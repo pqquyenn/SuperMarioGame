@@ -53,3 +53,6 @@ desktop.ini
 # Temporary files
 *.tmp
 *.log
+
+# *.png (nếu không muốn push ảnh ở thư mục gốc)
+# super_mario_project_spec.md
