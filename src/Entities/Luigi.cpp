@@ -1,13 +1,17 @@
 #include "Entities/Luigi.h"
 
-Luigi::Luigi(float x, float y) : Character(x, y) {
-    moveSpeed = 150.f;  // Runs slightly slower
-    jumpForce = 400.f;  // Jumps higher!
+namespace {
+CharacterProfile makeLuigiProfile() {
+    CharacterProfile profile;
+    profile.moveAcceleration = 850.f;
+    profile.walkSpeed = 150.f;
+    profile.runSpeed = 220.f;
+    profile.jumpForce = 400.f;
+    profile.jumpHoldAcceleration = 1000.f;
+    profile.maxJumpHoldTime = 0.22f;
+    return profile;
+}
 }
 
-void Luigi::update(float dt) {
-    velocity.y += 980.f * dt;
-    position += velocity * dt;
-    sprite.setPosition(position);
-    velocity.x *= 0.8f;
-}
+Luigi::Luigi(float x, float y)
+    : Character{x, y, makeLuigiProfile()} {}
