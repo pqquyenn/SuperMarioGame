@@ -4,5 +4,5 @@
 
 class FireCommand : public Command {
 public:
-    void execute(Character& character, float dt) override;
+    void execute(Character& character, float dt) const override;
 };
