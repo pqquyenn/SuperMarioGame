@@ -1,11 +1,37 @@
 #pragma once
+#include <SFML/Graphics/Rect.hpp>
 
-#include "Entities/Character.h"
-#include "Level/TileMap.h"
-#include <vector>
+// Forward Declarations
+class Entity;
+class TileMap;
 
+/**
+ * @brief Handles AABB collision detection and polymorphic resolution.
+ * 
+ * Decouples collision math from game logic. Post-collision responses are deferred 
+ * back to the Entity objects via virtual method calls.
+ */
 class CollisionManager {
 public:
-    static bool checkAABB(const sf::FloatRect& rectA, const sf::FloatRect& rectB);
-    static void resolveCharacterMapCollision(Character& character, const TileMap& tileMap);
+    /**
+     * @brief Axis-Aligned Bounding Box (AABB) intersection check
+     * @param a Bounds of object A
+     * @param b Bounds of object B
+     * @param overlap Populated with the intersected rectangle if a collision occurs
+     * @return true if overlapping
+     */
+    static bool checkAABB(const sf::FloatRect& a, const sf::FloatRect& b, sf::FloatRect& overlap);
+    
+    /**
+     * @brief Checks an entity against the nearby grid in TileMap and resolves position
+     * @param entity The entity moving through the map
+     * @param map The static level geometry
+     */
+    static void resolveTileCollisions(Entity& entity, const TileMap& map);
+    
+    /**
+     * @brief Resolves collisions between two dynamic entities
+     * Uses double-dispatch or simple callback logic on the Entity class.
+     */
+    static void resolveEntityCollisions(Entity& a, Entity& b);
 };

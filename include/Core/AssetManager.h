@@ -23,6 +23,7 @@ public:
 
     bool loadTexture(const std::string& name, const std::string& filename);
     sf::Texture& getTexture(const std::string& name);
+    void loadLevelAssets();
 
     bool loadFont(const std::string& name, const std::string& filename);
     sf::Font& getFont(const std::string& name);

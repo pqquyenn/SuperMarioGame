@@ -1,27 +1,38 @@
 #pragma once
-
 #include <SFML/Graphics.hpp>
+#include "Level/TileType.h"
 
-enum class TileType {
-    AIR,
-    SOLID_GROUND,
-    BRICK,
-    QUESTION_BLOCK,
-    PIPE,
-    COIN_BLOCK
-};
-
+/**
+ * @brief Extrinsic State for a Tile
+ * 
+ * Represents a specific tile on the map. It holds its position in the world 
+ * and a pointer to the shared Flyweight (TileType) for its appearance and rules.
+ */
 class Tile {
-private:
-    sf::Sprite sprite;
-    TileType type;
-    sf::Vector2f position;
-
 public:
-    Tile(TileType t = TileType::AIR, float x = 0.f, float y = 0.f);
-    void setTexture(const sf::Texture& texture);
-    void render(sf::RenderWindow& window);
+    /**
+     * @brief Construct a new Tile object
+     * @param type Pointer to the shared Flyweight state
+     * @param position Extrinsic position in the world
+     */
+    Tile(const TileType* type, const sf::Vector2f& position);
 
-    TileType getType() const { return type; }
+    /**
+     * @brief Renders the tile by delegating to the Flyweight type
+     */
+    void render(sf::RenderTarget& target) const;
+
+    /**
+     * @brief Returns the AABB boundary for collision detection
+     */
     sf::FloatRect getBounds() const;
+    
+    // --- Delegates to the Flyweight type ---
+    bool isSolid() const;
+    bool isWarpPipe() const;
+    int getWarpDirection() const;
+
+private:
+    const TileType* m_type;   // Pointer to shared intrinsic state
+    sf::Vector2f m_position;  // Extrinsic world position
 };
