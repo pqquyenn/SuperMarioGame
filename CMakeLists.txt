@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Try finding installed SFML first, otherwise fetch it automatically
-find_package(SFML 2.5 COMPONENTS graphics audio QUIET)
+find_package(SFML 2.6.1 COMPONENTS graphics audio QUIET)
 
 if(NOT SFML_FOUND)
     include(FetchContent)
