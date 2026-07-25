@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.20)
 project(SFML-Mario LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Try finding installed SFML first, otherwise fetch it automatically
-find_package(SFML 2.6.1 COMPONENTS graphics audio QUIET)
+# Try finding installed SFML first, otherwise fetch it automatically via FetchContent
+find_package(SFML 2.5 COMPONENTS graphics audio window system QUIET)
 
 if(NOT SFML_FOUND)
     include(FetchContent)
@@ -23,28 +23,53 @@ if(NOT SFML_FOUND)
     FetchContent_MakeAvailable(SFML)
 endif()
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS 
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
+)
 
 add_executable(mario ${SOURCES} ${HEADERS})
 
 target_include_directories(mario
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-if(TARGET sfml-graphics AND TARGET sfml-audio)
-    target_link_libraries(mario PRIVATE sfml-graphics sfml-audio)
-elseif(TARGET SFML::Graphics AND TARGET SFML::Audio)
-    target_link_libraries(mario PRIVATE SFML::Graphics SFML::Audio)
+if(TARGET SFML::Graphics)
+    target_link_libraries(mario PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+elseif(TARGET sfml-graphics)
+    target_link_libraries(mario PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
 else()
-    target_link_libraries(mario PRIVATE sfml-graphics sfml-audio)
+    target_link_libraries(mario PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
 endif()
 
 # Copy assets to executable folder post-build
-add_custom_command(TARGET mario POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/assets"
-        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
-    COMMENT "Copying assets to output directory"
-)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+    add_custom_command(TARGET mario POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
+        COMMENT "Copying assets to output directory"
+    )
+endif()
+
+# Copy SFML DLLs on Windows post-build if fetched
+if(WIN32 AND TARGET sfml-graphics)
+    add_custom_command(TARGET mario POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:sfml-graphics>
+            $<TARGET_FILE:sfml-audio>
+            $<TARGET_FILE:sfml-window>
+            $<TARGET_FILE:sfml-system>
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+        COMMENT "Copying SFML DLLs to runtime directory"
+    )
+endif()
+
+
