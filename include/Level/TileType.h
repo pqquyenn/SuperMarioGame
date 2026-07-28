@@ -25,9 +25,24 @@ struct TileType {
      * @param position Extrinsic position from the Tile object
      */
     void render(sf::RenderTarget& target, const sf::Vector2f& position) const {
-        if (!texture) return;
-        sf::Sprite sprite(*texture, textureRect);
-        sprite.setPosition(position);
-        target.draw(sprite);
+        if (texture) {
+            sf::Sprite sprite(*texture, textureRect);
+            sprite.setPosition(position);
+            target.draw(sprite);
+        } else {
+            // DEBUG FALLBACK: Draw colored rectangles if textures aren't loaded yet!
+            sf::RectangleShape shape(sf::Vector2f(16.f, 16.f));
+            shape.setPosition(position);
+            
+            // Assign colors based on basic properties
+            if (isWarpPipe) {
+                shape.setFillColor(sf::Color(0, 168, 0)); // Green for pipes
+            } else if (isSolid) {
+                shape.setFillColor(sf::Color(184, 92, 0)); // Brown for bricks/ground
+            } else {
+                shape.setFillColor(sf::Color(255, 206, 196)); // Light peach for unknown
+            }
+            target.draw(shape);
+        }
     }
 };
