@@ -7,5 +7,5 @@ bool Level::loadLevel(const std::string& levelFile) {
 void Level::update(float dt) {}
 
 void Level::render(sf::RenderWindow& window) {
-    map.render(window);
+    map.render(window, camera);
 }
