@@ -1,33 +1,19 @@
 #include "Entities/Enemies/Enemy.h"
 
 Enemy::Enemy(float x, float y)
-    : Entity(x, y), speed(50.f), direction(-1), isAlive(true), squished(false) {}
-
-void Enemy::reverseDirection() {
-    direction = -direction;
+    : Entity(x, y), speed(50.f), direction(-1), isAlive(true), squished(false) {
 }
 
-int Enemy::getDirection() const {
-    return direction;
-}
+void Enemy::reverseDirection() { direction = -direction; }
 
-void Enemy::setDirection(int dir) {
-    direction = dir;
-}
+int Enemy::getDirection() const { return direction; }
 
-float Enemy::getSpeed() const {
-    return speed;
-}
+void Enemy::setDirection(int dir) { direction = dir; }
 
-void Enemy::setSpeed(float spd) {
-    speed = spd;
-}
+float Enemy::getSpeed() const { return speed; }
 
-bool Enemy::isSquished() const {
-    return squished;
-}
+void Enemy::setSpeed(float spd) { speed = spd; }
 
-bool Enemy::isEnemyAlive() const {
-    return isAlive;
-}
+bool Enemy::isSquished() const { return squished; }
 
+bool Enemy::isEnemyAlive() const { return isAlive; }
