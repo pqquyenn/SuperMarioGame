@@ -4,11 +4,11 @@
 
 class Koopa : public Enemy {
 private:
-  bool inShell = false;
-  bool shellSpinning = false;
+    bool inShell = false;
+    bool shellSpinning = false;
 
 public:
-  Koopa(float x = 0.f, float y = 0.f);
-  void update(float dt) override;
-  void onStomped() override;
+    Koopa(float x = 0.f, float y = 0.f);
+    void update(float dt) override;
+    void onStomped() override;
 };

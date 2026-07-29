@@ -54,5 +54,5 @@ desktop.ini
 *.tmp
 *.log
 
-# *.png
+# *.png (nếu không muốn push ảnh ở thư mục gốc)
 # super_mario_project_spec.md
