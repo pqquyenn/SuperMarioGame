@@ -1,7 +1,11 @@
 #include "Level/Level.h"
 
 bool Level::loadLevel(const std::string& levelFile) {
-    return map.loadFromFile(levelFile);
+    if (map.readFromFile(levelFile)) return true;
+    if (map.readFromFile("../" + levelFile)) return true;
+    if (map.readFromFile("../../" + levelFile)) return true;
+    if (map.readFromFile("../../../" + levelFile)) return true;
+    return false;
 }
 
 void Level::update(float dt) {}

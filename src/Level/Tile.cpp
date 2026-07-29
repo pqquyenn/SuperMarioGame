@@ -7,15 +7,12 @@ Tile::Tile(const TileType* type, const sf::Vector2f& position)
 
 void Tile::render(sf::RenderTarget& target) const {
     if (m_type) {
-        // Delegate rendering to the shared Flyweight, passing our specific extrinsic position
         m_type->render(target, m_position);
     }
 }
 
 sf::FloatRect Tile::getBounds() const {
     if (!m_type) return sf::FloatRect(m_position.x, m_position.y, 0, 0);
-    
-    // Assuming the bounding box size matches the texture rect size
     return sf::FloatRect(
         m_position.x, 
         m_position.y, 
@@ -25,7 +22,6 @@ sf::FloatRect Tile::getBounds() const {
 }
 
 bool Tile::isSolid() const {
-    // The boolean logic lives strictly in the shared Flyweight
     return m_type ? m_type->isSolid : false;
 }
 
