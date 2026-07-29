@@ -3,6 +3,7 @@
 #include "Level/TileType.h"
 #include "Core/AssetManager.h"
 #include <cmath>
+#include <sstream>
 
 TileMap::TileMap() : m_tileSize(16), m_needsRedraw(true) {
     initFlyweights();
@@ -90,6 +91,12 @@ void TileMap::initFlyweights() {
     add("F", 480, 40, false);
     add("f", 480, 40, false);
     add("|", 103, 69, true);
+
+    add("ground", 1, 137, true);
+    add("brick", 35, 103, true);
+    add("question", 1, 69, true);
+    add("pipetop", 103, 52, true, true, 1);
+    add("pipebottom", 103, 69, true, true, 1);
 }
 
 bool TileMap::readFromFile(const std::string& filepath) {
@@ -100,30 +107,36 @@ bool TileMap::readFromFile(const std::string& filepath) {
     }
 
     m_grid.clear();
+    std::string headerLine;
+    if (std::getline(file, headerLine)) {
+        std::stringstream ss(headerLine);
+        int rows, cols;
+        ss >> rows >> cols; // Đọc thông số kích thước map
+    }
     std::string line;
     int y = 0;
-
     while (std::getline(file, line)) {
-        std::vector<std::unique_ptr<Tile>> row;
-        for (size_t x = 0; x < line.size(); ++x) {
-            char c = line[x];
-            if (c == '-') {
+        if (line.empty()) continue;
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<std::unique_ptr<Tile>> row; 
+        int x = 0;
+        while (ss >> token) {
+            if (token == "A" || token == "-") {
                 row.push_back(nullptr);
-                continue;
-            }
-            auto it = m_tileRegistry.find(std::string(1, c));
-            if (it != m_tileRegistry.end()) {
-                row.push_back(std::make_unique<Tile>(
-                    it->second.get(),
-                    sf::Vector2f(float(x * m_tileSize), float(y * m_tileSize))));
             } else {
-                row.push_back(nullptr);
+                auto it = m_tileRegistry.find(token);
+                if (it != m_tileRegistry.end()) {
+                    row.push_back(std::make_unique<Tile>(it->second.get(), sf::Vector2f(x * m_tileSize, y * m_tileSize)));
+                } else {
+                    row.push_back(nullptr);
+                }
             }
+            x++;
         }
         m_grid.push_back(std::move(row));
-        ++y;
+        y++;
     }
-
     m_needsRedraw = true;
     m_frontBuffer.create(320, 240);
     m_backBuffer.create(320, 240);
