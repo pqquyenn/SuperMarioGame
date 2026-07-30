@@ -110,6 +110,12 @@ bool TileMap::readFromFile(const std::string& filepath) {
     }
 
     m_grid.clear();
+    std::string headerLine;
+    if (std::getline(file, headerLine)) {
+        std::stringstream ss(headerLine);
+        int rows, cols;
+        ss >> rows >> cols; // Đọc thông số kích thước map
+    }
     std::string line;
 
     // Check if first line contains dimensions like "15 16"
@@ -177,11 +183,11 @@ bool TileMap::readFromFile(const std::string& filepath) {
                     row.push_back(nullptr);
                 }
             }
+            x++;
         }
         m_grid.push_back(std::move(row));
-        ++y;
+        y++;
     }
-
     m_needsRedraw = true;
     m_frontBuffer.create(320, 240);
     m_backBuffer.create(320, 240);
