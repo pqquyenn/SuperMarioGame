@@ -9,8 +9,8 @@ int main() {
     window.setFramerateLimit(60);
 
     Level level(1);
-    if (!level.loadLevel("assets/maps/1-1.txt")) {
-        std::cerr << "Failed to load level file assets/maps/1-1.txt!" << std::endl;
+    if (!level.loadLevel("assets/maps/1.1/1-1.txt")) {
+        std::cerr << "Failed to load level file assets/maps/1.1/1-1.txt!" << std::endl;
         return -1;
     }
 
