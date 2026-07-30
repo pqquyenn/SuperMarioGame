@@ -44,3 +44,11 @@ void Game::update(float dt) {
     // dt thay doi tuy theo toc do frame thuc te
     stateManager.update(dt);
 }
+
+void Game::fixedUpdate(float fixedDt) {
+    // Fixed timestep update: dung cho physics, collision, movement...
+    // fixedDt LUON = TIME_PER_FRAME (1/60s) -> dam bao physics
+    // chay giong nhau tren moi may bat ke FPS thuc te
+    // TODO: Goi physics update cua stateManager khi co physics system
+    // Vi du: stateManager.fixedUpdate(fixedDt);
+}
