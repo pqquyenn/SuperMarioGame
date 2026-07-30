@@ -65,3 +65,44 @@ Game::Game() : accumulator(0.0f) {
     initWindow();
     initStates();
 }
+
+// === Main Game Loop ===
+
+void Game::run() {
+    clock.restart();
+
+    while (window.isOpen()) {
+        // 1. Tinh DeltaTime: thoi gian thuc te cua frame truoc
+        float dt = clock.restart().asSeconds();
+
+        // 2. Chong "Spiral of Death": neu dt qua lon (vd: debug breakpoint,
+        //    lag dot ngot), gioi han lai de tranh fixedUpdate chay hang tram lan
+        if (dt > 0.25f) {
+            dt = 0.25f;
+        }
+
+        // 3. Xu ly input/event
+        processEvents();
+
+        // 4. Fixed Timestep: tich luy thoi gian va chay physics deu dan
+        //    VD: may chay 120 FPS -> fixedUpdate chay 1 lan moi 2 frame
+        //        may chay 30 FPS  -> fixedUpdate chay 2 lan moi frame
+        accumulator += dt;
+        while (accumulator >= TIME_PER_FRAME) {
+            fixedUpdate(TIME_PER_FRAME);
+            accumulator -= TIME_PER_FRAME;
+        }
+
+        // 5. Variable update (animation, UI, camera...)
+        update(dt);
+
+        // 6. Render
+        render();
+
+        // 7. Manual FPS Capping: neu frame xu ly xong som, sleep cho du 1/60s
+        sf::Time frameTime = clock.getElapsedTime();
+        if (frameTime.asSeconds() < TIME_PER_FRAME) {
+            sf::sleep(sf::seconds(TIME_PER_FRAME - frameTime.asSeconds()));
+        }
+    }
+}
