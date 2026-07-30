@@ -19,3 +19,7 @@ void SoundManager::playBGM(const std::string& filename, bool loop) {
         std::cerr << "[SoundManager] Failed to load BGM: " << filename << std::endl;
     }
 }
+
+void SoundManager::stopBGM() {
+    backgroundMusic.stop();
+}
