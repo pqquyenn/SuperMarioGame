@@ -20,3 +20,7 @@ void Game::initWindow() {
     // Tat VSync de tranh xung dot voi manual FPS capping
     window.setVerticalSyncEnabled(false);
 }
+
+void Game::initStates() {
+    stateManager.pushState(std::make_unique<MenuState>());
+}
