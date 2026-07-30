@@ -80,8 +80,8 @@ void TileMap::initFlyweights() {
     const sf::Texture* flagPoleTex = &assets->getTexture("FlagPole");
     const sf::Texture* flagTex = &assets->getTexture("Flag");
     add("C", castleTex, 0, 0, 80, 80, false);
-    add("P", flagPoleTex, 0, 0, 16, 160, false);
-    add("|", flagPoleTex, 0, 0, 16, 160, false);
+    add("P", flagPoleTex, 0, 0, 16, 16, false);
+    add("|", flagPoleTex, 0, 16, 16, 16, false);
     add("F", flagTex, 0, 0, 16, 16, false);
     add("f", flagTex, 0, 0, 16, 16, false);
 
