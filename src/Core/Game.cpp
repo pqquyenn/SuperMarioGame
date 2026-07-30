@@ -52,3 +52,9 @@ void Game::fixedUpdate(float fixedDt) {
     // TODO: Goi physics update cua stateManager khi co physics system
     // Vi du: stateManager.fixedUpdate(fixedDt);
 }
+
+void Game::render() {
+    window.clear(sf::Color(107, 140, 255)); // Classic Mario sky blue
+    stateManager.render(window);
+    window.display();
+}
