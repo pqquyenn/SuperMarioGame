@@ -38,3 +38,9 @@ void Game::processEvents() {
         stateManager.handleInput(window);
     }
 }
+
+void Game::update(float dt) {
+    // Variable timestep update: dung cho animation, UI, camera...
+    // dt thay doi tuy theo toc do frame thuc te
+    stateManager.update(dt);
+}
