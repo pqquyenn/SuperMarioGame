@@ -14,6 +14,26 @@ int main() {
         return -1;
     }
 
+    TileMap bgMap;
+    bgMap.setTileOffset(sf::Vector2f(0.f, -8.f));
+    
+    std::string bgPaths[] = {
+        "assets/maps/1.1/background.txt",
+        "../assets/maps/1.1/background.txt",
+        "../../assets/maps/1.1/background.txt",
+        "../../../assets/maps/1.1/background.txt"
+    };
+    bool bgLoaded = false;
+    for (const auto& p : bgPaths) {
+        if (bgMap.readFromFile(p)) {
+            bgLoaded = true;
+            break;
+        }
+    }
+    if (!bgLoaded) {
+        std::cerr << "Failed to load background.txt!" << std::endl;
+    }
+
     std::cout << "Level loaded successfully!" << std::endl;
     std::cout << "Controls: Arrow Keys or WASD to move camera." << std::endl;
     std::cout << "Press U or H: Enter Underground Secret Map (underground.txt)." << std::endl;
@@ -28,7 +48,7 @@ int main() {
     cam.setLevelBounds(levelPixelW, levelPixelH);
     cam.setCenter(200.f, 112.f);
 
-    const float speed = 18.0f;
+    const float speed = 20.0f;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -45,6 +65,7 @@ int main() {
                     if (level.loadHiddenMap("underground.txt")) {
                         cam.setCenter(160.f, 120.f);
                         level.getTileMap().setNeedsRedraw(true);
+                        bgMap.setNeedsRedraw(true);
                     }
                 }
                 else if (event.key.code == sf::Keyboard::M || event.key.code == sf::Keyboard::Num1) {
@@ -52,6 +73,7 @@ int main() {
                     if (level.loadLevel("1.1/1-1.txt")) {
                         cam.setCenter(200.f, 112.f);
                         level.getTileMap().setNeedsRedraw(true);
+                        bgMap.setNeedsRedraw(true);
                     }
                 }
             }
@@ -77,6 +99,7 @@ int main() {
 
         if (moved) {
             level.getTileMap().setNeedsRedraw(true);
+            bgMap.setNeedsRedraw(true);
         }
 
         cam.applyTo(window);
@@ -85,6 +108,9 @@ int main() {
         bool isUndergroundArea = level.getIsUnderground() || camY >= 240.f || camX > 3280.f;
         sf::Color bgColor = isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
         window.clear(bgColor);
+        if (!isUndergroundArea) {
+            bgMap.render(window, cam);
+        }
         level.render(window);
         window.display();
     }

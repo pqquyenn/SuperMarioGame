@@ -29,6 +29,7 @@ public:
     void render(sf::RenderTarget& target, const Camera& camera);
     std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
     void setNeedsRedraw(bool needsRedraw);
+    void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
 
 private:
     void initFlyweights();
@@ -40,4 +41,5 @@ private:
     sf::RenderTexture m_frontBuffer;
     sf::RenderTexture m_backBuffer;
     bool m_needsRedraw;
+    sf::Vector2f m_tileOffset{0.f, 0.f};
 };

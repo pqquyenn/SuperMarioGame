@@ -2,12 +2,13 @@
 #include <iostream>
 #include <filesystem>
 
-AssetManager* AssetManager::instance = nullptr;
+// === Meyers' Singleton ===
 
-AssetManager* AssetManager::getInstance() {
-    if (!instance) {
-        instance = new AssetManager();
-    }
+AssetManager& AssetManager::getInstance() {
+    // Static local variable: chi tao 1 lan duy nhat khi goi lan dau
+    // Thread-safe tu C++11 (compiler dam bao)
+    // Tu dong huy khi chuong trinh ket thuc (khong memory leak)
+    static AssetManager instance;
     return instance;
 }
 
@@ -44,7 +45,14 @@ void AssetManager::loadLevelAssets() {
     tryLoad("PipeTop", "assets/maps/Mario Game Assets/PipeTop.png");
     tryLoad("PipeBottom", "assets/maps/Mario Game Assets/PipeBottom.png");
     tryLoad("PipeConnection", "assets/maps/Mario Game Assets/PipeConnection.png");
+    tryLoad("Cloud1", "assets/maps/Mario Game Assets/Cloud1.png");
     tryLoad("Cloud2", "assets/maps/Mario Game Assets/Cloud2.png");
+    tryLoad("Cloud3", "assets/maps/Mario Game Assets/Cloud3.png");
+    tryLoad("Bush1", "assets/maps/Mario Game Assets/Bush1.png");
+    tryLoad("Bush2", "assets/maps/Mario Game Assets/Bush2.png");
+    tryLoad("Bush3", "assets/maps/Mario Game Assets/Bush3.png");
+    tryLoad("Hill1", "assets/maps/Mario Game Assets/Hill1.png");
+    tryLoad("Hill2", "assets/maps/Mario Game Assets/Hill2.png");
     tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
     tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
     tryLoad("Coin_Underground", "assets/maps/Mario Game Assets/Coin_Underground.png");
