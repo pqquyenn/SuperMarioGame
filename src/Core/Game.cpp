@@ -1,30 +1,22 @@
 #include "Core/Game.h"
 #include "States/MenuState.h"
+#include <iostream>
+#include <thread>   // std::this_thread::sleep_for (dung cho manual FPS capping)
+#include <chrono>   // std::chrono::duration (do thoi gian chinh xac)
 #include <memory>
 
+// === Initialization ===
+
 void Game::initWindow() {
-    window.create(sf::VideoMode(800, 600), "Super Mario Bros (C++ SFML 2.6.1)", sf::Style::Close | sf::Style::Titlebar);
-    window.setFramerateLimit(60);
-}
+    window.create(
+        sf::VideoMode(800, 600),
+        "Super Mario Bros (C++ SFML 2.6.1)",
+        sf::Style::Close | sf::Style::Titlebar
+    );
 
-void Game::initStates() {
-    stateManager.pushState(std::make_unique<MenuState>());
-}
+    // KHONG dung setFramerateLimit() vi ta tu cap FPS bang tay trong run()
+    // window.setFramerateLimit(60);  // <-- bo di
 
-Game::Game() {
-    initWindow();
-    initStates();
-}
-
-void Game::run() {
-    while (window.isOpen()) {
-        float dt = clock.restart().asSeconds();
-
-        stateManager.handleInput(window);
-        stateManager.update(dt);
-
-        window.clear(sf::Color(107, 140, 255)); // Classic Mario sky blue
-        stateManager.render(window);
-        window.display();
-    }
+    // Tat VSync de tranh xung dot voi manual FPS capping
+    window.setVerticalSyncEnabled(false);
 }
