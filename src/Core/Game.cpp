@@ -24,3 +24,17 @@ void Game::initWindow() {
 void Game::initStates() {
     stateManager.pushState(std::make_unique<MenuState>());
 }
+
+// === Core Loop Steps ===
+
+void Game::processEvents() {
+    sf::Event event;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            window.close();
+        }
+
+        // Chuyen event cho state hien tai xu ly (menu, play, pause...)
+        stateManager.handleInput(window);
+    }
+}
