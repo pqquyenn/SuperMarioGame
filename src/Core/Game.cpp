@@ -58,3 +58,10 @@ void Game::render() {
     stateManager.render(window);
     window.display();
 }
+
+// === Constructor ===
+
+Game::Game() : accumulator(0.0f) {
+    initWindow();
+    initStates();
+}
