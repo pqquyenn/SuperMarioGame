@@ -11,3 +11,19 @@ AssetManager& AssetManager::getInstance() {
     static AssetManager instance;
     return instance;
 }
+
+// === Texture ===
+
+bool AssetManager::loadTexture(const std::string& name, const std::string& filename) {
+    if (textures[name].loadFromFile(filename)) {
+        textures[name].setSmooth(false);  // Pixel art khong can lam min
+        return true;
+    }
+    std::cerr << "AssetManager: Failed to load texture " << filename << std::endl;
+    textures.erase(name);
+    return false;
+}
+
+sf::Texture& AssetManager::getTexture(const std::string& name) {
+    return textures[name];
+}
