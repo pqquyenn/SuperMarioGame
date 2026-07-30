@@ -12,9 +12,9 @@ TileMap::TileMap() : m_tileSize(16), m_needsRedraw(true) {
 TileMap::~TileMap() = default;
 
 void TileMap::initFlyweights() {
-    AssetManager* assets = AssetManager::getInstance();
-    assets->loadLevelAssets();
-    const sf::Texture& sheet = assets->getTexture("BlockTileSheet");
+    AssetManager& assets = AssetManager::getInstance();
+    assets.loadLevelAssets();
+    const sf::Texture& sheet = assets.getTexture("BlockTileSheet");
 
     auto add = [&](const std::string& key, const sf::Texture* tex, int left, int top, int width, int height, bool solid, bool warp = false, int dir = 0) {
         auto t = std::make_shared<TileType>();
@@ -27,36 +27,36 @@ void TileMap::initFlyweights() {
     };
 
     // 1. Ground Block (Overworld)
-    const sf::Texture* groundTex = &assets->getTexture("GroundBlock");
+    const sf::Texture* groundTex = &assets.getTexture("GroundBlock");
     add("X", groundTex, 0, 0, 16, 16, true);
     add("x", groundTex, 0, 0, 16, 16, true);
 
     // 2. Stair / Hard Block (solid non-destructible block for stairs/pyramids & flagpole base)
-    const sf::Texture* hardBlockTex = &assets->getTexture("HardBlock");
+    const sf::Texture* hardBlockTex = &assets.getTexture("HardBlock");
     add("B", hardBlockTex, 0, 0, 16, 16, true);
     add("D", hardBlockTex, 0, 0, 16, 16, true);
     add("b", hardBlockTex, 0, 0, 16, 16, true);
     add("d", hardBlockTex, 0, 0, 16, 16, true);
 
     // 3. Destructible Brick Block ('S')
-    const sf::Texture* brickTex = &assets->getTexture("Brick");
+    const sf::Texture* brickTex = &assets.getTexture("Brick");
     add("S", brickTex, 0, 0, 16, 16, true);
     add("s", brickTex, 0, 0, 16, 16, true);
 
     // 4. Question Block ('?', 'Q')
-    const sf::Texture* mysteryTex = &assets->getTexture("MysteryBlock");
+    const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
     add("?", mysteryTex, 0, 0, 16, 16, true);
     add("Q", mysteryTex, 0, 0, 16, 16, true);
     add("q", mysteryTex, 0, 0, 16, 16, true);
 
     // 5. Seamless Pipe parts (<, >, [, ])
-    const sf::Texture* pipeTopTex = &assets->getTexture("PipeTop");
-    const sf::Texture* pipeBottomTex = &assets->getTexture("PipeBottom");
+    const sf::Texture* pipeTopTex = &assets.getTexture("PipeTop");
+    const sf::Texture* pipeBottomTex = &assets.getTexture("PipeBottom");
     add("<", pipeTopTex, 0, 0, 16, 16, true, true, 1);
     add(">", pipeTopTex, 16, 0, 16, 16, true, true, 1);
     add("[", pipeBottomTex, 0, 0, 16, 16, true, true, 1);
     add("]", pipeBottomTex, 16, 0, 16, 16, true, true, 1);
-    const sf::Texture* pipeConnTex = &assets->getTexture("PipeConnection");
+    const sf::Texture* pipeConnTex = &assets.getTexture("PipeConnection");
     add("1", pipeConnTex, 0, 16, 16, 16, true, true, 1);
     add("2",pipeConnTex,16,16,16,16,true,true,1);
     add("3",pipeConnTex,0,32,16,16,true,true,1);
@@ -67,7 +67,7 @@ void TileMap::initFlyweights() {
    
 
     // 6. Multi-Tile Clouds (3x2 grid: (, ), *, {, _, })
-    const sf::Texture* cloudTex = &assets->getTexture("Cloud2");
+    const sf::Texture* cloudTex = &assets.getTexture("Cloud2");
     add("(", cloudTex, 0, 0, 16, 16, false);
     add(")", cloudTex, 16, 0, 16, 16, false);
     add("*", cloudTex, 32, 0, 16, 16, false);
@@ -76,9 +76,9 @@ void TileMap::initFlyweights() {
     add("}", cloudTex, 32, 16, 16, 16, false);
 
     // 7. End-Level Elements (Castle, FlagPole, Flag)
-    const sf::Texture* castleTex = &assets->getTexture("Castle");
-    const sf::Texture* flagPoleTex = &assets->getTexture("FlagPole");
-    const sf::Texture* flagTex = &assets->getTexture("Flag");
+    const sf::Texture* castleTex = &assets.getTexture("Castle");
+    const sf::Texture* flagPoleTex = &assets.getTexture("FlagPole");
+    const sf::Texture* flagTex = &assets.getTexture("Flag");
     add("C", castleTex, 0, 0, 80, 80, false);
     add("P", flagPoleTex, 0, 0, 16, 160, false);
     add("|", flagPoleTex, 0, 0, 16, 160, false);
@@ -86,9 +86,9 @@ void TileMap::initFlyweights() {
     add("f", flagTex, 0, 0, 16, 16, false);
 
     // 8. Underground Specific Tiles (UndergroundBlock, UndergroundBrick, Coin_Underground)
-    const sf::Texture* ugBlockTex = &assets->getTexture("UndergroundBlock");
-    const sf::Texture* ugBrickTex = &assets->getTexture("UndergroundBrick");
-    const sf::Texture* ugCoinTex = &assets->getTexture("Coin_Underground");
+    const sf::Texture* ugBlockTex = &assets.getTexture("UndergroundBlock");
+    const sf::Texture* ugBrickTex = &assets.getTexture("UndergroundBrick");
+    const sf::Texture* ugCoinTex = &assets.getTexture("Coin_Underground");
 
     add("u", ugBlockTex, 0, 0, 16, 16, true);
     add("U", ugBlockTex, 0, 0, 16, 16, true);
@@ -183,7 +183,6 @@ bool TileMap::readFromFile(const std::string& filepath) {
                     row.push_back(nullptr);
                 }
             }
-            x++;
         }
         m_grid.push_back(std::move(row));
         y++;
