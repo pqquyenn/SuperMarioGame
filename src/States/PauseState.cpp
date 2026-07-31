@@ -141,3 +141,12 @@ void PauseState::render(sf::RenderWindow& window) {
         window.draw(selectorText);
     }
 }
+
+void PauseState::updateSelectorPosition() {
+    float yPositions[] = { 320.f, 370.f };  // Y cua RESUME va QUIT TO MENU
+    selectorText.setPosition(260.f, yPositions[selectedIndex]);
+
+    // Highlight muc dang chon = vang, muc khac = trang
+    resumeText.setFillColor(selectedIndex == 0 ? sf::Color(228, 166, 61) : sf::Color::White);
+    quitText.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
+}
