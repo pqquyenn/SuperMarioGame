@@ -30,6 +30,15 @@ public:
     std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
+    
+    int getWidth() const {
+        int maxW = 0;
+        for (const auto& row : m_grid) {
+            if ((int)row.size() > maxW) maxW = (int)row.size();
+        }
+        return maxW;
+    }
+    int getHeight() const { return (int)m_grid.size(); }
 
 private:
     void initFlyweights();

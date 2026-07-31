@@ -55,7 +55,24 @@ void AssetManager::loadLevelAssets() {
     tryLoad("Hill2", "assets/maps/Mario Game Assets/Hill2.png");
     tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
     tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
-    tryLoad("Coin_Underground", "assets/maps/Mario Game Assets/Coin_Underground.png");
+    tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.png");
+    if (textures.find("SpriteIsland") == textures.end() || textures["SpriteIsland"].getSize().x == 0) {
+        tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.webp");
+    }
+    
+    tryLoad("UndergroundHardBlock", "assets/maps/Mario Game Assets/UndergroundHardBlock.png");
+    if (textures.find("UndergroundHardBlock") == textures.end() || textures["UndergroundHardBlock"].getSize().x == 0) {
+        tryLoad("UndergroundHardBlock", "assets/maps/Mario Game Assets/UndergroundHardBlock.webp");
+    }
+    tryLoad("Platform", "assets/maps/Mario Game Assets/Platform.png");
+    tryLoad("LargeCastle", "assets/maps/Mario Game Assets/LargeCastle.png");
+    
+    // Generate solid black tile
+    if (textures.find("BlackTile") == textures.end()) {
+        sf::Image blackImg;
+        blackImg.create(16, 16, sf::Color::Black);
+        textures["BlackTile"].loadFromImage(blackImg);
+    }
 }
 
 bool AssetManager::loadFont(const std::string& name, const std::string& filename) {

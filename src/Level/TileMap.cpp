@@ -29,25 +29,19 @@ void TileMap::initFlyweights() {
     // 1. Ground Block (Overworld)
     const sf::Texture* groundTex = &assets.getTexture("GroundBlock");
     add("X", groundTex, 0, 0, 16, 16, true);
-    add("x", groundTex, 0, 0, 16, 16, true);
 
     // 2. Stair / Hard Block (solid non-destructible block for stairs/pyramids & flagpole base)
     const sf::Texture* hardBlockTex = &assets.getTexture("HardBlock");
     add("B", hardBlockTex, 0, 0, 16, 16, true);
-    add("D", hardBlockTex, 0, 0, 16, 16, true);
-    add("b", hardBlockTex, 0, 0, 16, 16, true);
-    add("d", hardBlockTex, 0, 0, 16, 16, true);
 
     // 3. Destructible Brick Block ('S')
     const sf::Texture* brickTex = &assets.getTexture("Brick");
     add("S", brickTex, 0, 0, 16, 16, true);
-    add("s", brickTex, 0, 0, 16, 16, true);
 
     // 4. Question Block ('?', 'Q')
     const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
     add("?", mysteryTex, 0, 0, 16, 16, true);
     add("Q", mysteryTex, 0, 0, 16, 16, true);
-    add("q", mysteryTex, 0, 0, 16, 16, true);
 
     // 5. Seamless Pipe parts (<, >, [, ])
     const sf::Texture* pipeTopTex = &assets.getTexture("PipeTop");
@@ -68,13 +62,14 @@ void TileMap::initFlyweights() {
 
     // 5. End-Level Elements (Castle, FlagPole, Flag)
     const sf::Texture* castleTex = &assets.getTexture("Castle");
+    const sf::Texture* largeCastleTex = &assets.getTexture("LargeCastle");
     const sf::Texture* flagPoleTex = &assets.getTexture("FlagPole");
     const sf::Texture* flagTex = &assets.getTexture("Flag");
     add("C", castleTex, 0, 0, 80, 80, false);
+    add("LC", largeCastleTex, 0, 0, 148, 176, false);
     add("P", flagPoleTex, 0, 0, 16, 16, false);
     add("|", flagPoleTex, 0, 16, 16, 16, false);
     add("F", flagTex, 0, 0, 16, 16, false);
-    add("f", flagTex, 0, 0, 16, 16, false);
 
     // 6. Underground Specific Tiles (UndergroundBlock, UndergroundBrick, Coin_Underground)
     const sf::Texture* ugBlockTex = &assets.getTexture("UndergroundBlock");
@@ -82,12 +77,14 @@ void TileMap::initFlyweights() {
     const sf::Texture* ugCoinTex = &assets.getTexture("Coin_Underground");
 
     add("u", ugBlockTex, 0, 0, 16, 16, true);
-
     add("r", ugBrickTex, 0, 0, 16, 16, true);
-  
-
     add("c", ugCoinTex, 0, 0, 16, 16, false);
     
+    // Background Black Tile for 1-2
+    add("*", &assets.getTexture("BlackTile"), 0, 0, 16, 16, false);
+    
+    // Warp Text (mapped as solid bricks for layout, or hard blocks)
+    add("W", &assets.getTexture("Brick"), 0, 0, 16, 16, true); // Placeholder for Warp Text
 
     // 7. Auto-generated mappings for large scenery objects
     auto addMulti = [&](const std::string& prefix, const sf::Texture* tex, int cols, int rows, bool isHill1 = false) {
@@ -109,6 +106,19 @@ void TileMap::initFlyweights() {
     addMulti("cL", &assets.getTexture("Cloud3"), 4, 2);
     addMulti("h", &assets.getTexture("Hill1"), 3, 2, true);
     addMulti("H", &assets.getTexture("Hill2"), 5, 3);
+    addMulti("isl", &assets.getTexture("SpriteIsland"), 4, 3);
+    
+    add("uh", &assets.getTexture("UndergroundHardBlock"), 0, 0, 16, 16, true);
+    
+    const sf::Texture* platformTex = &assets.getTexture("Platform");
+    add("pf1", platformTex, 0, 0, 16, 8, true);
+    add("pf2", platformTex, 16, 0, 16, 8, true);
+    add("pf3", platformTex, 32, 0, 16, 8, true);
+    
+    // Athletic Level Specific (1-3)
+    add("T", &assets.getTexture("SpriteIsland"), 16, 32, 16, 16, true); // Tree Trunk (solid)
+    add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);  // Green Cap
+    add("O", platformTex, 16, 0, 16, 8, true);                          // Orange Wood Platform
 }
 
 bool TileMap::readFromFile(const std::string& filepath) {
@@ -119,22 +129,17 @@ bool TileMap::readFromFile(const std::string& filepath) {
     }
 
     m_grid.clear();
-    std::string headerLine;
-    if (std::getline(file, headerLine)) {
-        std::stringstream ss(headerLine);
-        int rows, cols;
-        ss >> rows >> cols; // Đọc thông số kích thước map
-    }
     std::string line;
 
-    // Check if first line contains dimensions like "15 16"
+    // Check if first line contains numeric dimensions header (e.g. "15 16")
     std::streampos pos = file.tellg();
     if (std::getline(file, line)) {
         std::stringstream ss(line);
         int rows, cols;
         if (ss >> rows >> cols && rows > 0 && cols > 0 && line.find_first_not_of("0123456789 \t\r\n") == std::string::npos) {
-            // Header line skipped
+            // Valid header line, leave consumed
         } else {
+            // Not a header line, rewind to start of file so row 0 is parsed as map data
             file.clear();
             file.seekg(pos);
         }
@@ -145,14 +150,8 @@ bool TileMap::readFromFile(const std::string& filepath) {
         if (line.empty() || line[0] == '#') continue;
         std::vector<std::unique_ptr<Tile>> row;
 
-        bool isSpaceSeparated = false;
-        if (line.find(' ') != std::string::npos) {
-            if (filepath.find("background.txt") != std::string::npos) {
-                isSpaceSeparated = true;
-            } else if (line.find_first_not_of("-X?QS<>[]CPFE()*{_}urcURC \t\r\n") != std::string::npos) {
-                isSpaceSeparated = true;
-            }
-        }
+        // Any line containing spaces uses space-separated tokenization (std::stringstream)
+        bool isSpaceSeparated = (line.find(' ') != std::string::npos);
 
         if (isSpaceSeparated) {
             std::stringstream ss(line);
@@ -164,13 +163,18 @@ bool TileMap::readFromFile(const std::string& filepath) {
                 } else {
                     auto it = m_tileRegistry.find(token);
                     if (it != m_tileRegistry.end()) {
-                        float yOff = m_tileOffset.y;
-                        if (token[0] == 'H') yOff -= m_tileOffset.y; // Hill2 does not move up
-                        if (token[0] == 'h') yOff += 4.f; // Hill1 moves down 4.f
-                        
-                        row.push_back(std::make_unique<Tile>(
-                            it->second.get(),
-                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
+                        // Skip static tile rendering for Platform entities
+                        if (token == "O") {
+                            row.push_back(nullptr);
+                        } else {
+                            float yOff = m_tileOffset.y;
+                            if (token[0] == 'H') yOff -= m_tileOffset.y; // Hill2 does not move up
+                            if (token[0] == 'h') yOff += 4.f;           // Hill1 moves down 4.f
+                            
+                            row.push_back(std::make_unique<Tile>(
+                                it->second.get(),
+                                sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
+                        }
                     } else {
                         std::shared_ptr<TileType> typeToUse = nullptr;
                         if (token == "ground1") typeToUse = m_tileRegistry["u"];
@@ -183,6 +187,7 @@ bool TileMap::readFromFile(const std::string& filepath) {
                                 typeToUse.get(),
                                 sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
                         } else {
+                            std::cerr << "TileMap Warning: Unregistered token '" << token << "' at row " << y << ", col " << x << " in " << filepath << std::endl;
                             row.push_back(nullptr);
                         }
                     }
@@ -198,10 +203,17 @@ bool TileMap::readFromFile(const std::string& filepath) {
                 }
                 auto it = m_tileRegistry.find(std::string(1, c));
                 if (it != m_tileRegistry.end()) {
-                    row.push_back(std::make_unique<Tile>(
-                        it->second.get(),
-                        sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
+                    if (c == 'O') {
+                        row.push_back(nullptr);
+                    } else {
+                        row.push_back(std::make_unique<Tile>(
+                            it->second.get(),
+                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
+                    }
                 } else {
+                    if (c != 'e' && c != 'E' && c != 'o') {
+                        std::cerr << "TileMap Warning: Unregistered char '" << c << "' at row " << y << ", col " << x << " in " << filepath << std::endl;
+                    }
                     row.push_back(nullptr);
                 }
             }

@@ -17,36 +17,48 @@ int main() {
     TileMap bgMap;
     bgMap.setTileOffset(sf::Vector2f(0.f, -8.f));
     
-    std::string bgPaths[] = {
-        "assets/maps/1.1/background.txt",
-        "../assets/maps/1.1/background.txt",
-        "../../assets/maps/1.1/background.txt",
-        "../../../assets/maps/1.1/background.txt"
-    };
-    bool bgLoaded = false;
-    for (const auto& p : bgPaths) {
-        if (bgMap.readFromFile(p)) {
-            bgLoaded = true;
-            break;
-        }
-    }
-    if (!bgLoaded) {
-        std::cerr << "Failed to load background.txt!" << std::endl;
-    }
-
-    std::cout << "Level loaded successfully!" << std::endl;
-    std::cout << "Controls: Arrow Keys or WASD to move camera." << std::endl;
-    std::cout << "Press U or H: Enter Underground Secret Map (underground.txt)." << std::endl;
-    std::cout << "Press M or 1: Return to Main Overworld Map." << std::endl;
-    std::cout << "Press ESC: Quit." << std::endl;
-
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
 
-    const float levelPixelW = 244.f * 16.f; // 3904px
-    const float levelPixelH = 16.f * 16.f;  // 256px
-    cam.setLevelBounds(levelPixelW, levelPixelH);
-    cam.setCenter(200.f, 112.f);
+    auto loadLevelMap = [&](const std::string& levelPath, const std::string& bgPath, float bgOffsetY = -8.f) {
+        if (level.loadLevel(levelPath)) {
+            bgMap.setTileOffset(sf::Vector2f(0.f, bgOffsetY));
+            
+            float levelPixelW = level.getTileMap().getWidth() * 16.f;
+            float levelPixelH = level.getTileMap().getHeight() * 16.f;
+            cam.setLevelBounds(levelPixelW, levelPixelH);
+            cam.setCenter(200.f, 112.f);
+            level.getTileMap().setNeedsRedraw(true);
+            
+            std::string fullBgPaths[] = {
+                "assets/maps/" + bgPath,
+                "../assets/maps/" + bgPath,
+                "../../assets/maps/" + bgPath,
+                "../../../assets/maps/" + bgPath
+            };
+            bool bgLoaded = false;
+            for (const auto& p : fullBgPaths) {
+                if (bgMap.readFromFile(p)) {
+                    bgLoaded = true;
+                    break;
+                }
+            }
+            if (!bgLoaded) {
+                std::cerr << "Failed to load " << bgPath << "!" << std::endl;
+            }
+            bgMap.setNeedsRedraw(true);
+        }
+    };
+
+    loadLevelMap("1.1/1-1.txt", "1.1/background.txt", -8.f);
+
+    std::cout << "Level loaded successfully!" << std::endl;
+    std::cout << "Controls: Arrow Keys or WASD to move camera." << std::endl;
+    std::cout << "Press U or H: Enter Underground Secret Map." << std::endl;
+    std::cout << "Press M or 1: Load World 1-1." << std::endl;
+    std::cout << "Press 2: Load World 1-2." << std::endl;
+    std::cout << "Press 3: Load World 1-3." << std::endl;
+    std::cout << "Press ESC: Quit." << std::endl;
 
     const float speed = 20.0f;
 
@@ -69,12 +81,16 @@ int main() {
                     }
                 }
                 else if (event.key.code == sf::Keyboard::M || event.key.code == sf::Keyboard::Num1) {
-                    std::cout << "Returning to Main Overworld Map (1.1/1-1.txt)..." << std::endl;
-                    if (level.loadLevel("1.1/1-1.txt")) {
-                        cam.setCenter(200.f, 112.f);
-                        level.getTileMap().setNeedsRedraw(true);
-                        bgMap.setNeedsRedraw(true);
-                    }
+                    std::cout << "Loading World 1-1..." << std::endl;
+                    loadLevelMap("1.1/1-1.txt", "1.1/background.txt", -8.f);
+                }
+                else if (event.key.code == sf::Keyboard::Num2) {
+                    std::cout << "Loading World 1-2..." << std::endl;
+                    loadLevelMap("1.2/1-2.txt", "1.2/background.txt", 0.f);
+                }
+                else if (event.key.code == sf::Keyboard::Num3) {
+                    std::cout << "Loading World 1-3..." << std::endl;
+                    loadLevelMap("1.3/1-3.txt", "1.3/background.txt", -8.f);
                 }
             }
         }
@@ -103,14 +119,9 @@ int main() {
         }
 
         cam.applyTo(window);
-        float camX = cam.getView().getCenter().x;
-        float camY = cam.getView().getCenter().y;
-        bool isUndergroundArea = level.getIsUnderground() || camY >= 240.f || camX > 3280.f;
-        sf::Color bgColor = isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
-        window.clear(bgColor);
-        if (!isUndergroundArea) {
-            bgMap.render(window, cam);
-        }
+        window.clear(sf::Color(92, 148, 252));
+        
+        bgMap.render(window, cam);
         level.render(window);
         window.display();
     }

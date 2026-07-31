@@ -17,9 +17,8 @@ void CollisionManager::resolveEntityCollisions(Entity& a, Entity& b) {
         // Double Dispatch: We allow the entities themselves to resolve state logic
         // Examples: Mario loses health, Goomba dies, Coin is collected.
         
-        // TODO: Uncomment these lines once your teammates add the virtual `onCollision` method to Entity.h!
-        // a.onCollision(b, overlap);
-        // b.onCollision(a, overlap);
+        a.onCollision(b, overlap);
+        b.onCollision(a, overlap);
     }
 }
 
