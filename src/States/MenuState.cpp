@@ -93,9 +93,16 @@ void MenuState::onEnter() {
 
     // --- Load background image ---
     const std::string bgPaths[] = {
+        "assets/state/MenuGameBackGround.jpg",
         "assets/state/MenuGameBackGround.png",
+        "assets/state/MenuGameBackGround.jpeg",
+        "assets/state/MenuGameBackGround.bmp",
+        "../assets/state/MenuGameBackGround.jpg",
         "../assets/state/MenuGameBackGround.png",
+        "../assets/state/MenuGameBackGround.jpeg",
+        "../../assets/state/MenuGameBackGround.jpg",
         "../../assets/state/MenuGameBackGround.png",
+        "../../../assets/state/MenuGameBackGround.jpg",
         "../../../assets/state/MenuGameBackGround.png"
     };
 
@@ -114,6 +121,34 @@ void MenuState::onEnter() {
             }
         }
     }
+
+    // Fallback: Check if there's any image file inside assets/state directory
+    if (!bgLoaded) {
+        const std::string stateDirs[] = { "assets/state", "../assets/state", "../../assets/state" };
+        for (const auto& dir : stateDirs) {
+            if (std::filesystem::exists(dir) && std::filesystem::is_directory(dir)) {
+                for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+                    if (entry.is_regular_file()) {
+                        std::string ext = entry.path().extension().string();
+                        if (ext == ".jpg" || ext == ".png" || ext == ".jpeg" || ext == ".bmp") {
+                            if (bgTexture.loadFromFile(entry.path().string())) {
+                                bgLoaded = true;
+                                bgSprite.setTexture(bgTexture);
+                                sf::Vector2u texSize = bgTexture.getSize();
+                                if (texSize.x > 0 && texSize.y > 0) {
+                                    bgSprite.setScale(800.f / static_cast<float>(texSize.x), 600.f / static_cast<float>(texSize.y));
+                                }
+                                std::cout << "[MenuState] Background image loaded from dir scan: " << entry.path().string() << std::endl;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (bgLoaded) break;
+        }
+    }
+
 
     // --- Mac dinh chon START GAME ---
     selectedIndex = 0;
