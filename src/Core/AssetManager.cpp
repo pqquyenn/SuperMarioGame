@@ -12,11 +12,9 @@ AssetManager& AssetManager::getInstance() {
     return instance;
 }
 
-// === Texture ===
-
 bool AssetManager::loadTexture(const std::string& name, const std::string& filename) {
     if (textures[name].loadFromFile(filename)) {
-        textures[name].setSmooth(false);  // Pixel art khong can lam min
+        textures[name].setSmooth(false);
         return true;
     }
     std::cerr << "AssetManager: Failed to load texture " << filename << std::endl;
@@ -26,4 +24,55 @@ bool AssetManager::loadTexture(const std::string& name, const std::string& filen
 
 sf::Texture& AssetManager::getTexture(const std::string& name) {
     return textures[name];
+}
+
+void AssetManager::loadLevelAssets() {
+    auto tryLoad = [&](const std::string& name, const std::string& rel) {
+        if (std::filesystem::exists(rel)) { loadTexture(name, rel); return; }
+        if (std::filesystem::exists("../" + rel)) { loadTexture(name, "../" + rel); return; }
+        if (std::filesystem::exists("../../" + rel)) { loadTexture(name, "../../" + rel); return; }
+        if (std::filesystem::exists("../../../" + rel)) { loadTexture(name, "../../../" + rel); return; }
+    };
+    tryLoad("BlockTileSheet", "assets/textures/blocks/BlockTileSheet.png");
+    tryLoad("DecorSheet", "assets/textures/blocks/DecorSheet.png");
+    tryLoad("Castle", "assets/maps/Mario Game Assets/Castle.png");
+    tryLoad("FlagPole", "assets/maps/Mario Game Assets/FlagPole.png");
+    tryLoad("Flag", "assets/maps/Mario Game Assets/Flag.png");
+    tryLoad("GroundBlock", "assets/maps/Mario Game Assets/GroundBlock.png");
+    tryLoad("HardBlock", "assets/maps/Mario Game Assets/HardBlock.png");
+    tryLoad("Brick", "assets/maps/Mario Game Assets/Brick.png");
+    tryLoad("MysteryBlock", "assets/maps/Mario Game Assets/MysteryBlock.png");
+    tryLoad("PipeTop", "assets/maps/Mario Game Assets/PipeTop.png");
+    tryLoad("PipeBottom", "assets/maps/Mario Game Assets/PipeBottom.png");
+    tryLoad("PipeConnection", "assets/maps/Mario Game Assets/PipeConnection.png");
+    tryLoad("Cloud2", "assets/maps/Mario Game Assets/Cloud2.png");
+    tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
+    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
+    tryLoad("Coin_Underground", "assets/maps/Mario Game Assets/Coin_Underground.png");
+}
+
+bool AssetManager::loadFont(const std::string& name, const std::string& filename) {
+    sf::Font font;
+    if (font.loadFromFile(filename)) {
+        fonts[name] = font;
+        return true;
+    }
+    return false;
+}
+
+sf::Font& AssetManager::getFont(const std::string& name) {
+    return fonts[name];
+}
+
+bool AssetManager::loadSoundBuffer(const std::string& name, const std::string& filename) {
+    sf::SoundBuffer buffer;
+    if (buffer.loadFromFile(filename)) {
+        soundBuffers[name] = buffer;
+        return true;
+    }
+    return false;
+}
+
+sf::SoundBuffer& AssetManager::getSoundBuffer(const std::string& name) {
+    return soundBuffers[name];
 }

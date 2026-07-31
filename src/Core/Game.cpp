@@ -23,6 +23,8 @@ void Game::initWindow() {
 
 void Game::initStates() {
     stateManager.pushState(std::make_unique<MenuState>());
+    // Xu ly ngay lap tuc vi day la lan khoi tao dau tien
+    stateManager.processPendingActions();
 }
 
 // === Core Loop Steps ===
@@ -34,8 +36,8 @@ void Game::processEvents() {
             window.close();
         }
 
-        // Chuyen event cho state hien tai xu ly (menu, play, pause...)
-        stateManager.handleInput(window);
+        // Chuyen tung event rieng le cho state hien tai xu ly
+        stateManager.handleInput(event, window);
     }
 }
 
@@ -81,10 +83,13 @@ void Game::run() {
             dt = 0.25f;
         }
 
-        // 3. Xu ly input/event
+        // 3. Xu ly pending state transitions tu frame truoc
+        stateManager.processPendingActions();
+
+        // 4. Xu ly input/event
         processEvents();
 
-        // 4. Fixed Timestep: tich luy thoi gian va chay physics deu dan
+        // 5. Fixed Timestep: tich luy thoi gian va chay physics deu dan
         //    VD: may chay 120 FPS -> fixedUpdate chay 1 lan moi 2 frame
         //        may chay 30 FPS  -> fixedUpdate chay 2 lan moi frame
         accumulator += dt;
@@ -93,13 +98,13 @@ void Game::run() {
             accumulator -= TIME_PER_FRAME;
         }
 
-        // 5. Variable update (animation, UI, camera...)
+        // 6. Variable update (animation, UI, camera...)
         update(dt);
 
-        // 6. Render
+        // 7. Render
         render();
 
-        // 7. Manual FPS Capping: neu frame xu ly xong som, sleep cho du 1/60s
+        // 8. Manual FPS Capping: neu frame xu ly xong som, sleep cho du 1/60s
         sf::Time frameTime = clock.getElapsedTime();
         if (frameTime.asSeconds() < TIME_PER_FRAME) {
             sf::sleep(sf::seconds(TIME_PER_FRAME - frameTime.asSeconds()));

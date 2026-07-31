@@ -12,91 +12,94 @@ TileMap::TileMap() : m_tileSize(16), m_needsRedraw(true) {
 TileMap::~TileMap() = default;
 
 void TileMap::initFlyweights() {
-    AssetManager* assets = AssetManager::getInstance();
-    assets->loadLevelAssets();
-    const sf::Texture& sheet = assets->getTexture("BlockTileSheet");
+    AssetManager& assets = AssetManager::getInstance();
+    assets.loadLevelAssets();
+    const sf::Texture& sheet = assets.getTexture("BlockTileSheet");
 
-    auto add = [&](const std::string& key, int left, int top, bool solid,
-                   bool warp = false, int dir = 0) {
+    auto add = [&](const std::string& key, const sf::Texture* tex, int left, int top, int width, int height, bool solid, bool warp = false, int dir = 0) {
         auto t = std::make_shared<TileType>();
-        t->texture = &sheet;
-        t->textureRect = sf::IntRect(left, top, 16, 16);
+        t->texture = tex;
+        t->textureRect = sf::IntRect(left, top, width, height);
         t->isSolid = solid;
         t->isWarpPipe = warp;
         t->warpDirection = dir;
         m_tileRegistry[key] = t;
     };
 
-    // Ground / stair
-    add("X", 1, 137, true);
-    add("x", 1, 137, true);
-    add("B", 1, 137, true);
-    add("D", 1, 137, true);
-    add("b", 1, 137, true);
-    add("d", 1, 137, true);
+    // 1. Ground Block (Overworld)
+    const sf::Texture* groundTex = &assets.getTexture("GroundBlock");
+    add("X", groundTex, 0, 0, 16, 16, true);
+    add("x", groundTex, 0, 0, 16, 16, true);
 
-    // Brick
-    add("S", 35, 103, true);
-    add("s", 35, 103, true);
+    // 2. Stair / Hard Block (solid non-destructible block for stairs/pyramids & flagpole base)
+    const sf::Texture* hardBlockTex = &assets.getTexture("HardBlock");
+    add("B", hardBlockTex, 0, 0, 16, 16, true);
+    add("D", hardBlockTex, 0, 0, 16, 16, true);
+    add("b", hardBlockTex, 0, 0, 16, 16, true);
+    add("d", hardBlockTex, 0, 0, 16, 16, true);
 
-    // Question
-    add("?", 1, 69, true);
-    add("Q", 1, 69, true);
-    add("q", 1, 69, true);
+    // 3. Destructible Brick Block ('S')
+    const sf::Texture* brickTex = &assets.getTexture("Brick");
+    add("S", brickTex, 0, 0, 16, 16, true);
+    add("s", brickTex, 0, 0, 16, 16, true);
 
-    // Pipe top / body
-    add("<", 103, 52, true, true, 1);
-    add(">", 119, 52, true, true, 1);
-    add("[", 103, 69, true, true, 1);
-    add("]", 119, 69, true, true, 1);
+    // 4. Question Block ('?', 'Q')
+    const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
+    add("?", mysteryTex, 0, 0, 16, 16, true);
+    add("Q", mysteryTex, 0, 0, 16, 16, true);
+    add("q", mysteryTex, 0, 0, 16, 16, true);
 
-    // Cloud 6 tiles (3x2) from Overworld
-    add("(", 232, 72, false);
-    add(")", 248, 72, false);
-    add("*", 264, 72, false);
-    add("{", 232, 80, false);
-    add("_", 248, 80, false);
-    add("}", 264, 80, false);
-    add("C", 248, 72, false);
-    add("c", 248, 72, false);
+    // 5. Seamless Pipe parts (<, >, [, ])
+    const sf::Texture* pipeTopTex = &assets.getTexture("PipeTop");
+    const sf::Texture* pipeBottomTex = &assets.getTexture("PipeBottom");
+    add("<", pipeTopTex, 0, 0, 16, 16, true, true, 1);
+    add(">", pipeTopTex, 16, 0, 16, 16, true, true, 1);
+    add("[", pipeBottomTex, 0, 0, 16, 16, true, true, 1);
+    add("]", pipeBottomTex, 16, 0, 16, 16, true, true, 1);
+    const sf::Texture* pipeConnTex = &assets.getTexture("PipeConnection");
+    add("1", pipeConnTex, 0, 16, 16, 16, true, true, 1);
+    add("2",pipeConnTex,16,16,16,16,true,true,1);
+    add("3",pipeConnTex,0,32,16,16,true,true,1);
+    add("4",pipeConnTex,16,32,16,16,true,true,1);
+    add("5",pipeConnTex,32,0,16,16,true,true,1);
+    add("6",pipeConnTex,32,16,16,16,true,true,1);
+    add("7",pipeConnTex,32,32,16,16,true,true,1);
+   
 
-    // Bush 4 tiles
-    add("a", 64, 96, false);
-    add("b", 80, 96, false);
-    add("c", 96, 96, false);
-    add("d", 112, 96, false);
-    add("U", 80, 96, false);
-    add("u", 80, 96, false);
+    // 6. Multi-Tile Clouds (3x2 grid: (, ), *, {, _, })
+    const sf::Texture* cloudTex = &assets.getTexture("Cloud2");
+    add("(", cloudTex, 0, 0, 16, 16, false);
+    add(")", cloudTex, 16, 0, 16, 16, false);
+    add("*", cloudTex, 32, 0, 16, 16, false);
+    add("{", cloudTex, 0, 16, 16, 16, false);
+    add("_", cloudTex, 16, 16, 16, 16, false);
+    add("}", cloudTex, 32, 16, 16, 16, false);
 
-    // Hill 9 tiles
-    //   . 1 .
-    //  2 3 4
-    // 5 6 7 8 9
-    add("1", 176, 48, false);
-    add("2", 160, 80, false);
-    add("3", 176, 80, false);
-    add("4", 192, 80, false);
-    add("5", 144, 96, false);
-    add("6", 160, 96, false);
-    add("7", 176, 96, false);
-    add("8", 192, 96, false);
-    add("9", 192, 96, false);
-    add("H", 176, 96, false);
-    add("h", 176, 96, false);
-    add("L", 160, 96, false);
-    add("M", 176, 96, false);
-    add("R", 192, 96, false);
+    // 7. End-Level Elements (Castle, FlagPole, Flag)
+    const sf::Texture* castleTex = &assets.getTexture("Castle");
+    const sf::Texture* flagPoleTex = &assets.getTexture("FlagPole");
+    const sf::Texture* flagTex = &assets.getTexture("Flag");
+    add("C", castleTex, 0, 0, 80, 80, false);
+    add("P", flagPoleTex, 0, 0, 16, 160, false);
+    add("|", flagPoleTex, 0, 0, 16, 160, false);
+    add("F", flagTex, 0, 0, 16, 16, false);
+    add("f", flagTex, 0, 0, 16, 16, false);
 
-    // Flag / pole
-    add("F", 480, 40, false);
-    add("f", 480, 40, false);
-    add("|", 103, 69, true);
+    // 8. Underground Specific Tiles (UndergroundBlock, UndergroundBrick, Coin_Underground)
+    const sf::Texture* ugBlockTex = &assets.getTexture("UndergroundBlock");
+    const sf::Texture* ugBrickTex = &assets.getTexture("UndergroundBrick");
+    const sf::Texture* ugCoinTex = &assets.getTexture("Coin_Underground");
 
-    add("ground", 1, 137, true);
-    add("brick", 35, 103, true);
-    add("question", 1, 69, true);
-    add("pipetop", 103, 52, true, true, 1);
-    add("pipebottom", 103, 69, true, true, 1);
+    add("u", ugBlockTex, 0, 0, 16, 16, true);
+    add("U", ugBlockTex, 0, 0, 16, 16, true);
+    add("ground1", ugBlockTex, 0, 0, 16, 16, true);
+
+    add("r", ugBrickTex, 0, 0, 16, 16, true);
+    add("R", ugBrickTex, 0, 0, 16, 16, true);
+    add("brick2", ugBrickTex, 0, 0, 16, 16, true);
+
+    add("c", ugCoinTex, 0, 0, 16, 16, false);
+    add("coin1", ugCoinTex, 0, 0, 16, 16, false);
 }
 
 bool TileMap::readFromFile(const std::string& filepath) {
@@ -114,25 +117,72 @@ bool TileMap::readFromFile(const std::string& filepath) {
         ss >> rows >> cols; // Đọc thông số kích thước map
     }
     std::string line;
+
+    // Check if first line contains dimensions like "15 16"
+    std::streampos pos = file.tellg();
+    if (std::getline(file, line)) {
+        std::stringstream ss(line);
+        int rows, cols;
+        if (ss >> rows >> cols && rows > 0 && cols > 0 && line.find_first_not_of("0123456789 \t\r\n") == std::string::npos) {
+            // Header line skipped
+        } else {
+            file.clear();
+            file.seekg(pos);
+        }
+    }
+
     int y = 0;
     while (std::getline(file, line)) {
-        if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::string token;
-        std::vector<std::unique_ptr<Tile>> row; 
-        int x = 0;
-        while (ss >> token) {
-            if (token == "A" || token == "-") {
-                row.push_back(nullptr);
-            } else {
-                auto it = m_tileRegistry.find(token);
+        if (line.empty() || line[0] == '#') continue;
+        std::vector<std::unique_ptr<Tile>> row;
+
+        if (line.find(' ') != std::string::npos && line.find_first_not_of("-X?QS<>[]CPFE()*{_}urcURC \t\r\n") != std::string::npos) {
+            std::stringstream ss(line);
+            std::string token;
+            int x = 0;
+            while (ss >> token) {
+                if (token == "A" || token == "." || token == "-") {
+                    row.push_back(nullptr);
+                } else {
+                    auto it = m_tileRegistry.find(token);
+                    if (it != m_tileRegistry.end()) {
+                        row.push_back(std::make_unique<Tile>(
+                            it->second.get(),
+                            sf::Vector2f(float(x * m_tileSize), float(y * m_tileSize))));
+                    } else {
+                        std::shared_ptr<TileType> typeToUse = nullptr;
+                        if (token == "ground1") typeToUse = m_tileRegistry["u"];
+                        else if (token == "brick2") typeToUse = m_tileRegistry["r"];
+                        else if (token == "coin1") typeToUse = m_tileRegistry["c"];
+                        else if (token.rfind("P", 0) == 0) typeToUse = m_tileRegistry["["];
+
+                        if (typeToUse) {
+                            row.push_back(std::make_unique<Tile>(
+                                typeToUse.get(),
+                                sf::Vector2f(float(x * m_tileSize), float(y * m_tileSize))));
+                        } else {
+                            row.push_back(nullptr);
+                        }
+                    }
+                }
+                ++x;
+            }
+        } else {
+            for (size_t x = 0; x < line.size(); ++x) {
+                char c = line[x];
+                if (c == '-' || c == ' ' || c == '.') {
+                    row.push_back(nullptr);
+                    continue;
+                }
+                auto it = m_tileRegistry.find(std::string(1, c));
                 if (it != m_tileRegistry.end()) {
-                    row.push_back(std::make_unique<Tile>(it->second.get(), sf::Vector2f(x * m_tileSize, y * m_tileSize)));
+                    row.push_back(std::make_unique<Tile>(
+                        it->second.get(),
+                        sf::Vector2f(float(x * m_tileSize), float(y * m_tileSize))));
                 } else {
                     row.push_back(nullptr);
                 }
             }
-            x++;
         }
         m_grid.push_back(std::move(row));
         y++;
@@ -143,7 +193,7 @@ bool TileMap::readFromFile(const std::string& filepath) {
     m_frontBuffer.setSmooth(false);
     m_backBuffer.setSmooth(false);
 
-    std::cout << "TileMap: Loaded " << m_grid.size() << " rows\n";
+    std::cout << "TileMap: Loaded " << m_grid.size() << " rows from " << filepath << std::endl;
     return !m_grid.empty();
 }
 
