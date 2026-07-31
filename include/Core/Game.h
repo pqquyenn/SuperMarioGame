@@ -22,9 +22,14 @@ private:
     // de dam bao physics update chay deu tren moi may
     float accumulator;
 
+    // === Window & Fullscreen ===
+    bool isFullscreen = false;
+    void toggleFullscreen();
+
     // === Initialization ===
     void initWindow();
     void initStates();
+
 
     // === Core Loop Steps ===
     void processEvents();               // Xu ly input/event cua SFML

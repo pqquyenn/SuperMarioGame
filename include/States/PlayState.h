@@ -2,8 +2,12 @@
 
 #include "States/GameState.h"
 #include "States/GameStateManager.h"
+#include "Level/Level.h"
 
 class PlayState : public GameState {
+private:
+    Level level;
+
 public:
     PlayState() = default;
 
@@ -13,3 +17,4 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 };
+
