@@ -113,8 +113,13 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 }
 
 void PauseState::update(float dt) {
-    // Pause state: khong update game logic
-    // TODO: Update animation pause menu (neu co)
+    // Game logic KHONG update (dang pause)
+    // Chi update animation nhap nhay selector
+    blinkTimer += dt;
+    if (blinkTimer >= 0.4f) {
+        showSelector = !showSelector;
+        blinkTimer = 0.f;
+    }
 }
 
 void PauseState::render(sf::RenderWindow& window) {
