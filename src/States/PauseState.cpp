@@ -123,6 +123,21 @@ void PauseState::update(float dt) {
 }
 
 void PauseState::render(sf::RenderWindow& window) {
-    // TODO: Ve overlay ban trong suot len tren PlayState
-    // TODO: Ve text "PAUSED", "Press ESC to Resume", "Press Q to Quit"
+    // LUU Y: Khong goi window.clear() o day
+    // Vi PlayState da ve truoc do roi, PauseState chi ve OVERLAY len tren
+
+    // 1. Ve overlay den ban trong suot
+    window.draw(overlay);
+
+    if (!fontLoaded) return;
+
+    // 2. Ve texts
+    window.draw(pausedText);
+    window.draw(resumeText);
+    window.draw(quitText);
+
+    // 3. Ve selector nhap nhay
+    if (showSelector) {
+        window.draw(selectorText);
+    }
 }
