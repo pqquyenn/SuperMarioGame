@@ -72,17 +72,42 @@ void PauseState::onExit() {
 
 void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
     if (event.type == sf::Event::KeyPressed) {
-        if (event.key.code == sf::Keyboard::Escape) {
-            // Nhan Escape -> pop PauseState -> quay ve PlayState
-            if (stateManager) {
-                stateManager->popState();
-            }
-        }
-        else if (event.key.code == sf::Keyboard::Q) {
-            // Nhan Q -> quay ve Menu (thay the toan bo stack)
-            if (stateManager) {
-                stateManager->changeState(std::make_unique<MenuState>());
-            }
+        switch (event.key.code) {
+            case sf::Keyboard::Up:
+            case sf::Keyboard::W:
+                selectedIndex--;
+                if (selectedIndex < 0) selectedIndex = MENU_ITEMS - 1;
+                updateSelectorPosition();
+                break;
+
+            case sf::Keyboard::Down:
+            case sf::Keyboard::S:
+                selectedIndex++;
+                if (selectedIndex >= MENU_ITEMS) selectedIndex = 0;
+                updateSelectorPosition();
+                break;
+
+            case sf::Keyboard::Enter:
+                if (stateManager) {
+                    if (selectedIndex == 0) {
+                        // RESUME -> pop PauseState, quay ve PlayState
+                        stateManager->popState();
+                    } else if (selectedIndex == 1) {
+                        // QUIT TO MENU -> thay bang MenuState
+                        stateManager->changeState(std::make_unique<MenuState>());
+                    }
+                }
+                break;
+
+            case sf::Keyboard::Escape:
+                // Phim tat: Escape luon = Resume
+                if (stateManager) {
+                    stateManager->popState();
+                }
+                break;
+
+            default:
+                break;
         }
     }
 }
