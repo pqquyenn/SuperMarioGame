@@ -91,6 +91,30 @@ void MenuState::onEnter() {
     groundBlock.setPosition(0.f, 536.f);
     groundBlock.setFillColor(sf::Color(192, 96, 0));  // Mau nau dat
 
+    // --- Load background image ---
+    const std::string bgPaths[] = {
+        "assets/state/MenuGameBackGround.png",
+        "../assets/state/MenuGameBackGround.png",
+        "../../assets/state/MenuGameBackGround.png",
+        "../../../assets/state/MenuGameBackGround.png"
+    };
+
+    bgLoaded = false;
+    for (const auto& path : bgPaths) {
+        if (std::filesystem::exists(path)) {
+            if (bgTexture.loadFromFile(path)) {
+                bgLoaded = true;
+                bgSprite.setTexture(bgTexture);
+                sf::Vector2u texSize = bgTexture.getSize();
+                if (texSize.x > 0 && texSize.y > 0) {
+                    bgSprite.setScale(800.f / static_cast<float>(texSize.x), 600.f / static_cast<float>(texSize.y));
+                }
+                std::cout << "[MenuState] Background image loaded: " << path << std::endl;
+                break;
+            }
+        }
+    }
+
     // --- Mac dinh chon START GAME ---
     selectedIndex = 0;
     updateSelectorPosition();
@@ -163,16 +187,18 @@ void MenuState::update(float dt) {
 // render() - Ve menu len man hinh
 // ==============================================================
 void MenuState::render(sf::RenderWindow& window) {
-    // Background xanh troi Mario classic
-    window.clear(sf::Color(92, 148, 252));
+    if (bgLoaded) {
+        window.draw(bgSprite);
+    } else {
+        // Fallback: Background xanh troi Mario classic
+        window.clear(sf::Color(92, 148, 252));
+        window.draw(groundBlock);
+    }
 
     if (!fontLoaded) {
         // Neu khong co font, chi hien thi background
         return;
     }
-
-    // Ve dat nen phia duoi
-    window.draw(groundBlock);
 
     // Ve title
     window.draw(titleText);
@@ -189,6 +215,7 @@ void MenuState::render(sf::RenderWindow& window) {
         window.draw(selectorText);
     }
 }
+
 
 // ==============================================================
 // updateSelectorPosition() - Cap nhat vi tri ">" theo muc dang chon

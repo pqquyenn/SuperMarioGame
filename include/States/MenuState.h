@@ -26,7 +26,11 @@ private:
     bool showSelector = true;
 
     // === Background ===
+    sf::Texture bgTexture;
+    sf::Sprite bgSprite;
+    bool bgLoaded = false;
     sf::RectangleShape groundBlock;   // Gia lap dat nen phia duoi
+
 
     // === Helpers ===
     void updateSelectorPosition();
