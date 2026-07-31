@@ -3,6 +3,8 @@
 #include <iostream>
 #include <memory>
 
+GameOverState::GameOverState(int score) : finalScore(score) {}
+
 void GameOverState::onEnter() {
     std::cout << "[GameOverState] onEnter - GAME OVER" << std::endl;
 
@@ -91,5 +93,19 @@ void GameOverState::update(float dt) {
 }
 
 void GameOverState::render(sf::RenderWindow& window) {
-    // TODO: Ve man hinh Game Over, diem so, "Press Enter to return to Menu"
+    // TODO: Se implement sau
+    window.clear(sf::Color::Black);
+    if (!fontLoaded) return;
+    window.draw(gameOverText);
+    window.draw(scoreText);
+    window.draw(retryText);
+    window.draw(menuText);
+    if (showSelector) window.draw(selectorText);
+}
+
+void GameOverState::updateSelectorPosition() {
+    float yPositions[] = { 360.f, 410.f };
+    selectorText.setPosition(260.f, yPositions[selectedIndex]);
+    retryText.setFillColor(selectedIndex == 0 ? sf::Color(228, 166, 61) : sf::Color::White);
+    menuText.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
 }

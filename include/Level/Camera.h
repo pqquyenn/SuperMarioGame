@@ -24,6 +24,11 @@ public:
         view.setSize(width, height);
     }
 
+    void zoom(float factor) {
+        view.zoom(factor);
+    }
+
+
     void setCenter(float x, float y) {
         float halfW = view.getSize().x / 2.f;
         float halfH = view.getSize().y / 2.f;

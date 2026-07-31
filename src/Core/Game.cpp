@@ -7,17 +7,26 @@
 
 // === Initialization ===
 
+// === Initialization ===
+
 void Game::initWindow() {
     window.create(
         sf::VideoMode(800, 600),
         "Super Mario Bros (C++ SFML 2.6.1)",
-        sf::Style::Close | sf::Style::Titlebar
+        sf::Style::Default // Enable Titlebar, Resize, Close, and Maximize button
     );
 
-    // KHONG dung setFramerateLimit() vi ta tu cap FPS bang tay trong run()
-    // window.setFramerateLimit(60);  // <-- bo di
-
     // Tat VSync de tranh xung dot voi manual FPS capping
+    window.setVerticalSyncEnabled(false);
+}
+
+void Game::toggleFullscreen() {
+    isFullscreen = !isFullscreen;
+    if (isFullscreen) {
+        window.create(sf::VideoMode::getDesktopMode(), "Super Mario Bros (C++ SFML 2.6.1)", sf::Style::Fullscreen);
+    } else {
+        window.create(sf::VideoMode(800, 600), "Super Mario Bros (C++ SFML 2.6.1)", sf::Style::Default);
+    }
     window.setVerticalSyncEnabled(false);
 }
 
@@ -35,11 +44,19 @@ void Game::processEvents() {
         if (event.type == sf::Event::Closed) {
             window.close();
         }
+        else if (event.type == sf::Event::KeyPressed) {
+            if (event.key.code == sf::Keyboard::F11 || 
+               (event.key.code == sf::Keyboard::Enter && event.key.alt)) {
+                toggleFullscreen();
+            }
+        }
 
         // Chuyen tung event rieng le cho state hien tai xu ly
         stateManager.handleInput(event, window);
     }
 }
+
+
 
 void Game::update(float dt) {
     // Variable timestep update: dung cho animation, UI, camera...
