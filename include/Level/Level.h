@@ -20,6 +20,7 @@ private:
     std::vector<std::unique_ptr<Item>> items;
 
     void spawnEntitiesFromMap();
+    bool loadInternal(const std::string& filename, bool isUnderground);
 
 public:
     Level(int id = 1);

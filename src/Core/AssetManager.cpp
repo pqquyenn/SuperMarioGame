@@ -67,6 +67,15 @@ void AssetManager::loadLevelAssets() {
     tryLoad("Platform", "assets/maps/Mario Game Assets/Platform.png");
     tryLoad("LargeCastle", "assets/maps/Mario Game Assets/LargeCastle.png");
     
+    // Load Entity Textures
+    tryLoad("Goomba", "assets/maps/Mario Game Assets/Goomba_Walk1.png");
+    tryLoad("Koopa", "assets/maps/Mario Game Assets/Koopa_Walk1.png");
+    tryLoad("PiranhaPlant", "assets/maps/Mario Game Assets/PipeTop.png"); // Fallback if no PiranhaPlant.png
+    tryLoad("Coin", "assets/maps/Mario Game Assets/Coin.png");
+    tryLoad("Mushroom", "assets/maps/Mario Game Assets/MagicMushroom.png");
+    tryLoad("FireFlower", "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower
+    tryLoad("Mario", "assets/maps/Mario Game Assets/Mario_Small_Idle.png");
+    
     // Generate solid black tile
     if (textures.find("BlackTile") == textures.end()) {
         sf::Image blackImg;
