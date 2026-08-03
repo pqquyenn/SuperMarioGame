@@ -54,7 +54,7 @@ void AssetManager::loadLevelAssets() {
     tryLoad("Hill1", "assets/maps/Mario Game Assets/Hill1.png");
     tryLoad("Hill2", "assets/maps/Mario Game Assets/Hill2.png");
     tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
-    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
+    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");  
     tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.png");
     if (textures.find("SpriteIsland") == textures.end() || textures["SpriteIsland"].getSize().x == 0) {
         tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.webp");
@@ -74,7 +74,20 @@ void AssetManager::loadLevelAssets() {
     tryLoad("Coin", "assets/maps/Mario Game Assets/Coin.png");
     tryLoad("Mushroom", "assets/maps/Mario Game Assets/MagicMushroom.png");
     tryLoad("FireFlower", "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower
+    tryLoad("PlayerSpriteSheet", "assets/textures/characters/PlayerSpriteSheet.png");
     tryLoad("Mario", "assets/maps/Mario Game Assets/Mario_Small_Idle.png");
+    tryLoad("Mario_Small_Idle", "assets/maps/Mario Game Assets/Mario_Small_Idle.png");
+    tryLoad("Mario_Small_Run1", "assets/maps/Mario Game Assets/Mario_Small_Run1.png");
+    tryLoad("Mario_Small_Run2", "assets/maps/Mario Game Assets/Mario_Small_Run2.png");
+    tryLoad("Mario_Small_Run3", "assets/maps/Mario Game Assets/Mario_Small_Run3.png");
+    tryLoad("Mario_Small_Jump", "assets/maps/Mario Game Assets/Mario_Small_Jump.png");
+    tryLoad("Mario_Small_Slide", "assets/maps/Mario Game Assets/Mario_Small_Slide.png");
+    tryLoad("Mario_Big_Idle", "assets/maps/Mario Game Assets/Mario_Big_Idle.png");
+    tryLoad("Mario_Big_Run1", "assets/maps/Mario Game Assets/Mario_Big_Run1.png");
+    tryLoad("Mario_Big_Run2", "assets/maps/Mario Game Assets/Mario_Big_Run2.png");
+    tryLoad("Mario_Big_Run3", "assets/maps/Mario Game Assets/Mario_Big_Run3.png");
+    tryLoad("Mario_Big_Jump", "assets/maps/Mario Game Assets/Mario_Big_Jump.png");
+    tryLoad("Mario_Big_Slide", "assets/maps/Mario Game Assets/Mario_Big_Slide.png");
     
     // Generate solid black tile
     if (textures.find("BlackTile") == textures.end()) {
