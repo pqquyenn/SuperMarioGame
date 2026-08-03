@@ -40,6 +40,10 @@ public:
     }
     int getHeight() const { return (int)m_grid.size(); }
 
+    // Named aliases used by Level and PlayState
+    int getMapWidth()  const { return getWidth(); }
+    int getMapHeight() const { return getHeight(); }
+
 private:
     void initFlyweights();
 

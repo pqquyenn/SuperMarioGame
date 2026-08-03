@@ -1,5 +1,6 @@
 #include "Physics/CollisionManager.h"
 #include "Entities/Entity.h"
+#include "Entities/Character.h"
 #include "Level/TileMap.h"
 #include "Level/Tile.h"
 #include <algorithm>
@@ -76,6 +77,12 @@ void CollisionManager::resolveTileCollisions(Entity& entity, const TileMap& map)
             if (overlap.height <= overlap.width) {
                 if (bounds.top < tileBounds.top) {
                     pos.y -= overlap.height;  // Landed on top of the tile (ground)
+
+                    // ★ Task 4: Set grounded for Characters (Mario/Luigi) so jump() works.
+                    // Enemies and Items skip this branch silently.
+                    if (auto* character = dynamic_cast<Character*>(&entity)) {
+                        character->setGrounded(true);
+                    }
                 } else {
                     pos.y += overlap.height;  // Hit the underside (ceiling)
                 }
