@@ -70,6 +70,17 @@ if(WIN32 AND TARGET sfml-graphics)
             "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
         COMMENT "Copying SFML DLLs to runtime directory"
     )
+
+    # Copy OpenAL DLL (required by sfml-audio) - without this the game crashes silently on startup
+    set(OPENAL_DLL "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
+    if(EXISTS "${OPENAL_DLL}")
+        add_custom_command(TARGET mario POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${OPENAL_DLL}"
+                "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+            COMMENT "Copying openal32.dll to runtime directory"
+        )
+    endif()
 endif()
 
 
