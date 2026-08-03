@@ -203,18 +203,31 @@ void Character::updatePlayerAnimation(float dt) {
     animator.play(*clip);
     animator.update(dt);
 
-    const sf::IntRect* frame = animator.getCurrentFrame();
+    const AnimationFrame* frame = animator.getCurrentFrame();
     if (!frame) {
         return;
     }
 
-    sprite.setTextureRect(*frame);
+    if (frame->texture) {
+        sprite.setTexture(*frame->texture);
+    }
+    sprite.setTextureRect(frame->textureRect);
 
     // Keep the sprite anchored to the collision body's left edge while using
     // negative X scale to reuse right-facing frames for left-facing movement.
-    const float frameWidth = static_cast<float>(std::abs(frame->width));
+    const float frameWidth = static_cast<float>(
+        std::abs(frame->textureRect.width)
+    );
     sprite.setOrigin(facingRight ? 0.f : frameWidth, 0.f);
     sprite.setScale(facingRight ? 1.f : -1.f, 1.f);
+}
+
+void Character::setPlayerAnimationProfile(
+    PlayerAnimationProfile playerAnimationProfile
+) {
+    animator.stop();
+    animationProfile = std::move(playerAnimationProfile);
+    updatePlayerAnimation(0.f);
 }
 
 void Character::updatePlayerEffects(float dt) {

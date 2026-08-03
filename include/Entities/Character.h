@@ -79,6 +79,7 @@ protected:
 
     float getMoveSpeedMultiplier() const;
     float getJumpForceMultiplier() const;
+    void setPlayerAnimationProfile(PlayerAnimationProfile playerAnimationProfile);
 
     explicit Character(float x = 0.f, float y = 0.f);
     Character(
