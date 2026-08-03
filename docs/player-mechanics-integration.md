@@ -24,6 +24,28 @@ void PlayState::update(float dt) {
 }
 ```
 
+### Player Input and Camera Ownership
+
+Player controls move only the `Character`. `PlayState` must not also move the
+camera directly from `A/D`, arrow keys, or jump keys. Otherwise the same input
+will control both the player and the view.
+
+After player movement and terrain correction, update the camera from the
+player's world position. The Camera/Level owner should implement a horizontal
+follow threshold or dead zone, smooth movement if desired, and clamping to the
+level bounds:
+
+```text
+Left level edge  -> player moves; camera remains clamped
+Middle of level -> camera follows after the player crosses the dead zone
+Right level edge -> player moves; camera remains clamped
+```
+
+`W`, Up, and Space are player jump bindings. Direct keyboard camera movement
+should be removed from normal gameplay or placed behind an explicit debug mode.
+The recommended integration order remains input, player update, collision
+correction, and finally camera follow.
+
 The recommended interaction priority in each frame is:
 
 1. Forced-death conditions such as falling below the level

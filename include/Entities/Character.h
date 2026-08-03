@@ -44,8 +44,10 @@ struct CharacterProfile {
     float maxJumpHoldTime{0.18f};
     float damageInvincibilityDuration{2.f};
 
-    float bodyWidth{28.f};
-    float smallBodyHeight{30.f};
+    // Collision body matches the 16x16 Small player sprite and tile grid.
+    // Powered forms retain this width and scale the height to 16x32.
+    float bodyWidth{16.f};
+    float smallBodyHeight{16.f};
 
     bool canJump{true};
     bool canRun{true};
