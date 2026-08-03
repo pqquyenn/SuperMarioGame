@@ -45,10 +45,56 @@ void AssetManager::loadLevelAssets() {
     tryLoad("PipeTop", "assets/maps/Mario Game Assets/PipeTop.png");
     tryLoad("PipeBottom", "assets/maps/Mario Game Assets/PipeBottom.png");
     tryLoad("PipeConnection", "assets/maps/Mario Game Assets/PipeConnection.png");
+    tryLoad("Cloud1", "assets/maps/Mario Game Assets/Cloud1.png");
     tryLoad("Cloud2", "assets/maps/Mario Game Assets/Cloud2.png");
+    tryLoad("Cloud3", "assets/maps/Mario Game Assets/Cloud3.png");
+    tryLoad("Bush1", "assets/maps/Mario Game Assets/Bush1.png");
+    tryLoad("Bush2", "assets/maps/Mario Game Assets/Bush2.png");
+    tryLoad("Bush3", "assets/maps/Mario Game Assets/Bush3.png");
+    tryLoad("Hill1", "assets/maps/Mario Game Assets/Hill1.png");
+    tryLoad("Hill2", "assets/maps/Mario Game Assets/Hill2.png");
     tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
-    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
-    tryLoad("Coin_Underground", "assets/maps/Mario Game Assets/Coin_Underground.png");
+    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");  
+    tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.png");
+    if (textures.find("SpriteIsland") == textures.end() || textures["SpriteIsland"].getSize().x == 0) {
+        tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.webp");
+    }
+    
+    tryLoad("UndergroundHardBlock", "assets/maps/Mario Game Assets/UndergroundHardBlock.png");
+    if (textures.find("UndergroundHardBlock") == textures.end() || textures["UndergroundHardBlock"].getSize().x == 0) {
+        tryLoad("UndergroundHardBlock", "assets/maps/Mario Game Assets/UndergroundHardBlock.webp");
+    }
+    tryLoad("Platform", "assets/maps/Mario Game Assets/Platform.png");
+    tryLoad("LargeCastle", "assets/maps/Mario Game Assets/LargeCastle.png");
+    
+    // Load Entity Textures
+    tryLoad("Goomba", "assets/maps/Mario Game Assets/Goomba_Walk1.png");
+    tryLoad("Koopa", "assets/maps/Mario Game Assets/Koopa_Walk1.png");
+    tryLoad("PiranhaPlant", "assets/maps/Mario Game Assets/PipeTop.png"); // Fallback if no PiranhaPlant.png
+    tryLoad("Coin", "assets/maps/Mario Game Assets/Coin.png");
+    tryLoad("Mushroom", "assets/maps/Mario Game Assets/MagicMushroom.png");
+    tryLoad("FireFlower", "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower
+    tryLoad("PlayerSpriteSheet", "assets/textures/characters/PlayerSpriteSheet.png");
+    tryLoad("Mario", "assets/maps/Mario Game Assets/Mario_Small_Idle.png");
+    tryLoad("Mario_Small_Idle", "assets/maps/Mario Game Assets/Mario_Small_Idle.png");
+    tryLoad("Mario_Small_Run1", "assets/maps/Mario Game Assets/Mario_Small_Run1.png");
+    tryLoad("Mario_Small_Run2", "assets/maps/Mario Game Assets/Mario_Small_Run2.png");
+    tryLoad("Mario_Small_Run3", "assets/maps/Mario Game Assets/Mario_Small_Run3.png");
+    tryLoad("Mario_Small_Jump", "assets/maps/Mario Game Assets/Mario_Small_Jump.png");
+    tryLoad("Mario_Small_Slide", "assets/maps/Mario Game Assets/Mario_Small_Slide.png");
+    tryLoad("Mario_Big_Idle", "assets/maps/Mario Game Assets/Mario_Big_Idle.png");
+    tryLoad("Mario_Big_Run1", "assets/maps/Mario Game Assets/Mario_Big_Run1.png");
+    tryLoad("Mario_Big_Run2", "assets/maps/Mario Game Assets/Mario_Big_Run2.png");
+    tryLoad("Mario_Big_Run3", "assets/maps/Mario Game Assets/Mario_Big_Run3.png");
+    tryLoad("Mario_Big_Jump", "assets/maps/Mario Game Assets/Mario_Big_Jump.png");
+    tryLoad("Mario_Big_Slide", "assets/maps/Mario Game Assets/Mario_Big_Slide.png");
+    
+    // Generate solid black tile
+    if (textures.find("BlackTile") == textures.end()) {
+        sf::Image blackImg;
+        blackImg.create(16, 16, sf::Color::Black);
+        textures["BlackTile"].loadFromImage(blackImg);
+    }
 }
 
 bool AssetManager::loadFont(const std::string& name, const std::string& filename) {

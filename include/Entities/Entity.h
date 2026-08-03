@@ -26,6 +26,7 @@ public:
     // facade update and rendering
     virtual void update(float dt) = 0;
     virtual void render(sf::RenderWindow& window) const;
+    virtual void onCollision(Entity& other, const sf::FloatRect& overlap) {}
 
     // getters, setters and movement handling
     virtual sf::FloatRect getBounds() const;

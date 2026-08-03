@@ -38,12 +38,17 @@ public:
     void registerType(const std::string& typeName, CreatorFunc creator);
 
     /**
+     * @brief Register default game entities (Goomba, Koopa, etc.)
+     */
+    void registerDefaultEntities();
+
+    /**
      * @brief Create an entity dynamically
      * @param typeName The string ID to lookup in the registry
      * @param position The position to spawn the entity
      * @return unique_ptr to the new Entity (or nullptr if not found)
      */
-    std::unique_ptr<Entity> create(const std::string& typeName, const sf::Vector2f& position);
+    [[nodiscard]] std::unique_ptr<Entity> create(const std::string& typeName, const sf::Vector2f& position);
 
 private:
     EntityFactory() = default;
