@@ -49,6 +49,19 @@ void AssetManager::loadLevelAssets() {
     tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
     tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
     tryLoad("Coin_Underground", "assets/maps/Mario Game Assets/Coin_Underground.png");
+    tryLoad("PlayerSpriteSheet", "assets/textures/characters/PlayerSpriteSheet.png");
+    tryLoad("Mario_Small_Idle", "assets/maps/Mario Game Assets/Mario_Small_Idle.png");
+    tryLoad("Mario_Small_Run1", "assets/maps/Mario Game Assets/Mario_Small_Run1.png");
+    tryLoad("Mario_Small_Run2", "assets/maps/Mario Game Assets/Mario_Small_Run2.png");
+    tryLoad("Mario_Small_Run3", "assets/maps/Mario Game Assets/Mario_Small_Run3.png");
+    tryLoad("Mario_Small_Jump", "assets/maps/Mario Game Assets/Mario_Small_Jump.png");
+    tryLoad("Mario_Small_Slide", "assets/maps/Mario Game Assets/Mario_Small_Slide.png");
+    tryLoad("Mario_Big_Idle", "assets/maps/Mario Game Assets/Mario_Big_Idle.png");
+    tryLoad("Mario_Big_Run1", "assets/maps/Mario Game Assets/Mario_Big_Run1.png");
+    tryLoad("Mario_Big_Run2", "assets/maps/Mario Game Assets/Mario_Big_Run2.png");
+    tryLoad("Mario_Big_Run3", "assets/maps/Mario Game Assets/Mario_Big_Run3.png");
+    tryLoad("Mario_Big_Jump", "assets/maps/Mario Game Assets/Mario_Big_Jump.png");
+    tryLoad("Mario_Big_Slide", "assets/maps/Mario Game Assets/Mario_Big_Slide.png");
 }
 
 bool AssetManager::loadFont(const std::string& name, const std::string& filename) {
