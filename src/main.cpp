@@ -1,13 +1,8 @@
 #include "Core/Game.h"
-#include <iostream>
 
 int main() {
-    try {
-        Game game;
-        game.run();
-    } catch (const std::exception& e) {
-        std::cerr << "Fatal Error: " << e.what() << std::endl;
-        return -1;
-    }
+    Game game;
+    game.run();
     return 0;
 }
+

@@ -2,26 +2,80 @@
 #include "Commands/JumpCommand.h"
 #include "Commands/MoveCommand.h"
 #include "Commands/FireCommand.h"
+#include "Entities/Character.h"
 #include <SFML/Window/Keyboard.hpp>
 
-InputHandler::InputHandler() {
-    buttonUp = std::make_unique<JumpCommand>();
-    buttonLeft = std::make_unique<MoveLeftCommand>();
-    buttonRight = std::make_unique<MoveRightCommand>();
-    buttonAction = std::make_unique<FireCommand>();
+namespace {
+bool isHeld(const KeyBinding& binding) {
+    const bool primaryHeld =
+        binding.primary != sf::Keyboard::Unknown &&
+        sf::Keyboard::isKeyPressed(binding.primary);
+
+    const bool secondaryHeld =
+        binding.secondary != sf::Keyboard::Unknown &&
+        sf::Keyboard::isKeyPressed(binding.secondary);
+
+    const bool tertiaryHeld =
+        binding.tertiary != sf::Keyboard::Unknown &&
+        sf::Keyboard::isKeyPressed(binding.tertiary);
+
+    return primaryHeld || secondaryHeld || tertiaryHeld;
+}
 }
 
+InputHandler::InputHandler(const InputBindings& inputBindings)
+    : jumpCommand{std::make_unique<JumpCommand>()},
+      moveLeftCommand{std::make_unique<MoveLeftCommand>()},
+      moveRightCommand{std::make_unique<MoveRightCommand>()},
+      actionCommand{std::make_unique<FireCommand>()},
+      bindings{inputBindings} {}
+
 void InputHandler::handleInput(Character& character, float dt) {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-        buttonLeft->execute(character, dt);
+    if (!character.isActive()) {
+        character.setRunning(false);
+        // Preserve the physical key history so holding action through death or
+        // respawn is not mistaken for a new press on the first active frame.
+        actionWasHeld = isHeld(bindings.action);
+        return;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-        buttonRight->execute(character, dt);
+
+    const bool moveLeftHeld = isHeld(bindings.moveLeft);
+    const bool moveRightHeld = isHeld(bindings.moveRight);
+    const bool jumpHeld = isHeld(bindings.jump);
+    const bool actionHeld = isHeld(bindings.action);
+    const bool separateRunHeld = isHeld(bindings.run);
+
+    // Movement commands must observe the current frame's running state.
+    // The action key follows classic controls: hold to run, press to act.
+    character.setRunning(actionHeld || separateRunHeld);
+
+    // Opposing horizontal inputs cancel one another.
+    if (moveLeftHeld != moveRightHeld) {
+        if (moveLeftHeld) {
+            moveLeftCommand->execute(character, dt);
+        } else {
+            moveRightCommand->execute(character, dt);
+        }
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-        buttonUp->execute(character, dt);
+
+    // Jump is evaluated every frame so holding the key produces a higher jump.
+    if (jumpHeld) {
+        jumpCommand->execute(character, dt);
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z) || sf::Keyboard::isKeyPressed(sf::Keyboard::J)) {
-        buttonAction->execute(character, dt);
+
+    // The action key fires only on a new press.
+    if (actionHeld && !actionWasHeld) {
+        actionCommand->execute(character, dt);
     }
+
+    actionWasHeld = actionHeld;
+}
+
+void InputHandler::setBindings(const InputBindings& inputBindings) {
+    bindings = inputBindings;
+    actionWasHeld = false;
+}
+
+const InputBindings& InputHandler::getBindings() const {
+    return bindings;
 }

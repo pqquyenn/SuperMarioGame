@@ -1,19 +1,34 @@
 #include "Level/Tile.h"
+#include "Level/TileType.h"
 
-Tile::Tile(TileType t, float x, float y) : type(t), position(x, y) {
-    sprite.setPosition(position);
+Tile::Tile(const TileType* type, const sf::Vector2f& position)
+    : m_type(type), m_position(position) {
 }
 
-void Tile::setTexture(const sf::Texture& texture) {
-    sprite.setTexture(texture);
-}
-
-void Tile::render(sf::RenderWindow& window) {
-    if (type != TileType::AIR) {
-        window.draw(sprite);
+void Tile::render(sf::RenderTarget& target) const {
+    if (m_type) {
+        m_type->render(target, m_position);
     }
 }
 
 sf::FloatRect Tile::getBounds() const {
-    return sprite.getGlobalBounds();
+    if (!m_type) return sf::FloatRect(m_position.x, m_position.y, 0, 0);
+    return sf::FloatRect(
+        m_position.x, 
+        m_position.y, 
+        static_cast<float>(m_type->textureRect.width), 
+        static_cast<float>(m_type->textureRect.height)
+    );
+}
+
+bool Tile::isSolid() const {
+    return m_type ? m_type->isSolid : false;
+}
+
+bool Tile::isWarpPipe() const {
+    return m_type ? m_type->isWarpPipe : false;
+}
+
+int Tile::getWarpDirection() const {
+    return m_type ? m_type->warpDirection : 0;
 }

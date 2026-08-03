@@ -2,14 +2,14 @@
 #include "Core/AssetManager.h"
 #include <iostream>
 
-SoundManager* SoundManager::instance = nullptr;
+// === Meyers' Singleton ===
 
-SoundManager* SoundManager::getInstance() {
-    if (!instance) {
-        instance = new SoundManager();
-    }
+SoundManager& SoundManager::getInstance() {
+    static SoundManager instance;
     return instance;
 }
+
+// === Background Music ===
 
 void SoundManager::playBGM(const std::string& filename, bool loop) {
     if (backgroundMusic.openFromFile(filename)) {
@@ -24,9 +24,12 @@ void SoundManager::stopBGM() {
     backgroundMusic.stop();
 }
 
+// === Sound Effects ===
+
 void SoundManager::playSound(const std::string& name) {
     try {
-        sf::SoundBuffer& buf = AssetManager::getInstance()->getSoundBuffer(name);
+        // Chu y: dung dau cham (.) thay vi mui ten (->) vi getInstance() tra ve reference
+        sf::SoundBuffer& buf = AssetManager::getInstance().getSoundBuffer(name);
         sounds[name].setBuffer(buf);
         sounds[name].play();
     } catch (const std::exception& e) {
