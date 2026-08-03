@@ -131,22 +131,24 @@ void Character::applyHorizontalDeceleration(float dt) {
 }
 
 void Character::applyGravity(float dt) {
+    float gravityMultiplier = 1.f;
+
     if (jumpHeldThisFrame &&
         velocity.y < 0.f &&
         jumpHoldTime < profile.maxJumpHoldTime) {
-        velocity.y -= profile.jumpHoldAcceleration *
-                      getJumpForceMultiplier() * dt;
-        jumpHoldTime += dt;
-    } else if (!jumpHeldThisFrame &&
-               velocity.y < 0.f &&
-               jumpHoldTime < profile.maxJumpHoldTime) {
-        // Releasing jump early shortens the jump.
-        velocity.y *= 0.5f;
-        jumpHoldTime = profile.maxJumpHoldTime;
+        gravityMultiplier = profile.jumpHoldGravityMultiplier;
+        jumpHoldTime = std::min(
+            profile.maxJumpHoldTime,
+            jumpHoldTime + dt
+        );
+    } else if (!jumpHeldThisFrame && velocity.y < 0.f) {
+        // Early release produces a shorter jump without abruptly changing
+        // the velocity that was accumulated on previous frames.
+        gravityMultiplier = profile.jumpReleaseGravityMultiplier;
     }
 
     velocity.y = std::min(
-        velocity.y + profile.gravity * dt,
+        velocity.y + profile.gravity * gravityMultiplier * dt,
         profile.maxFallSpeed
     );
 }

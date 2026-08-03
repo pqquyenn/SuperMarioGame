@@ -7,7 +7,8 @@ CharacterProfile makeMarioProfile() {
     profile.walkSpeed = 170.f;
     profile.runSpeed = 260.f;
     profile.jumpForce = 350.f;
-    profile.jumpHoldAcceleration = 850.f;
+    profile.jumpHoldGravityMultiplier = 0.45f;
+    profile.jumpReleaseGravityMultiplier = 2.5f;
     profile.maxJumpHoldTime = 0.16f;
     return profile;
 }
