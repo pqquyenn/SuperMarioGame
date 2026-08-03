@@ -54,7 +54,7 @@ void AssetManager::loadLevelAssets() {
     tryLoad("Hill1", "assets/maps/Mario Game Assets/Hill1.png");
     tryLoad("Hill2", "assets/maps/Mario Game Assets/Hill2.png");
     tryLoad("UndergroundBlock", "assets/maps/Mario Game Assets/UndergroundBlock.png");
-    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");
+    tryLoad("UndergroundBrick", "assets/maps/Mario Game Assets/UndergroundBrick.png");  
     tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.png");
     if (textures.find("SpriteIsland") == textures.end() || textures["SpriteIsland"].getSize().x == 0) {
         tryLoad("SpriteIsland", "assets/maps/Mario Game Assets/SpriteIsland.webp");
