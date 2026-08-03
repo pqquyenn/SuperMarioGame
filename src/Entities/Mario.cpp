@@ -14,4 +14,9 @@ CharacterProfile makeMarioProfile() {
 }
 
 Mario::Mario(float x, float y)
-    : Character{x, y, makeMarioProfile()} {}
+    : Character{
+          x,
+          y,
+          makeMarioProfile(),
+          makeClassicPlayerAnimationProfile(9, 25, 153)
+      } {}

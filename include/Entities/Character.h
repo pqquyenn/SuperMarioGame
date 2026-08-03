@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Animation/SpriteAnimator.h"
 #include "Entities/Entity.h"
+#include "Entities/PlayerAnimation.h"
 #include "Observer/Subject.h"
 #include <functional>
 #include <memory>
@@ -76,7 +78,12 @@ protected:
     float getJumpForceMultiplier() const;
 
     explicit Character(float x = 0.f, float y = 0.f);
-    Character(float x, float y, const CharacterProfile& characterProfile);
+    Character(
+        float x,
+        float y,
+        const CharacterProfile& characterProfile,
+        PlayerAnimationProfile playerAnimationProfile
+    );
 
 public:
     ~Character() override;
@@ -122,6 +129,8 @@ private:
     std::vector<std::unique_ptr<PlayerEffect>> activeEffects;
     std::vector<std::unique_ptr<PlayerEffect>> pendingEffects;
 
+    PlayerAnimationProfile animationProfile;
+    SpriteAnimator animator;
     sf::Vector2f collisionSize;
     std::string currentFormName{"Small"};
     std::function<void(const ProjectileRequest&)> projectileRequestHandler;
@@ -131,4 +140,6 @@ private:
 
     void changeState(std::unique_ptr<PlayerState> state);
     void insertEffect(std::unique_ptr<PlayerEffect> effect);
+    PlayerMotion choosePlayerMotion() const;
+    void updatePlayerAnimation(float dt);
 };
