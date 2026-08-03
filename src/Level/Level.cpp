@@ -5,6 +5,7 @@
 #include "Entities/Items/Item.h"
 #include <algorithm>
 #include <vector>
+#include <filesystem>
 
 Level::Level(int id) : levelId(id) {}
 Level::~Level() = default;
@@ -70,29 +71,36 @@ bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
     
     EntityFactory::getInstance().registerDefaultEntities();
 
-    const std::string basePaths[] = {
-        "",
-        "assets/maps/",
-        "assets/maps/1.1/",
-        "assets/maps/1.2/",
-        "assets/maps/1.3/",
-        "assets/maps/Mario Game Assets/",
-        "../assets/maps/",
-        "../assets/maps/1.1/",
-        "../assets/maps/1.2/",
-        "../assets/maps/1.3/",
-        "../assets/maps/Mario Game Assets/",
-        "../../assets/maps/",
-        "../",
-        "../../"
+    std::filesystem::path p(filename);
+    std::string rawFilename = p.filename().string();
+
+    const std::string candidates[] = {
+        filename,
+        "assets/maps/" + filename,
+        "../assets/maps/" + filename,
+        "../../assets/maps/" + filename,
+        "assets/maps/1.1/" + rawFilename,
+        "assets/maps/1.2/" + rawFilename,
+        "assets/maps/1.3/" + rawFilename,
+        "../assets/maps/1.1/" + rawFilename,
+        "../assets/maps/1.2/" + rawFilename,
+        "../assets/maps/1.3/" + rawFilename,
+        "../../assets/maps/1.1/" + rawFilename,
+        "../../assets/maps/1.2/" + rawFilename,
+        "../../assets/maps/1.3/" + rawFilename,
+        "../" + filename,
+        "../../" + filename
     };
 
-    for (const auto& basePath : basePaths) {
-        if (map.readFromFile(basePath + filename)) {
-            spawnEntitiesFromMap();
-            return true;
+    for (const auto& path : candidates) {
+        if (std::filesystem::exists(path)) {
+            if (map.readFromFile(path)) {
+                spawnEntitiesFromMap();
+                return true;
+            }
         }
     }
+    std::cerr << "[Level] Failed to find level map file: " << filename << std::endl;
     return false;
 }
 
