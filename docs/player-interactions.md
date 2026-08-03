@@ -16,6 +16,7 @@ The player-mechanics code currently implements:
 - Form-dependent collision-body height with feet-position preservation
 - Generic special-action and projectile-request APIs
 - Configurable input bindings
+- Profile-driven player sprite animation for current forms and motions
 - Observer events for hits, deaths, and collected power-ups
 
 The following integration remains for the responsible teammates:
