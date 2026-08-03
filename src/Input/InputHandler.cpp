@@ -33,7 +33,9 @@ InputHandler::InputHandler(const InputBindings& inputBindings)
 void InputHandler::handleInput(Character& character, float dt) {
     if (!character.isActive()) {
         character.setRunning(false);
-        actionWasHeld = false;
+        // Preserve the physical key history so holding action through death or
+        // respawn is not mistaken for a new press on the first active frame.
+        actionWasHeld = isHeld(bindings.action);
         return;
     }
 
@@ -42,6 +44,10 @@ void InputHandler::handleInput(Character& character, float dt) {
     const bool jumpHeld = isHeld(bindings.jump);
     const bool actionHeld = isHeld(bindings.action);
     const bool separateRunHeld = isHeld(bindings.run);
+
+    // Movement commands must observe the current frame's running state.
+    // The action key follows classic controls: hold to run, press to act.
+    character.setRunning(actionHeld || separateRunHeld);
 
     // Opposing horizontal inputs cancel one another.
     if (moveLeftHeld != moveRightHeld) {
@@ -57,9 +63,7 @@ void InputHandler::handleInput(Character& character, float dt) {
         jumpCommand->execute(character, dt);
     }
 
-    // The action key doubles as run while held, but fires only on a new press.
-    character.setRunning(actionHeld || separateRunHeld);
-
+    // The action key fires only on a new press.
     if (actionHeld && !actionWasHeld) {
         actionCommand->execute(character, dt);
     }

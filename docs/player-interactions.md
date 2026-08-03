@@ -206,7 +206,9 @@ interface.
 | Decide player transition and capability result | Character / PlayerState |
 | Maintain temporary modifiers | Character / PlayerEffect |
 | Apply character movement and jump physics | Character |
+| Interpret player key bindings | InputHandler / Commands |
 | Create/update/render players during gameplay | PlayState |
+| Follow the player and clamp the view to level bounds | Camera / PlayState |
 | Decrement lives, respawn, and enter Game Over | Gameplay/session system |
 | Update score, lives, and HUD | Observer/UI system |
 

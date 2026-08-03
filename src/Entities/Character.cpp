@@ -271,7 +271,6 @@ void Character::die(DeathCause cause) {
 
 void Character::respawn(float x, float y) {
     clearEffects();
-    setPosition(x, y);
     setVelocity(0.f, 0.f);
 
     grounded = false;
@@ -282,6 +281,7 @@ void Character::respawn(float x, float y) {
     setActive(true);
 
     changeState(std::make_unique<SmallState>());
+    setPosition(x, y);
 }
 
 bool Character::addEffect(std::unique_ptr<PlayerEffect> effect) {
