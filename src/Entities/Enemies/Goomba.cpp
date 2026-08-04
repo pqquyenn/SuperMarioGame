@@ -5,19 +5,30 @@ Goomba::Goomba(float x, float y) : Enemy(x, y) {
   direction = -1; // Mặc định di chuyển sang trái
 }
 
+// ============================================================
+// update – Logic Goomba mỗi frame
+//   Nếu squished: đếm timer rồi biến mất
+//   Nếu bình thường: di chuyển ngang + trọng lực (velocity-based)
+// ============================================================
 void Goomba::update(float dt) {
   if (!active)
     return;
 
   if (squished) {
+    // Khi bị dẫm: dừng lại, đếm timer rồi biến mất
+    velocity.x = 0.f;
+    velocity.y = 0.f;
     squishTimer += dt;
     if (squishTimer >= squishDuration) {
       active = false;
       isAlive = false;
     }
   } else {
-    // Di chuyển theo hướng hiện tại
-    move(direction * speed * dt, 0.f);
+    // Di chuyển ngang + trọng lực (sử dụng applyPhysics từ Enemy base)
+    // applyPhysics sẽ: set velocity.x = direction * speed,
+    //                   velocity.y += GRAVITY * dt,
+    //                   position += velocity * dt
+    applyPhysics(dt);
   }
 }
 
@@ -29,6 +40,10 @@ void Goomba::onStomped() {
   }
 }
 
+// ============================================================
+// render – Vẽ Goomba
+//   Sprite nếu có texture, fallback: hình chữ nhật nâu (bẹp khi bị dẫm)
+// ============================================================
 void Goomba::render(sf::RenderWindow &window) const {
   if (!active)
     return;
