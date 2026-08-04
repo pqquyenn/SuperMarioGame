@@ -27,6 +27,7 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) const override;
     void onCollect() override;
+    bool tryCollect(Character& character) override;
 
     // Bắt đầu animation nhô lên từ gạch
     void startEmerge();

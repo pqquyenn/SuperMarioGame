@@ -9,3 +9,8 @@ sf::FloatRect Item::getBounds() const {
 bool Item::isCollected() const {
     return collected;
 }
+
+bool Item::tryCollect(Character& character) {
+    onCollect();
+    return true;
+}

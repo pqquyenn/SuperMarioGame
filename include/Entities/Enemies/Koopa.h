@@ -2,15 +2,11 @@
 
 #include "Entities/Enemies/Enemy.h"
 
-// ============================================================
-// Koopa – Rùa 3 trạng thái: Walking → Shell → Spinning
-// Hành vi vật lý: di chuyển ngang + trọng lực (velocity-based)
-// ============================================================
 class Koopa : public Enemy {
 private:
   bool inShell = false;
   bool shellSpinning = false;
-  sf::Vector2f size{32.f, 48.f}; // Koopa cao hơn Goomba (32x48)
+  sf::Vector2f size{16.f, 32.f}; // Kích thước chuẩn 1x2 tiles (16x32 pixels)
 
 public:
   Koopa(float x = 0.f, float y = 0.f);

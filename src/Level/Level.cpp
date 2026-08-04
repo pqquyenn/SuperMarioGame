@@ -24,9 +24,9 @@ void Level::spawnEntitiesFromMap() {
 
     if (levelId == 1) {
         enemySpawns = {
-            {"Goomba", {352.f, 192.f}},
-            {"Goomba", {640.f, 192.f}},
-            {"Koopa", {1700.f, 192.f}}
+            {"Goomba", {336.f, 192.f}},
+            {"Goomba", {656.f, 192.f}},
+            {"Koopa", {1712.f, 176.f}}
         };
         itemSpawns = {
             {"Coin", {256.f, 144.f}},
