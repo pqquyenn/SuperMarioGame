@@ -164,7 +164,12 @@ void Level::update(float dt) {
 
 void Level::render(sf::RenderWindow& window) {
     bgMap.render(window, camera);
-    map.render(window, camera);
+
+    for (const auto& item : items) {
+        if (item && item->isActive()) {
+            item->render(window);
+        }
+    }
 
     for (const auto& enemy : enemies) {
         if (enemy && enemy->isActive()) {
@@ -172,11 +177,7 @@ void Level::render(sf::RenderWindow& window) {
         }
     }
 
-    for (const auto& item : items) {
-        if (item && item->isActive()) {
-            item->render(window);
-        }
-    }
+    map.render(window, camera);
 }
 
 void Level::spawnItemFromBlock(float x, float y) {
