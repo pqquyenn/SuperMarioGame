@@ -125,8 +125,19 @@ bool Level::loadMap(const std::string& mapFile) {
 }
 
 void Level::update(float dt) {
+    sf::FloatRect camBounds = camera.getViewBounds();
+    const float spawnMargin = 80.f;
+
     for (auto& enemy : enemies) {
-        if (enemy && enemy->isActive()) {
+        if (!enemy || !enemy->isActive()) continue;
+
+        if (!enemy->isActivated()) {
+            if (enemy->getPosition().x <= camBounds.left + camBounds.width + spawnMargin) {
+                enemy->setActivated(true);
+            }
+        }
+
+        if (enemy->isActivated()) {
             enemy->update(dt);
             CollisionManager::resolveTileCollisions(*enemy, map);
         }
@@ -164,7 +175,12 @@ void Level::update(float dt) {
 
 void Level::render(sf::RenderWindow& window) {
     bgMap.render(window, camera);
-    map.render(window, camera);
+
+    for (const auto& item : items) {
+        if (item && item->isActive()) {
+            item->render(window);
+        }
+    }
 
     for (const auto& enemy : enemies) {
         if (enemy && enemy->isActive()) {
@@ -172,11 +188,7 @@ void Level::render(sf::RenderWindow& window) {
         }
     }
 
-    for (const auto& item : items) {
-        if (item && item->isActive()) {
-            item->render(window);
-        }
-    }
+    map.render(window, camera);
 }
 
 void Level::spawnItemFromBlock(float x, float y) {
@@ -185,7 +197,8 @@ void Level::spawnItemFromBlock(float x, float y) {
         itemType = "Mushroom";
     }
 
-    if (auto entity = EntityFactory::getInstance().create(itemType, {x, y - 16.f})) {
+    sf::Vector2f spawnPos = (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
+    if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
         if (itemType == "Coin") {
             if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
                 entity.release();

@@ -48,3 +48,7 @@ void Enemy::setSpeed(float spd) { speed = spd; }
 bool Enemy::isSquished() const { return squished; }
 
 bool Enemy::isEnemyAlive() const { return isAlive; }
+
+bool Enemy::isActivated() const { return activated; }
+
+void Enemy::setActivated(bool act) { activated = act; }

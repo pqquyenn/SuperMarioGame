@@ -17,6 +17,7 @@ protected:
   int direction{-1}; // -1: Left, 1: Right
   bool isAlive{true};
   bool squished{false};
+  bool activated{false};
 
   // ---- Vật lý trọng lực ----
   static constexpr float GRAVITY = 980.f;          // Gia tốc trọng lực (px/s²)
@@ -43,4 +44,7 @@ public:
 
   bool isSquished() const;
   bool isEnemyAlive() const;
+
+  bool isActivated() const;
+  void setActivated(bool act);
 };
