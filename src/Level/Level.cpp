@@ -24,9 +24,9 @@ void Level::spawnEntitiesFromMap() {
 
     if (levelId == 1) {
         enemySpawns = {
-            {"Goomba", {352.f, 192.f}},
-            {"Goomba", {640.f, 192.f}},
-            {"Koopa", {1700.f, 192.f}}
+            {"Goomba", {336.f, 192.f}},
+            {"Goomba", {656.f, 192.f}},
+            {"Koopa", {1712.f, 176.f}}
         };
         itemSpawns = {
             {"Coin", {256.f, 144.f}},
@@ -50,6 +50,7 @@ void Level::spawnEntitiesFromMap() {
             if (auto* enemy = dynamic_cast<Enemy*>(entity.get())) {
                 entity.release();
                 enemies.push_back(std::unique_ptr<Enemy>(enemy));
+                std::cout << "[Level] Spawned Enemy: " << data.type << " at (" << data.position.x << ", " << data.position.y << ")" << std::endl;
             }
         }
     }
@@ -59,6 +60,7 @@ void Level::spawnEntitiesFromMap() {
             if (auto* item = dynamic_cast<Item*>(entity.get())) {
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(item));
+                std::cout << "[Level] Spawned Item: " << data.type << " at (" << data.position.x << ", " << data.position.y << ")" << std::endl;
             }
         }
     }
