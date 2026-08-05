@@ -50,6 +50,7 @@ void Level::spawnEntitiesFromMap() {
             if (auto* enemy = dynamic_cast<Enemy*>(entity.get())) {
                 entity.release();
                 enemies.push_back(std::unique_ptr<Enemy>(enemy));
+                std::cout << "[Level] Spawned Enemy: " << data.type << " at (" << data.position.x << ", " << data.position.y << ")" << std::endl;
             }
         }
     }
@@ -59,6 +60,7 @@ void Level::spawnEntitiesFromMap() {
             if (auto* item = dynamic_cast<Item*>(entity.get())) {
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(item));
+                std::cout << "[Level] Spawned Item: " << data.type << " at (" << data.position.x << ", " << data.position.y << ")" << std::endl;
             }
         }
     }
