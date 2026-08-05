@@ -30,10 +30,6 @@ void Level::spawnEntitiesFromMap() {
             {"Goomba", {656.f, 192.f}},
             {"Koopa", {1712.f, 176.f}}
         };
-        itemSpawns = {
-            {"Coin", {256.f, 144.f}},
-            {"Mushroom", {336.f, 144.f}}
-        };
     } else if (levelId == 2) {
         enemySpawns = {
             {"Goomba", {200.f, 200.f}}
