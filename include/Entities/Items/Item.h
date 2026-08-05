@@ -24,5 +24,7 @@ public:
     // Collision box dựa trên size
     sf::FloatRect getBounds() const override;
 
+    void onCollision(Entity& other, const sf::FloatRect& overlap) override;
+
     bool isCollected() const;
 };

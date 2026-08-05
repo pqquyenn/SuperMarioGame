@@ -188,7 +188,6 @@ void Level::spawnItemFromBlock(float x, float y) {
     if (auto entity = EntityFactory::getInstance().create(itemType, {x, y - 16.f})) {
         if (itemType == "Coin") {
             if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
-                coin->startPop();
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(coin));
             }
@@ -207,17 +206,17 @@ void Level::spawnItemFromBlock(float x, float y) {
 void Level::warpToUnderground(Mario* mario) {
     std::cout << "[Level] Teleporting to hidden underground map area..." << std::endl;
     if (mario) {
-        mario->setPosition(3376.f, 32.f);
+        mario->setPosition(3416.f, 32.f);
         mario->setVelocity(sf::Vector2f(0.f, 0.f));
     }
-    camera.setCenter(3376.f, 120.f);
+    camera.setCenter(3416.f, 120.f);
 }
 
 void Level::warpToOverworldExit(Mario* mario) {
-    std::cout << "[Level] Teleporting back to Overworld (pipe next to last pipe)..." << std::endl;
+    std::cout << "[Level] Teleporting back to Overworld (5th pipe)..." << std::endl;
     if (mario) {
-        mario->setPosition(2864.f, 160.f);
+        mario->setPosition(2608.f, 160.f);
         mario->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
     }
-    camera.setCenter(2864.f, 120.f);
+    camera.setCenter(2608.f, 120.f);
 }

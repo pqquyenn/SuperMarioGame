@@ -175,10 +175,10 @@ bool TileMap::readFromFile(const std::string& filepath) {
                             row.push_back(nullptr);
                         } else {
                             float yOff = m_tileOffset.y;
-                            if (token[0] == 'H' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
+                            if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
                                 yOff -= 4.f;
                             }
-                            if (token[0] == 'h') yOff += 4.f;           // Hill1 moves down 4.f
+                            if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
                             
                             row.push_back(std::make_unique<Tile>(
                                 it->second.get(),

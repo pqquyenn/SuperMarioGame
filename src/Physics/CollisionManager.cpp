@@ -94,6 +94,18 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
 
                 if (enemy) {
                     enemy->reverseDirection();
+                } else if (Mushroom* shroom = dynamic_cast<Mushroom*>(&entity)) {
+                    shroom->reverseDirection();
+                }
+
+                // Check horizontal pipe warp (Exit from underground)
+                if (mario && tile->isWarpPipe() && level && pos.x >= 3400.f) {
+                    bool rightPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
+                                        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
+                    if (rightPressed) {
+                        level->warpToOverworldExit(mario);
+                        return;
+                    }
                 }
 
                 entity.setPosition(pos);
@@ -159,14 +171,7 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
             if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
                 if (tile->isCoinTile()) {
                     map.removeTile(tile);
-                    if (level) {
-                        level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
-                    }
-                }
-                // Check exit pipe warp in underground map area
-                else if (level && tile->isWarpPipe() && pos.x >= 3400.f) {
-                    level->warpToOverworldExit(mario);
-                    return;
+                    mario->notify(GameEvent{GameEventType::COIN_COLLECTED, 200});
                 }
             }
         }
