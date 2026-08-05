@@ -2,12 +2,31 @@
 
 #include "Entities/Entity.h"
 
+// ============================================================
+// Enemy – Lớp cơ sở cho tất cả kẻ địch trong game
+// Kế thừa từ Entity. Cung cấp:
+//   - speed, direction: di chuyển ngang
+//   - GRAVITY, TERMINAL_VELOCITY: vật lý trọng lực
+//   - applyGravity(dt), applyPhysics(dt): helper cập nhật vật lý
+//   - isAlive, squished: trạng thái sống/chết
+// Subclass: Goomba, Koopa, PiranhaPlant
+// ============================================================
 class Enemy : public Entity {
 protected:
   float speed{50.f};
   int direction{-1}; // -1: Left, 1: Right
   bool isAlive{true};
   bool squished{false};
+
+  // ---- Vật lý trọng lực ----
+  static constexpr float GRAVITY = 980.f;          // Gia tốc trọng lực (px/s²)
+  static constexpr float TERMINAL_VELOCITY = 500.f; // Vận tốc rơi tối đa (px/s)
+
+  // Helper: áp dụng trọng lực lên velocity.y
+  void applyGravity(float dt);
+
+  // Helper: set velocity.x từ direction * speed, áp gravity, tích phân vị trí
+  void applyPhysics(float dt);
 
 public:
   Enemy(float x = 0.f, float y = 0.f);

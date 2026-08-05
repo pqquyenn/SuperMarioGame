@@ -93,11 +93,23 @@ void Mushroom::render(sf::RenderWindow& window) const {
 // ============================================================
 // onCollect – Gọi khi Mario chạm vào nấm
 // ============================================================
+#include "Entities/Character.h"
+#include "PlayerStates/SuperState.h"
+
 void Mushroom::onCollect() {
     if (!collected) {
         collected = true;
         active = false;
     }
+}
+
+bool Mushroom::tryCollect(Character& character) {
+    if (!active || collected) return false;
+    if (character.receivePowerUp(std::make_unique<SuperState>())) {
+        onCollect();
+        return true;
+    }
+    return false;
 }
 
 void Mushroom::startEmerge() {

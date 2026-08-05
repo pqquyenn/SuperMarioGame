@@ -10,14 +10,15 @@ void Goomba::update(float dt) {
     return;
 
   if (squished) {
+    velocity.x = 0.f;
+    velocity.y = 0.f;
     squishTimer += dt;
     if (squishTimer >= squishDuration) {
       active = false;
       isAlive = false;
     }
   } else {
-    // Di chuyển theo hướng hiện tại
-    move(direction * speed * dt, 0.f);
+    applyPhysics(dt);
   }
 }
 
@@ -33,15 +34,18 @@ void Goomba::render(sf::RenderWindow &window) const {
   if (!active)
     return;
 
-  // Nếu đã gán texture cho sprite thì vẽ sprite
-  if (sprite.getTexture() != nullptr) {
-    window.draw(sprite);
-  } else {
-    // Fallback: Vẽ hình chữ nhật màu nâu đại diện cho Goomba (Bẹp xuống khi bị
-    // dẫm)
-    float currentHeight = squished ? 10.f : size.y;
-    float yOffset = squished ? (size.y - currentHeight) : 0.f;
+  float currentHeight = squished ? 8.f : size.y;
+  float yOffset = squished ? (size.y - currentHeight) : 0.f;
 
+  if (sprite.getTexture() != nullptr) {
+    sf::Sprite drawSprite = sprite;
+    drawSprite.setPosition(position.x, position.y + yOffset);
+    sf::Vector2u texSize = sprite.getTexture()->getSize();
+    if (texSize.x > 0 && texSize.y > 0) {
+      drawSprite.setScale(size.x / static_cast<float>(texSize.x), currentHeight / static_cast<float>(texSize.y));
+    }
+    window.draw(drawSprite);
+  } else {
     sf::RectangleShape shape(sf::Vector2f(size.x, currentHeight));
     shape.setPosition(position.x, position.y + yOffset);
     shape.setFillColor(squished ? sf::Color(139, 69, 19)
@@ -56,7 +60,7 @@ void Goomba::render(sf::RenderWindow &window) const {
 float Goomba::getSquishTimer() const { return squishTimer; }
 
 sf::FloatRect Goomba::getBounds() const {
-  float currentHeight = squished ? 10.f : size.y;
+  float currentHeight = squished ? 8.f : size.y;
   float yOffset = squished ? (size.y - currentHeight) : 0.f;
   return sf::FloatRect(position.x, position.y + yOffset, size.x, currentHeight);
 }
