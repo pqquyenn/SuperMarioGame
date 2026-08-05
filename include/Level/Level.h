@@ -30,6 +30,9 @@ public:
     bool loadMap(const std::string& mapFile);
     void update(float dt);
     void render(sf::RenderWindow& window);
+    void spawnPoppingCoin(float x, float y);
+    void warpToUnderground(class Mario* mario = nullptr);
+    void warpToOverworldExit(class Mario* mario = nullptr);
 
     TileMap& getTileMap() { return map; }
     Camera& getCamera() { return camera; }

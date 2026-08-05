@@ -5,21 +5,21 @@
 #include <memory>
 
 struct KeyBinding {
-    sf::Keyboard::Key primary{sf::Keyboard::Unknown};
-    sf::Keyboard::Key secondary{sf::Keyboard::Unknown};
-    sf::Keyboard::Key tertiary{sf::Keyboard::Unknown};
+    sf::Keyboard::Key primary{sf::Keyboard::Key::Unknown};
+    sf::Keyboard::Key secondary{sf::Keyboard::Key::Unknown};
+    sf::Keyboard::Key tertiary{sf::Keyboard::Key::Unknown};
 };
 
 struct InputBindings {
-    KeyBinding moveLeft{sf::Keyboard::Left, sf::Keyboard::A};
-    KeyBinding moveRight{sf::Keyboard::Right, sf::Keyboard::D};
+    KeyBinding moveLeft{sf::Keyboard::Key::Left, sf::Keyboard::Key::A};
+    KeyBinding moveRight{sf::Keyboard::Key::Right, sf::Keyboard::Key::D};
     KeyBinding jump{
-        sf::Keyboard::Space,
-        sf::Keyboard::W,
-        sf::Keyboard::Up
+        sf::Keyboard::Key::Space,
+        sf::Keyboard::Key::W,
+        sf::Keyboard::Key::Up
     };
-    KeyBinding action{sf::Keyboard::Z, sf::Keyboard::J};
-    KeyBinding run{sf::Keyboard::LShift, sf::Keyboard::RShift};
+    KeyBinding action{sf::Keyboard::Key::Z, sf::Keyboard::Key::J};
+    KeyBinding run{sf::Keyboard::Key::LShift, sf::Keyboard::Key::RShift};
 };
 
 class InputHandler {

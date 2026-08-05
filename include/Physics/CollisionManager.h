@@ -4,6 +4,7 @@
 // Forward Declarations
 class Entity;
 class TileMap;
+class Level;
 
 /**
  * @brief Handles AABB collision detection and polymorphic resolution.
@@ -27,7 +28,7 @@ public:
      * @param entity The entity moving through the map
      * @param map The static level geometry
      */
-    static void resolveTileCollisions(Entity& entity, const TileMap& map);
+    static void resolveTileCollisions(Entity& entity, TileMap& map, Level* level = nullptr);
     
     /**
      * @brief Resolves collisions between two dynamic entities

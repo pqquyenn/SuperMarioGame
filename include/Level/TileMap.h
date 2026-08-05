@@ -30,6 +30,8 @@ public:
     std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
+    void hitTile(Tile* tile);
+    void removeTile(Tile* tile);
     
     int getWidth() const {
         int maxW = 0;

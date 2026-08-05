@@ -3,6 +3,8 @@
 #include "Factories/EntityFactory.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Item.h"
+#include "Entities/Items/Coin.h"
+#include "Entities/Mario.h"
 #include <algorithm>
 #include <vector>
 #include <filesystem>
@@ -24,9 +26,9 @@ void Level::spawnEntitiesFromMap() {
 
     if (levelId == 1) {
         enemySpawns = {
-            {"Goomba", {352.f, 192.f}},
-            {"Goomba", {640.f, 192.f}},
-            {"Koopa", {1700.f, 192.f}}
+            {"Goomba", {352.f, 176.f}},
+            {"Goomba", {640.f, 176.f}},
+            {"Koopa", {1700.f, 176.f}}
         };
         itemSpawns = {
             {"Coin", {256.f, 144.f}},
@@ -160,5 +162,37 @@ void Level::render(sf::RenderWindow& window) {
         if (item && item->isActive()) {
             item->render(window);
         }
+    }
+}
+
+void Level::spawnPoppingCoin(float x, float y) {
+    if (auto entity = EntityFactory::getInstance().create("Coin", {x, y - 16.f})) {
+        if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
+            coin->startPop();
+            entity.release();
+            items.push_back(std::unique_ptr<Item>(coin));
+        }
+    }
+}
+
+void Level::warpToUnderground(Mario* mario) {
+    std::cout << "[Level] Warping down into Underground map..." << std::endl;
+    if (loadHiddenMap("underground.txt")) {
+        if (mario) {
+            mario->setPosition(32.f, 32.f);
+        }
+        camera.setCenter(160.f, 120.f);
+        map.setNeedsRedraw(true);
+    }
+}
+
+void Level::warpToOverworldExit(Mario* mario) {
+    std::cout << "[Level] Warping back to Overworld (pipe next to last pipe)..." << std::endl;
+    if (loadLevel("1.1/1-1.txt")) {
+        if (mario) {
+            mario->setPosition(2600.f, 160.f);
+        }
+        camera.setCenter(2600.f, 120.f);
+        map.setNeedsRedraw(true);
     }
 }
