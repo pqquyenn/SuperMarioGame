@@ -74,48 +74,7 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
     Enemy* enemy = dynamic_cast<Enemy*>(&entity);
 
     // ──────────────────────────────────────────────────────────────
-    // PASS 1 — X-axis resolution
-    // ──────────────────────────────────────────────────────────────
-    for (const Tile* tile : nearbyTiles) {
-        if (!tile || !tile->isSolid()) {
-            continue;
-        }
-
-        const sf::FloatRect tileBounds = tile->getBounds();
-
-        if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
-            if (overlap.width < overlap.height) {
-                if (bounds.left < tileBounds.left) {
-                    pos.x -= overlap.width;   // Entity is to the left of the tile
-                } else {
-                    pos.x += overlap.width;   // Entity is to the right of the tile
-                }
-                vel.x = 0.f;  // Kill horizontal momentum on wall contact
-
-                if (enemy) {
-                    enemy->reverseDirection();
-                } else if (Mushroom* shroom = dynamic_cast<Mushroom*>(&entity)) {
-                    shroom->reverseDirection();
-                }
-
-                // Check horizontal pipe warp (Exit from underground)
-                if (mario && tile->isWarpPipe() && level && pos.x >= 3400.f) {
-                    bool rightPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
-                                        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
-                    if (rightPressed) {
-                        level->warpToOverworldExit(mario);
-                        return;
-                    }
-                }
-
-                entity.setPosition(pos);
-                bounds = entity.getBounds();
-            }
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // PASS 2 — Y-axis resolution
+    // PASS 1 — Y-axis resolution (Ground & Ceiling landing)
     // ──────────────────────────────────────────────────────────────
     for (const Tile* tile : nearbyTiles) {
         if (!tile || !tile->isSolid()) {
@@ -154,6 +113,47 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
                     }
                 }
                 vel.y = 0.f;
+
+                entity.setPosition(pos);
+                bounds = entity.getBounds();
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // PASS 2 — X-axis resolution (Wall contact & Direction reversal)
+    // ──────────────────────────────────────────────────────────────
+    for (const Tile* tile : nearbyTiles) {
+        if (!tile || !tile->isSolid()) {
+            continue;
+        }
+
+        const sf::FloatRect tileBounds = tile->getBounds();
+
+        if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
+            if (overlap.width < overlap.height) {
+                if (bounds.left < tileBounds.left) {
+                    pos.x -= overlap.width;   // Entity is to the left of the tile
+                } else {
+                    pos.x += overlap.width;   // Entity is to the right of the tile
+                }
+                vel.x = 0.f;  // Kill horizontal momentum on wall contact
+
+                if (enemy) {
+                    enemy->reverseDirection();
+                } else if (Mushroom* shroom = dynamic_cast<Mushroom*>(&entity)) {
+                    shroom->reverseDirection();
+                }
+
+                // Check horizontal pipe warp (Exit from underground)
+                if (mario && tile->isWarpPipe() && level && pos.x >= 3400.f) {
+                    bool rightPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
+                                        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
+                    if (rightPressed) {
+                        level->warpToOverworldExit(mario);
+                        return;
+                    }
+                }
 
                 entity.setPosition(pos);
                 bounds = entity.getBounds();
