@@ -220,10 +220,10 @@ void Level::spawnItemFromBlock(float x, float y) {
 void Level::warpToUnderground(Mario* mario) {
     std::cout << "[Level] Teleporting to hidden underground map area..." << std::endl;
     if (mario) {
-        mario->setPosition(3416.f, 32.f);
+        mario->setPosition(3736.f, 32.f);
         mario->setVelocity(sf::Vector2f(0.f, 0.f));
     }
-    camera.setCenter(3416.f, 120.f);
+    camera.setCenter(3736.f, 120.f);
 }
 
 void Level::warpToOverworldExit(Mario* mario) {
