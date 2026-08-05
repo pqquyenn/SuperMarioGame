@@ -8,6 +8,7 @@
 #include "Level/Tile.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
+#include "PlayerStates/PlayerState.h"
 #include "Level/Tile.h"
 #include <algorithm>
 #include <cmath>
@@ -84,7 +85,8 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
         const sf::FloatRect tileBounds = tile->getBounds();
 
         if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
-            if (overlap.height <= overlap.width) {
+            bool isCeilingHit = (bounds.top > tileBounds.top && vel.y < 0.f);
+            if (overlap.height <= overlap.width || isCeilingHit) {
                 if (bounds.top < tileBounds.top) {
                     pos.y -= overlap.height;  // Landed on top of the tile (ground)
 
@@ -104,11 +106,17 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
                 } else {
                     pos.y += overlap.height;  // Hit the underside (ceiling)
 
-                    // Question block bump logic
-                    if (mario && tile->isQuestionBlock()) {
-                        map.hitTile(const_cast<Tile*>(tile));
-                        if (level) {
-                            level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
+                    // Block hit logic (Question block bump & Brick break)
+                    if (mario) {
+                        if (tile->isQuestionBlock()) {
+                            map.hitTile(const_cast<Tile*>(tile));
+                            if (level) {
+                                level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
+                            }
+                        } else if (tile->isBrick()) {
+                            if (mario->hasAbility(PlayerAbility::BreakBricks)) {
+                                map.removeTile(const_cast<Tile*>(tile));
+                            }
                         }
                     }
                 }

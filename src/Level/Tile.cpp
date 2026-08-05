@@ -36,3 +36,7 @@ bool Tile::isQuestionBlock() const {
 bool Tile::isCoinTile() const {
     return m_type ? m_type->isCoinTile : false;
 }
+
+bool Tile::isBrick() const {
+    return m_type ? m_type->isBrick : false;
+}

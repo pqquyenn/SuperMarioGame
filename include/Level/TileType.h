@@ -10,6 +10,7 @@ struct TileType {
     int warpDirection = 0;
     bool isQuestionBlock = false;
     bool isCoinTile = false;
+    bool isBrick = false;
     
     void render(sf::RenderTarget& target, const sf::Vector2f& position) const {
         if (!texture) return;

@@ -37,6 +37,7 @@ void TileMap::initFlyweights() {
     // 3. Destructible Brick Block ('S')
     const sf::Texture* brickTex = &assets.getTexture("Brick");
     add("S", brickTex, 0, 0, 16, 16, true);
+    m_tileRegistry["S"]->isBrick = true;
 
     // 4. Question Block ('?', 'Q') and Empty Block ('E')
     const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
@@ -84,6 +85,7 @@ void TileMap::initFlyweights() {
 
     add("u", ugBlockTex, 0, 0, 16, 16, true);
     add("r", ugBrickTex, 0, 0, 16, 16, true);
+    m_tileRegistry["r"]->isBrick = true;
     add("c", ugCoinTex, 0, 0, 16, 16, false);
     m_tileRegistry["c"]->isCoinTile = true;
     

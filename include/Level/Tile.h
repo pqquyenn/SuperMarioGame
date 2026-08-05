@@ -12,6 +12,7 @@ public:
     int getWarpDirection() const;
     bool isQuestionBlock() const;
     bool isCoinTile() const;
+    bool isBrick() const;
     void setType(const TileType* type) { m_type = type; }
     const TileType* getType() const { return m_type; }
 
