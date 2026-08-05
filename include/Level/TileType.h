@@ -8,6 +8,8 @@ struct TileType {
     bool isSolid = false;
     bool isWarpPipe = false;
     int warpDirection = 0;
+    bool isQuestionBlock = false;
+    bool isCoinTile = false;
     
     void render(sf::RenderTarget& target, const sf::Vector2f& position) const {
         if (!texture) return;
