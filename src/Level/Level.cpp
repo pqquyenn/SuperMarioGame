@@ -125,8 +125,19 @@ bool Level::loadMap(const std::string& mapFile) {
 }
 
 void Level::update(float dt) {
+    sf::FloatRect camBounds = camera.getViewBounds();
+    const float spawnMargin = 80.f;
+
     for (auto& enemy : enemies) {
-        if (enemy && enemy->isActive()) {
+        if (!enemy || !enemy->isActive()) continue;
+
+        if (!enemy->isActivated()) {
+            if (enemy->getPosition().x <= camBounds.left + camBounds.width + spawnMargin) {
+                enemy->setActivated(true);
+            }
+        }
+
+        if (enemy->isActivated()) {
             enemy->update(dt);
             CollisionManager::resolveTileCollisions(*enemy, map);
         }
