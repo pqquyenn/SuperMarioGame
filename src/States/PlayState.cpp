@@ -71,7 +71,7 @@ void PlayState::update(float dt) {
         mario->update(dt);
 
         // 3. Xử lý va chạm Mario với địa hình gạch / đất
-        CollisionManager::resolveTileCollisions(*mario, level.getTileMap());
+        CollisionManager::resolveTileCollisions(*mario, level.getTileMap(), &level);
 
         // 4. Xử lý va chạm Mario với Quái (Enemies)
         for (auto& enemy : level.getEnemies()) {

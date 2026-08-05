@@ -4,6 +4,7 @@
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Coin.h"
+#include "Entities/Items/Mushroom.h"
 #include "Entities/Mario.h"
 #include <algorithm>
 #include <vector>
@@ -95,6 +96,10 @@ bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
     for (const auto& path : candidates) {
         if (std::filesystem::exists(path)) {
             if (map.readFromFile(path)) {
+                std::filesystem::path bgPath = std::filesystem::path(path).parent_path() / "background.txt";
+                if (std::filesystem::exists(bgPath)) {
+                    bgMap.readFromFile(bgPath.string());
+                }
                 spawnEntitiesFromMap();
                 return true;
             }
@@ -130,7 +135,17 @@ void Level::update(float dt) {
     for (auto& item : items) {
         if (item && item->isActive()) {
             item->update(dt);
-            CollisionManager::resolveTileCollisions(*item, map);
+            
+            bool isEthereal = false;
+            if (auto* coin = dynamic_cast<Coin*>(item.get())) {
+                if (coin->isPopping()) isEthereal = true;
+            } else if (auto* shroom = dynamic_cast<Mushroom*>(item.get())) {
+                if (shroom->isEmerging()) isEthereal = true;
+            }
+            
+            if (!isEthereal) {
+                CollisionManager::resolveTileCollisions(*item, map);
+            }
         }
     }
 
@@ -148,6 +163,7 @@ void Level::update(float dt) {
 }
 
 void Level::render(sf::RenderWindow& window) {
+    bgMap.render(window, camera);
     map.render(window, camera);
 
     for (const auto& enemy : enemies) {
@@ -163,34 +179,45 @@ void Level::render(sf::RenderWindow& window) {
     }
 }
 
-void Level::spawnPoppingCoin(float x, float y) {
-    if (auto entity = EntityFactory::getInstance().create("Coin", {x, y - 16.f})) {
-        if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
-            coin->startPop();
-            entity.release();
-            items.push_back(std::unique_ptr<Item>(coin));
+void Level::spawnItemFromBlock(float x, float y) {
+    std::string itemType = "Coin";
+    if (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f || std::abs(x - 1744.f) < 1.f) {
+        itemType = "Mushroom";
+    }
+
+    if (auto entity = EntityFactory::getInstance().create(itemType, {x, y - 16.f})) {
+        if (itemType == "Coin") {
+            if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
+                coin->startPop();
+                entity.release();
+                items.push_back(std::unique_ptr<Item>(coin));
+            }
+        } else {
+            if (auto* item = dynamic_cast<Item*>(entity.get())) {
+                if (auto* shroom = dynamic_cast<Mushroom*>(item)) {
+                    shroom->startEmerge();
+                }
+                entity.release();
+                items.push_back(std::unique_ptr<Item>(item));
+            }
         }
     }
 }
 
 void Level::warpToUnderground(Mario* mario) {
-    std::cout << "[Level] Warping down into Underground map..." << std::endl;
-    if (loadHiddenMap("underground.txt")) {
-        if (mario) {
-            mario->setPosition(32.f, 32.f);
-        }
-        camera.setCenter(160.f, 120.f);
-        map.setNeedsRedraw(true);
+    std::cout << "[Level] Teleporting to hidden underground map area..." << std::endl;
+    if (mario) {
+        mario->setPosition(3376.f, 32.f);
+        mario->setVelocity(sf::Vector2f(0.f, 0.f));
     }
+    camera.setCenter(3376.f, 120.f);
 }
 
 void Level::warpToOverworldExit(Mario* mario) {
-    std::cout << "[Level] Warping back to Overworld (pipe next to last pipe)..." << std::endl;
-    if (loadLevel("1.1/1-1.txt")) {
-        if (mario) {
-            mario->setPosition(2600.f, 160.f);
-        }
-        camera.setCenter(2600.f, 120.f);
-        map.setNeedsRedraw(true);
+    std::cout << "[Level] Teleporting back to Overworld (pipe next to last pipe)..." << std::endl;
+    if (mario) {
+        mario->setPosition(2864.f, 160.f);
+        mario->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
     }
+    camera.setCenter(2864.f, 120.f);
 }
