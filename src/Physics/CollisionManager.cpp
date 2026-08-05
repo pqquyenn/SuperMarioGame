@@ -146,7 +146,7 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
                 }
 
                 // Check horizontal pipe warp (Exit from underground)
-                if (mario && tile->isWarpPipe() && level && pos.x >= 3400.f) {
+                if (mario && tile->isWarpPipe() && level && pos.x >= 3720.f) {
                     bool rightPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
                                         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
                     if (rightPressed) {
