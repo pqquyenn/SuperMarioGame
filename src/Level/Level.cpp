@@ -185,7 +185,8 @@ void Level::spawnItemFromBlock(float x, float y) {
         itemType = "Mushroom";
     }
 
-    if (auto entity = EntityFactory::getInstance().create(itemType, {x, y - 16.f})) {
+    sf::Vector2f spawnPos = (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
+    if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
         if (itemType == "Coin") {
             if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
                 entity.release();
