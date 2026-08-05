@@ -189,6 +189,7 @@ void Level::spawnItemFromBlock(float x, float y) {
         if (itemType == "Coin") {
             if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
                 entity.release();
+                coin->startPop();
                 items.push_back(std::unique_ptr<Item>(coin));
             }
         } else {
