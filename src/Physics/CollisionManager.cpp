@@ -6,6 +6,9 @@
 #include "Level/Level.h"
 #include "Level/TileMap.h"
 #include "Level/Tile.h"
+#include "Entities/Items/Coin.h"
+#include "Entities/Items/Mushroom.h"
+#include "Level/Tile.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -40,6 +43,9 @@ void CollisionManager::resolveEntityCollisions(Entity& a, Entity& b) {
             return;
         } else {
             mario->takeDamage();
+            if (!mario->isActive()) {
+                mario->respawn(40.f, 160.f);
+            }
             return;
         }
     }
@@ -50,6 +56,13 @@ void CollisionManager::resolveEntityCollisions(Entity& a, Entity& b) {
 }
 
 void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level* level) {
+    if (Coin* coin = dynamic_cast<Coin*>(&entity)) {
+        if (coin->isPopping()) return;
+    }
+    if (Mushroom* shroom = dynamic_cast<Mushroom*>(&entity)) {
+        if (shroom->isEmerging()) return;
+    }
+
     sf::FloatRect bounds = entity.getBounds();
 
     // Retrieve only tiles physically near the entity to minimize comparisons
@@ -124,7 +137,7 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
                     if (mario && tile->isQuestionBlock()) {
                         map.hitTile(const_cast<Tile*>(tile));
                         if (level) {
-                            level->spawnPoppingCoin(tileBounds.left, tileBounds.top);
+                            level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
                         }
                     }
                 }
@@ -147,11 +160,11 @@ void CollisionManager::resolveTileCollisions(Entity& entity, TileMap& map, Level
                 if (tile->isCoinTile()) {
                     map.removeTile(tile);
                     if (level) {
-                        level->spawnPoppingCoin(tileBounds.left, tileBounds.top);
+                        level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
                     }
                 }
-                // Check exit pipe warp in underground map
-                else if (level && level->getIsUnderground() && tile->isWarpPipe() && pos.x >= 250.f) {
+                // Check exit pipe warp in underground map area
+                else if (level && tile->isWarpPipe() && pos.x >= 3400.f) {
                     level->warpToOverworldExit(mario);
                     return;
                 }
