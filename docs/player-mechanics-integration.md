@@ -226,6 +226,11 @@ PlayerState already updates:
 - Collision-body height
 - Player feet position when growing or shrinking
 
+Character now also selects and advances Idle, Running, Jumping, Sliding, and
+Dead sprite clips through the reusable `SpriteAnimator` component. The current
+frame rectangles match `PlayerSpriteSheet.png` and change automatically during
+`Character::update(dt)`.
+
 The asset/animation integration can query:
 
 ```cpp
@@ -235,12 +240,15 @@ character.getCurrentFormName();
 Entity provides:
 
 ```cpp
-character.setTexture(texture, true);
+character.setTexture(texture);
 character.setTextureRect(frame);
 ```
 
 Use separate Small, Super, and Fire animation frames. Do not vertically stretch
 the Small sprite to simulate Super form.
+
+See `docs/player-animation-integration.md` for the exact atlas rows, frame
+coordinates, and the Luigi opaque-background warning.
 
 ## Input Bindings
 

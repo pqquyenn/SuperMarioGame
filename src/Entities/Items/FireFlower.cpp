@@ -94,11 +94,23 @@ void FireFlower::render(sf::RenderWindow& window) const {
 // ============================================================
 // onCollect – Mario ăn hoa lửa
 // ============================================================
+#include "Entities/Character.h"
+#include "PlayerStates/FireState.h"
+
 void FireFlower::onCollect() {
     if (!collected) {
         collected = true;
         active = false;
     }
+}
+
+bool FireFlower::tryCollect(Character& character) {
+    if (!active || collected) return false;
+    if (character.receivePowerUp(std::make_unique<FireState>())) {
+        onCollect();
+        return true;
+    }
+    return false;
 }
 
 void FireFlower::startEmerge() {

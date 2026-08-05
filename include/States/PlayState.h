@@ -3,10 +3,15 @@
 #include "States/GameState.h"
 #include "States/GameStateManager.h"
 #include "Level/Level.h"
+#include "Entities/Mario.h"
+#include "Input/InputHandler.h"
+#include <memory>
 
 class PlayState : public GameState {
 private:
     Level level;
+    std::unique_ptr<Mario> mario;
+    InputHandler inputHandler;
 
 public:
     PlayState() = default;
@@ -16,5 +21,8 @@ public:
     void handleInput(sf::Event& event, sf::RenderWindow& window) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
+
+    Mario* getMario() { return mario.get(); }
+    const Mario* getMario() const { return mario.get(); }
 };
 

@@ -14,4 +14,9 @@ CharacterProfile makeLuigiProfile() {
 }
 
 Luigi::Luigi(float x, float y)
-    : Character{x, y, makeLuigiProfile()} {}
+    : Character{
+          x,
+          y,
+          makeLuigiProfile(),
+          makeClassicPlayerAnimationProfile(73, 89, 153)
+      } {}

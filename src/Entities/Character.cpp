@@ -6,18 +6,26 @@
 #include "PlayerStates/SuperState.h"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 Character::Character(float x, float y)
-    : Character{x, y, CharacterProfile{}} {}
+    : Character{
+          x,
+          y,
+          CharacterProfile{},
+          makeClassicPlayerAnimationProfile(9, 25, 153)
+      } {}
 
 Character::Character(
     float x,
     float y,
-    const CharacterProfile& characterProfile
+    const CharacterProfile& characterProfile,
+    PlayerAnimationProfile playerAnimationProfile
 )
     : Entity{x, y},
       profile{characterProfile},
+      animationProfile{std::move(playerAnimationProfile)},
       collisionSize{
           characterProfile.bodyWidth,
           characterProfile.smallBodyHeight
@@ -36,6 +44,7 @@ void Character::update(float dt) {
 
     if (isActive()) {
         updateCharacterPhysics(dt);
+        updatePlayerAnimation(dt);
     }
 }
 
@@ -152,6 +161,58 @@ void Character::updateCharacterPhysics(float dt) {
 
     horizontalInputThisFrame = false;
     jumpHeldThisFrame = false;
+}
+
+PlayerMotion Character::choosePlayerMotion() const {
+    constexpr float motionThreshold = 1.f;
+
+    if (!isActive()) {
+        return PlayerMotion::Dead;
+    }
+
+    // The current sheet has one airborne pose, shared by rising and falling.
+    if (!grounded) {
+        return PlayerMotion::Jumping;
+    }
+
+    if (std::abs(velocity.x) < motionThreshold) {
+        return PlayerMotion::Idle;
+    }
+
+    const bool velocityFacesRight = velocity.x > 0.f;
+    if (velocityFacesRight != facingRight) {
+        return PlayerMotion::Sliding;
+    }
+
+    return PlayerMotion::Running;
+}
+
+void Character::updatePlayerAnimation(float dt) {
+    const AnimationClip* clip = animationProfile.findClip(
+        currentFormName,
+        choosePlayerMotion()
+    );
+
+    if (!clip) {
+        animator.stop();
+        return;
+    }
+
+    animator.play(*clip);
+    animator.update(dt);
+
+    const sf::IntRect* frame = animator.getCurrentFrame();
+    if (!frame) {
+        return;
+    }
+
+    sprite.setTextureRect(*frame);
+
+    // Keep the sprite anchored to the collision body's left edge while using
+    // negative X scale to reuse right-facing frames for left-facing movement.
+    const float frameWidth = static_cast<float>(std::abs(frame->width));
+    sprite.setOrigin(facingRight ? 0.f : frameWidth, 0.f);
+    sprite.setScale(facingRight ? 1.f : -1.f, 1.f);
 }
 
 void Character::updatePlayerEffects(float dt) {
@@ -407,6 +468,7 @@ void Character::applyForm(
 
     position.y = oldBottom - collisionSize.y;
     syncSpritePosition();
+    updatePlayerAnimation(0.f);
 }
 
 std::string_view Character::getCurrentFormName() const {

@@ -3,13 +3,11 @@
 
 // ============================================================
 // Constructor
-// Coin kích thước 24x24 (nhỏ hơn tile 32x32), đặt giữa tile
+// Coin kích thước 16x16 (chuẩn 1 tile)
 // ============================================================
 Coin::Coin(float x, float y) : Item(x, y) {
-    size = {24.f, 24.f};
-    // Canh giữa coin trong tile 32x32
-    position.x = x + 4.f;
-    position.y = y + 4.f;
+    size = {16.f, 16.f};
+    position = {x, y};
 }
 
 // ============================================================
@@ -47,7 +45,13 @@ void Coin::render(sf::RenderWindow& window) const {
     if (!active || collected) return;
 
     if (sprite.getTexture() != nullptr) {
-        window.draw(sprite);
+        sf::Sprite drawSprite = sprite;
+        drawSprite.setPosition(position);
+        sf::Vector2u texSize = sprite.getTexture()->getSize();
+        if (texSize.x > 0 && texSize.y > 0) {
+            drawSprite.setScale(size.x / static_cast<float>(texSize.x), size.y / static_cast<float>(texSize.y));
+        }
+        window.draw(drawSprite);
         return;
     }
 
@@ -85,11 +89,20 @@ void Coin::render(sf::RenderWindow& window) const {
 // ============================================================
 // onCollect – Mario thu thập coin
 // ============================================================
+#include "Entities/Character.h"
+
 void Coin::onCollect() {
     if (!collected) {
         collected = true;
         active = false;
     }
+}
+
+bool Coin::tryCollect(Character& character) {
+    if (!active || collected) return false;
+    onCollect();
+    character.notify(GameEvent{GameEventType::COIN_COLLECTED, scoreValue});
+    return true;
 }
 
 // ============================================================

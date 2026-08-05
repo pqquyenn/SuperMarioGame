@@ -28,6 +28,7 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) const override;
     void onCollect() override;
+    bool tryCollect(Character& character) override;
 
     void startEmerge();
     bool isEmerging() const;

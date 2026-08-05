@@ -1,5 +1,9 @@
 #include "States/PlayState.h"
 #include "States/PauseState.h"
+#include "Core/AssetManager.h"
+#include "Physics/CollisionManager.h"
+#include "Entities/Enemies/Enemy.h"
+#include "Entities/Items/Item.h"
 #include <iostream>
 #include <memory>
 
@@ -8,6 +12,11 @@ void PlayState::onEnter() {
     if (!level.loadLevel("1.1/1-1.txt")) {
         std::cerr << "[PlayState] Failed to load level 1.1/1-1.txt!" << std::endl;
     }
+
+    // Khởi tạo con Mario tại vị trí xuất phát (40, 160)
+    mario = std::make_unique<Mario>(40.f, 160.f);
+    mario->setTexture(AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
+    mario->update(0.f);
 
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
@@ -33,6 +42,9 @@ void PlayState::handleInput(sf::Event& event, sf::RenderWindow& window) {
         else if (event.key.code == sf::Keyboard::U || event.key.code == sf::Keyboard::H) {
             std::cout << "[PlayState] Load Underground Map..." << std::endl;
             if (level.loadHiddenMap("underground.txt")) {
+                if (mario) {
+                    mario->setPosition(32.f, 32.f);
+                }
                 level.getCamera().setCenter(160.f, 120.f);
                 level.getTileMap().setNeedsRedraw(true);
             }
@@ -40,6 +52,9 @@ void PlayState::handleInput(sf::Event& event, sf::RenderWindow& window) {
         else if (event.key.code == sf::Keyboard::M || event.key.code == sf::Keyboard::Num1) {
             std::cout << "[PlayState] Return to Main Overworld Map..." << std::endl;
             if (level.loadLevel("1.1/1-1.txt")) {
+                if (mario) {
+                    mario->setPosition(40.f, 160.f);
+                }
                 level.getCamera().setCenter(200.f, 112.f);
                 level.getTileMap().setNeedsRedraw(true);
             }
@@ -47,35 +62,45 @@ void PlayState::handleInput(sf::Event& event, sf::RenderWindow& window) {
     }
 }
 
-
-
 void PlayState::update(float dt) {
-    Camera& cam = level.getCamera();
-    const float speed = 200.0f * dt;
-    bool moved = false;
+    if (mario && mario->isActive()) {
+        // 1. Phím bấm điều khiển Mario
+        inputHandler.handleInput(*mario, dt);
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-        cam.move(speed, 0.f);
-        moved = true;
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-        cam.move(-speed, 0.f);
-        moved = true;
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-        cam.move(0.f, speed);
-        moved = true;
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
-        cam.move(0.f, -speed);
-        moved = true;
+        // 2. Cập nhật vật lý & animation của Mario
+        mario->update(dt);
+
+        // 3. Xử lý va chạm Mario với địa hình gạch / đất
+        CollisionManager::resolveTileCollisions(*mario, level.getTileMap());
+
+        // 4. Xử lý va chạm Mario với Quái (Enemies)
+        for (auto& enemy : level.getEnemies()) {
+            if (enemy && enemy->isActive()) {
+                CollisionManager::resolveEntityCollisions(*mario, *enemy);
+            }
+        }
+
+        // 5. Xử lý va chạm Mario với Vật phẩm (Items)
+        for (auto& item : level.getItems()) {
+            if (item && item->isActive()) {
+                CollisionManager::resolveEntityCollisions(*mario, *item);
+            }
+        }
+
+        // 6. Kiểm tra rơi xuống vực (Void Death & Respawn)
+        if (mario->getPosition().y > 300.f) {
+            mario->die(DeathCause::Void);
+            mario->respawn(40.f, 160.f);
+        }
     }
 
-    if (moved) {
-        level.getTileMap().setNeedsRedraw(true);
-    }
-
+    // Cập nhật các entity trong level
     level.update(dt);
+
+    // Camera tự động cuộn theo vị trí Mario
+    if (mario) {
+        level.getCamera().update(mario->getPosition());
+    }
 }
 
 void PlayState::render(sf::RenderWindow& window) {
@@ -89,5 +114,9 @@ void PlayState::render(sf::RenderWindow& window) {
 
     window.clear(bgColor);
     level.render(window);
+
+    if (mario && mario->isActive()) {
+        mario->render(window);
+    }
 }
 
