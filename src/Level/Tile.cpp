@@ -12,13 +12,9 @@ void Tile::render(sf::RenderTarget& target) const {
 }
 
 sf::FloatRect Tile::getBounds() const {
-    if (!m_type) return sf::FloatRect(m_position.x, m_position.y, 0, 0);
-    return sf::FloatRect(
-        m_position.x, 
-        m_position.y, 
-        static_cast<float>(m_type->textureRect.width), 
-        static_cast<float>(m_type->textureRect.height)
-    );
+    if (!m_type) return sf::FloatRect(m_position, {0.f, 0.f});
+    sf::Vector2f size(static_cast<float>(m_type->textureRect.width), static_cast<float>(m_type->textureRect.height));
+    return sf::FloatRect(m_position, size);
 }
 
 bool Tile::isSolid() const {
@@ -31,4 +27,12 @@ bool Tile::isWarpPipe() const {
 
 int Tile::getWarpDirection() const {
     return m_type ? m_type->warpDirection : 0;
+}
+
+bool Tile::isQuestionBlock() const {
+    return m_type ? m_type->isQuestionBlock : false;
+}
+
+bool Tile::isCoinTile() const {
+    return m_type ? m_type->isCoinTile : false;
 }

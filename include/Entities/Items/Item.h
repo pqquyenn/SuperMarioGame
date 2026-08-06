@@ -19,9 +19,12 @@ public:
 
     // Mỗi Item phải định nghĩa hành vi khi Mario thu thập
     virtual void onCollect() = 0;
+    virtual bool tryCollect(class Character& character);
 
     // Collision box dựa trên size
     sf::FloatRect getBounds() const override;
+
+    void onCollision(Entity& other, const sf::FloatRect& overlap) override;
 
     bool isCollected() const;
 };

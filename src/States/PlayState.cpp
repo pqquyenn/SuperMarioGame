@@ -21,7 +21,7 @@ void PlayState::onEnter() {
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
 
-    const float levelPixelW = 244.f * 16.f; // 3904px
+    const float levelPixelW = 264.f * 16.f; // 4224px
     const float levelPixelH = 16.f * 16.f;  // 256px
     cam.setLevelBounds(levelPixelW, levelPixelH);
     cam.setCenter(200.f, 112.f);
@@ -71,7 +71,7 @@ void PlayState::update(float dt) {
         mario->update(dt);
 
         // 3. Xử lý va chạm Mario với địa hình gạch / đất
-        CollisionManager::resolveTileCollisions(*mario, level.getTileMap());
+        CollisionManager::resolveTileCollisions(*mario, level.getTileMap(), &level);
 
         // 4. Xử lý va chạm Mario với Quái (Enemies)
         for (auto& enemy : level.getEnemies()) {
@@ -97,9 +97,20 @@ void PlayState::update(float dt) {
     // Cập nhật các entity trong level
     level.update(dt);
 
+    // Cập nhật HUD (đếm ngược thời gian)
+    hud.update(dt);
+
     // Camera tự động cuộn theo vị trí Mario
     if (mario) {
-        level.getCamera().update(mario->getPosition());
+        if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
+            // Standalone underground map
+            level.getCamera().setCenter(160.f, 120.f);
+        } else if (mario->getPosition().x >= 3600.f) {
+            // Appended underground area in 1-1.txt
+            level.getCamera().setCenter(3840.f, 120.f);
+        } else {
+            level.getCamera().update(mario->getPosition());
+        }
     }
 }
 
@@ -109,7 +120,7 @@ void PlayState::render(sf::RenderWindow& window) {
 
     float camX = cam.getView().getCenter().x;
     float camY = cam.getView().getCenter().y;
-    bool isUndergroundArea = level.getIsUnderground() || camY >= 240.f || camX > 3280.f;
+    bool isUndergroundArea = level.getIsUnderground() || camY >= 240.f || camX > 3600.f;
     sf::Color bgColor = isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
 
     window.clear(bgColor);
@@ -118,5 +129,8 @@ void PlayState::render(sf::RenderWindow& window) {
     if (mario && mario->isActive()) {
         mario->render(window);
     }
+
+    // Vẽ HUD overlay (luôn cố định trên cùng màn hình)
+    hud.render(window);
 }
 

@@ -10,6 +10,10 @@ public:
     bool isSolid() const;
     bool isWarpPipe() const;
     int getWarpDirection() const;
+    bool isQuestionBlock() const;
+    bool isCoinTile() const;
+    void setType(const TileType* type) { m_type = type; }
+    const TileType* getType() const { return m_type; }
 
 private:
     const TileType* m_type;

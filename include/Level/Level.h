@@ -13,6 +13,7 @@ class Level {
 private:
     int levelId = 1;
     TileMap map;
+    TileMap bgMap;
     Camera camera;
     bool isUnderground = false;
 
@@ -30,8 +31,12 @@ public:
     bool loadMap(const std::string& mapFile);
     void update(float dt);
     void render(sf::RenderWindow& window);
+    void spawnItemFromBlock(float x, float y);
+    void warpToUnderground(class Mario* mario = nullptr);
+    void warpToOverworldExit(class Mario* mario = nullptr);
 
     TileMap& getTileMap() { return map; }
+    TileMap& getBgMap() { return bgMap; }
     Camera& getCamera() { return camera; }
     bool getIsUnderground() const { return isUnderground; }
 

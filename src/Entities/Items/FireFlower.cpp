@@ -52,8 +52,8 @@ void FireFlower::render(sf::RenderWindow& window) const {
     float stemW = 6.f;
     float stemH = size.y * 0.5f;
     sf::RectangleShape stem(sf::Vector2f(stemW, stemH));
-    stem.setPosition(position.x + (size.x - stemW) / 2.f,
-                     position.y + size.y - stemH);
+    stem.setPosition(sf::Vector2f(position.x + (size.x - stemW) / 2.f,
+                     position.y + size.y - stemH));
     stem.setFillColor(sf::Color(0, 140, 0));
     stem.setOutlineColor(sf::Color(0, 80, 0));
     stem.setOutlineThickness(1.f);
@@ -94,11 +94,23 @@ void FireFlower::render(sf::RenderWindow& window) const {
 // ============================================================
 // onCollect – Mario ăn hoa lửa
 // ============================================================
+#include "Entities/Character.h"
+#include "PlayerStates/FireState.h"
+
 void FireFlower::onCollect() {
     if (!collected) {
         collected = true;
         active = false;
     }
+}
+
+bool FireFlower::tryCollect(Character& character) {
+    if (!active || collected) return false;
+    if (character.receivePowerUp(std::make_unique<FireState>())) {
+        onCollect();
+        return true;
+    }
+    return false;
 }
 
 void FireFlower::startEmerge() {

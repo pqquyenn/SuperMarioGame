@@ -3,6 +3,9 @@
 #include "Factories/EntityFactory.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Item.h"
+#include "Entities/Items/Coin.h"
+#include "Entities/Items/Mushroom.h"
+#include "Entities/Mario.h"
 #include <algorithm>
 #include <vector>
 #include <filesystem>
@@ -24,13 +27,9 @@ void Level::spawnEntitiesFromMap() {
 
     if (levelId == 1) {
         enemySpawns = {
-            {"Goomba", {352.f, 192.f}},
-            {"Goomba", {640.f, 192.f}},
-            {"Koopa", {1700.f, 192.f}}
-        };
-        itemSpawns = {
-            {"Coin", {256.f, 144.f}},
-            {"Mushroom", {336.f, 144.f}}
+            {"Goomba", {336.f, 192.f}},
+            {"Goomba", {656.f, 192.f}},
+            {"Koopa", {1712.f, 176.f}}
         };
     } else if (levelId == 2) {
         enemySpawns = {
@@ -50,6 +49,7 @@ void Level::spawnEntitiesFromMap() {
             if (auto* enemy = dynamic_cast<Enemy*>(entity.get())) {
                 entity.release();
                 enemies.push_back(std::unique_ptr<Enemy>(enemy));
+                std::cout << "[Level] Spawned Enemy: " << data.type << " at (" << data.position.x << ", " << data.position.y << ")" << std::endl;
             }
         }
     }
@@ -59,6 +59,7 @@ void Level::spawnEntitiesFromMap() {
             if (auto* item = dynamic_cast<Item*>(entity.get())) {
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(item));
+                std::cout << "[Level] Spawned Item: " << data.type << " at (" << data.position.x << ", " << data.position.y << ")" << std::endl;
             }
         }
     }
@@ -95,6 +96,10 @@ bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
     for (const auto& path : candidates) {
         if (std::filesystem::exists(path)) {
             if (map.readFromFile(path)) {
+                std::filesystem::path bgPath = std::filesystem::path(path).parent_path() / "background.txt";
+                if (std::filesystem::exists(bgPath)) {
+                    bgMap.readFromFile(bgPath.string());
+                }
                 spawnEntitiesFromMap();
                 return true;
             }
@@ -120,8 +125,19 @@ bool Level::loadMap(const std::string& mapFile) {
 }
 
 void Level::update(float dt) {
+    sf::FloatRect camBounds = camera.getViewBounds();
+    const float spawnMargin = 80.f;
+
     for (auto& enemy : enemies) {
-        if (enemy && enemy->isActive()) {
+        if (!enemy || !enemy->isActive()) continue;
+
+        if (!enemy->isActivated()) {
+            if (enemy->getPosition().x <= camBounds.left + camBounds.width + spawnMargin) {
+                enemy->setActivated(true);
+            }
+        }
+
+        if (enemy->isActivated()) {
             enemy->update(dt);
             CollisionManager::resolveTileCollisions(*enemy, map);
         }
@@ -130,7 +146,17 @@ void Level::update(float dt) {
     for (auto& item : items) {
         if (item && item->isActive()) {
             item->update(dt);
-            CollisionManager::resolveTileCollisions(*item, map);
+            
+            bool isEthereal = false;
+            if (auto* coin = dynamic_cast<Coin*>(item.get())) {
+                if (coin->isPopping()) isEthereal = true;
+            } else if (auto* shroom = dynamic_cast<Mushroom*>(item.get())) {
+                if (shroom->isEmerging()) isEthereal = true;
+            }
+            
+            if (!isEthereal) {
+                CollisionManager::resolveTileCollisions(*item, map);
+            }
         }
     }
 
@@ -148,7 +174,13 @@ void Level::update(float dt) {
 }
 
 void Level::render(sf::RenderWindow& window) {
-    map.render(window, camera);
+    bgMap.render(window, camera);
+
+    for (const auto& item : items) {
+        if (item && item->isActive()) {
+            item->render(window);
+        }
+    }
 
     for (const auto& enemy : enemies) {
         if (enemy && enemy->isActive()) {
@@ -156,9 +188,49 @@ void Level::render(sf::RenderWindow& window) {
         }
     }
 
-    for (const auto& item : items) {
-        if (item && item->isActive()) {
-            item->render(window);
+    map.render(window, camera);
+}
+
+void Level::spawnItemFromBlock(float x, float y) {
+    std::string itemType = "Coin";
+    if (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f || std::abs(x - 1744.f) < 1.f) {
+        itemType = "Mushroom";
+    }
+
+    sf::Vector2f spawnPos = (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
+    if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
+        if (itemType == "Coin") {
+            if (auto* coin = dynamic_cast<Coin*>(entity.get())) {
+                entity.release();
+                coin->startPop();
+                items.push_back(std::unique_ptr<Item>(coin));
+            }
+        } else {
+            if (auto* item = dynamic_cast<Item*>(entity.get())) {
+                if (auto* shroom = dynamic_cast<Mushroom*>(item)) {
+                    shroom->startEmerge();
+                }
+                entity.release();
+                items.push_back(std::unique_ptr<Item>(item));
+            }
         }
     }
+}
+
+void Level::warpToUnderground(Mario* mario) {
+    std::cout << "[Level] Teleporting to hidden underground map area..." << std::endl;
+    if (mario) {
+        mario->setPosition(3736.f, 32.f);
+        mario->setVelocity(sf::Vector2f(0.f, 0.f));
+    }
+    camera.setCenter(3736.f, 120.f);
+}
+
+void Level::warpToOverworldExit(Mario* mario) {
+    std::cout << "[Level] Teleporting back to Overworld (5th pipe)..." << std::endl;
+    if (mario) {
+        mario->setPosition(2608.f, 160.f);
+        mario->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
+    }
+    camera.setCenter(2608.f, 120.f);
 }

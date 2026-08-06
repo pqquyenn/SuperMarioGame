@@ -35,6 +35,10 @@ void AssetManager::loadLevelAssets() {
     };
     // tryLoad("BlockTileSheet", "assets/sprites/blocks/BlockTileSheet.png");
     tryLoad("DecorSheet", "assets/textures/blocks/DecorSheet.png");
+    tryLoad("Overworld", "assets/maps/Mario Game Assets/Overworld.png");
+    tryLoad("Underground", "assets/maps/Mario Game Assets/Underground.png");
+    tryLoad("Coin_Underground", "assets/maps/Mario Game Assets/Coin_Underground.png");
+    tryLoad("EmptyBlock", "assets/maps/Mario Game Assets/EmptyBlock.png");
     tryLoad("Castle", "assets/maps/Mario Game Assets/Castle.png");
     tryLoad("FlagPole", "assets/maps/Mario Game Assets/FlagPole.png");
     tryLoad("Flag", "assets/maps/Mario Game Assets/Flag.png");

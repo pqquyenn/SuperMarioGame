@@ -31,6 +31,7 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) const override;
     void onCollect() override;
+    bool tryCollect(Character& character) override;
 
     // Bắt đầu animation pop (bắn ra từ gạch)
     void startPop();

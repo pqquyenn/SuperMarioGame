@@ -38,10 +38,16 @@ void TileMap::initFlyweights() {
     const sf::Texture* brickTex = &assets.getTexture("Brick");
     add("S", brickTex, 0, 0, 16, 16, true);
 
-    // 4. Question Block ('?', 'Q')
+    // 4. Question Block ('?', 'Q') and Empty Block ('E')
     const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
     add("?", mysteryTex, 0, 0, 16, 16, true);
+    m_tileRegistry["?"]->isQuestionBlock = true;
+
     add("Q", mysteryTex, 0, 0, 16, 16, true);
+    m_tileRegistry["Q"]->isQuestionBlock = true;
+
+    const sf::Texture* emptyTex = &assets.getTexture("EmptyBlock");
+    add("E", emptyTex, 0, 0, 16, 16, true);
 
     // 5. Seamless Pipe parts (<, >, [, ])
     const sf::Texture* pipeTopTex = &assets.getTexture("PipeTop");
@@ -79,6 +85,7 @@ void TileMap::initFlyweights() {
     add("u", ugBlockTex, 0, 0, 16, 16, true);
     add("r", ugBrickTex, 0, 0, 16, 16, true);
     add("c", ugCoinTex, 0, 0, 16, 16, false);
+    m_tileRegistry["c"]->isCoinTile = true;
     
     // Background Black Tile for 1-2
     add("*", &assets.getTexture("BlackTile"), 0, 0, 16, 16, false);
@@ -168,8 +175,10 @@ bool TileMap::readFromFile(const std::string& filepath) {
                             row.push_back(nullptr);
                         } else {
                             float yOff = m_tileOffset.y;
-                            if (token[0] == 'H') yOff -= m_tileOffset.y; // Hill2 does not move up
-                            if (token[0] == 'h') yOff += 4.f;           // Hill1 moves down 4.f
+                            if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
+                                yOff -= 4.f;
+                            }
+                            if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
                             
                             row.push_back(std::make_unique<Tile>(
                                 it->second.get(),
@@ -294,3 +303,25 @@ std::vector<Tile*> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const 
 }
 
 void TileMap::setNeedsRedraw(bool v) { m_needsRedraw = v; }
+
+void TileMap::hitTile(Tile* tile) {
+    if (!tile) return;
+    auto it = m_tileRegistry.find("E");
+    if (it != m_tileRegistry.end()) {
+        tile->setType(it->second.get());
+        m_needsRedraw = true;
+    }
+}
+
+void TileMap::removeTile(Tile* tile) {
+    if (!tile) return;
+    for (auto& row : m_grid) {
+        for (auto& t : row) {
+            if (t.get() == tile) {
+                t.reset();
+                m_needsRedraw = true;
+                return;
+            }
+        }
+    }
+}
