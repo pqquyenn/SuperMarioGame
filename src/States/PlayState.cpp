@@ -97,9 +97,6 @@ void PlayState::update(float dt) {
     // Cập nhật các entity trong level
     level.update(dt);
 
-    // Cập nhật HUD (đếm ngược thời gian)
-    hud.update(dt);
-
     // Camera tự động cuộn theo vị trí Mario
     if (mario) {
         if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
@@ -129,8 +126,5 @@ void PlayState::render(sf::RenderWindow& window) {
     if (mario && mario->isActive()) {
         mario->render(window);
     }
-
-    // Vẽ HUD overlay (luôn cố định trên cùng màn hình)
-    hud.render(window);
 }
 
