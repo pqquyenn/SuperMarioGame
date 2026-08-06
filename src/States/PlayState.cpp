@@ -4,6 +4,7 @@
 #include "Physics/CollisionManager.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Item.h"
+#include "UI/HUD.h"
 #include <iostream>
 #include <memory>
 
@@ -17,6 +18,9 @@ void PlayState::onEnter() {
     mario = std::make_unique<Mario>(40.f, 160.f);
     mario->setTexture(AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
     mario->update(0.f);
+
+    // Đăng ký HUD làm Observer của Mario (nhận sự kiện coin, enemy, die, powerup)
+    mario->addObserver(&hud);
 
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
@@ -97,9 +101,6 @@ void PlayState::update(float dt) {
     // Cập nhật các entity trong level
     level.update(dt);
 
-    // Cập nhật HUD (đếm ngược thời gian)
-    hud.update(dt);
-
     // Camera tự động cuộn theo vị trí Mario
     if (mario) {
         if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
@@ -112,6 +113,9 @@ void PlayState::update(float dt) {
             level.getCamera().update(mario->getPosition());
         }
     }
+
+    // Cập nhật HUD (thời gian, điểm số...)
+    hud.update(dt);
 }
 
 void PlayState::render(sf::RenderWindow& window) {
@@ -130,7 +134,7 @@ void PlayState::render(sf::RenderWindow& window) {
         mario->render(window);
     }
 
-    // Vẽ HUD overlay (luôn cố định trên cùng màn hình)
+    // Vẽ HUD (score, coins, world, time) cố định trên màn hình
     hud.render(window);
 }
 
