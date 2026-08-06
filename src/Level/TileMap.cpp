@@ -120,13 +120,15 @@ void TileMap::initFlyweights() {
     add("uh", &assets.getTexture("UndergroundHardBlock"), 0, 0, 16, 16, true);
     
     const sf::Texture* platformTex = &assets.getTexture("Platform");
-    add("pf1", platformTex, 0, 0, 16, 8, true);
-    add("pf2", platformTex, 16, 0, 16, 8, true);
-    add("pf3", platformTex, 32, 0, 16, 8, true);
+    add("D", platformTex, 0, 0, 16, 8, true);
+    add("M", platformTex, 16, 0, 16, 8, true);
+    add("N", platformTex, 32, 0, 16, 8, true);
     
     // Athletic Level Specific (1-3)
     add("T", &assets.getTexture("SpriteIsland"), 16, 32, 16, 16, true); // Tree Trunk (solid)
-    add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);  // Green Cap
+    add("8", &assets.getTexture("SpriteIsland"), 0, 0, 16, 16, true);  // Green Cap
+    add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);
+    add("9", &assets.getTexture("SpriteIsland"), 48, 0, 16, 16, true);
     add("O", platformTex, 16, 0, 16, 8, true);                          // Orange Wood Platform
 }
 

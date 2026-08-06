@@ -5,7 +5,6 @@
 #include "Level/Level.h"
 #include "Entities/Mario.h"
 #include "Input/InputHandler.h"
-#include "UI/HUD.h"
 #include <memory>
 
 class PlayState : public GameState {
@@ -13,7 +12,6 @@ private:
     Level level;
     std::unique_ptr<Mario> mario;
     InputHandler inputHandler;
-    HUD hud;
 
 public:
     PlayState() = default;

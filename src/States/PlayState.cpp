@@ -18,6 +18,9 @@ void PlayState::onEnter() {
     mario->setTexture(AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
     mario->update(0.f);
 
+    // Đăng ký HUD làm Observer của Mario (nhận sự kiện coin, enemy, die, powerup)
+    mario->addObserver(&hud);
+
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
 
@@ -97,9 +100,6 @@ void PlayState::update(float dt) {
     // Cập nhật các entity trong level
     level.update(dt);
 
-    // Cập nhật HUD (đếm ngược thời gian)
-    hud.update(dt);
-
     // Camera tự động cuộn theo vị trí Mario
     if (mario) {
         if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
@@ -129,8 +129,5 @@ void PlayState::render(sf::RenderWindow& window) {
     if (mario && mario->isActive()) {
         mario->render(window);
     }
-
-    // Vẽ HUD overlay (luôn cố định trên cùng màn hình)
-    hud.render(window);
 }
 
