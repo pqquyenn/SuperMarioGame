@@ -8,6 +8,21 @@ void Koopa::update(float dt) {
     return;
 
   applyPhysics(dt);
+
+  // Walk animation: chuyển đổi giữa Walk1 và Walk2 khi đang đi (không ở trong shell)
+  if (!inShell) {
+    walkAnimTimer += dt;
+    if (walkAnimTimer >= walkAnimInterval) {
+      walkAnimTimer -= walkAnimInterval;
+      walkFrame = 1 - walkFrame; // Toggle 0 ↔ 1
+      auto& assets = AssetManager::getInstance();
+      if (walkFrame == 0) {
+        setTexture(assets.getTexture("Koopa"));        // Walk1
+      } else {
+        setTexture(assets.getTexture("Koopa_Walk2"));  // Walk2
+      }
+    }
+  }
 }
 
 void Koopa::onStomped() {

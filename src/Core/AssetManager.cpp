@@ -95,6 +95,7 @@ void AssetManager::loadLevelAssets() {
   // Load Entity Textures
   tryLoad("Goomba", "assets/maps/Mario Game Assets/Goomba_Walk1.png");
   tryLoad("Koopa", "assets/maps/Mario Game Assets/Koopa_Walk1.png");
+  tryLoad("Koopa_Walk2", "assets/maps/Mario Game Assets/Koopa_Walk2.png");
   tryLoad("PiranhaPlant",
           "assets/maps/Mario Game Assets/PipeTop.png"); // Fallback if no
                                                         // PiranhaPlant.png
