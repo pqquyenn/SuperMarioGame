@@ -136,7 +136,20 @@ void Character::applyGravity(float dt) {
     if (jumpHeldThisFrame &&
         velocity.y < 0.f &&
         jumpHoldTime < profile.maxJumpHoldTime) {
-        gravityMultiplier = profile.jumpHoldGravityMultiplier;
+        // Holding jump supplies its strongest lift just after takeoff, then
+        // smoothly fades back to normal gravity. This keeps the initial jump
+        // impulse and held-jump assistance from feeling like two separate
+        // forces while still allowing variable jump height.
+        const float holdProgress = std::clamp(
+            jumpHoldTime / profile.maxJumpHoldTime,
+            0.f,
+            1.f
+        );
+        const float easedProgress =
+            holdProgress * holdProgress * (3.f - 2.f * holdProgress);
+        gravityMultiplier =
+            profile.jumpHoldGravityMultiplier +
+            (1.f - profile.jumpHoldGravityMultiplier) * easedProgress;
         jumpHoldTime = std::min(
             profile.maxJumpHoldTime,
             jumpHoldTime + dt
