@@ -4,6 +4,7 @@
 #include "Physics/CollisionManager.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Item.h"
+#include "UI/HUD.h"
 #include <iostream>
 #include <memory>
 
@@ -112,6 +113,9 @@ void PlayState::update(float dt) {
             level.getCamera().update(mario->getPosition());
         }
     }
+
+    // Cập nhật HUD (thời gian, điểm số...)
+    hud.update(dt);
 }
 
 void PlayState::render(sf::RenderWindow& window) {
@@ -129,5 +133,8 @@ void PlayState::render(sf::RenderWindow& window) {
     if (mario && mario->isActive()) {
         mario->render(window);
     }
+
+    // Vẽ HUD (score, coins, world, time) cố định trên màn hình
+    hud.render(window);
 }
 

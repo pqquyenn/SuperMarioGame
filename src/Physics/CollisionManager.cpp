@@ -8,6 +8,7 @@
 #include "Level/Level.h"
 #include "Level/Tile.h"
 #include "Level/TileMap.h"
+#include "PlayerStates/PlayerState.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -117,11 +118,25 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           // Question block bump logic
           if (mario && tile->isQuestionBlock()) {
-            map.hitTile(const_cast<Tile *>(tile));
+            Tile* mutableTile = const_cast<Tile *>(tile);
+            mutableTile->startBump();
+            map.hitTile(mutableTile);
             if (level) {
               level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
             }
             mario->notify(GameEvent{GameEventType::COIN_COLLECTED, 200});
+          }
+
+          // Brick block logic
+          if (mario && tile->isBrick()) {
+            Tile* mutableTile = const_cast<Tile *>(tile);
+            if (mario->hasAbility(PlayerAbility::BreakBricks)) {
+              // Super/Fire Mario breaks the brick
+              map.breakBrick(mutableTile);
+            } else {
+              // Small Mario just bumps the brick
+              mutableTile->startBump();
+            }
           }
         }
         vel.y = 0.f;
