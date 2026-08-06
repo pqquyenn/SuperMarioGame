@@ -29,6 +29,7 @@ private:
     std::unique_ptr<Command> moveRightCommand;
     std::unique_ptr<Command> actionCommand;
 
+    bool jumpWasHeld{false};
     bool actionWasHeld{false};
     InputBindings bindings;
 

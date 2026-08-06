@@ -89,17 +89,17 @@ void Character::moveRight(float dt) {
 }
 
 void Character::jump() {
-    if (!profile.canJump) {
+    if (!profile.canJump || !grounded) {
         return;
     }
 
-    jumpHeldThisFrame = true;
+    velocity.y = -profile.jumpForce * getJumpForceMultiplier();
+    grounded = false;
+    jumpHoldTime = 0.f;
+}
 
-    if (grounded) {
-        velocity.y = -profile.jumpForce * getJumpForceMultiplier();
-        grounded = false;
-        jumpHoldTime = 0.f;
-    }
+void Character::setJumpHeld(bool status) {
+    jumpHeldThisFrame = profile.canJump && status;
 }
 
 void Character::shootFireball() {

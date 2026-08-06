@@ -98,6 +98,7 @@ public:
     virtual void moveLeft(float dt);
     virtual void moveRight(float dt);
     virtual void jump();
+    void setJumpHeld(bool status);
     virtual void shootFireball();
     void useSpecialAbility();
 
