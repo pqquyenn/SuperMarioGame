@@ -18,6 +18,9 @@ void PlayState::onEnter() {
     mario->setTexture(AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
     mario->update(0.f);
 
+    // Đăng ký HUD làm Observer của Mario (nhận sự kiện coin, enemy, die, powerup)
+    mario->addObserver(&hud);
+
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
 
