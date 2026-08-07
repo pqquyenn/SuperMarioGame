@@ -42,7 +42,10 @@ struct CharacterProfile {
     float gravity{980.f};
     float maxFallSpeed{900.f};
     float jumpForce{350.f};
-    float jumpHoldAcceleration{900.f};
+    // Holding jump reduces gravity briefly; releasing early increases it.
+    // Both multipliers preserve a continuous vertical-velocity curve.
+    float jumpHoldGravityMultiplier{0.45f};
+    float jumpReleaseGravityMultiplier{2.5f};
     float maxJumpHoldTime{0.18f};
     float damageInvincibilityDuration{2.f};
 
@@ -76,6 +79,7 @@ protected:
 
     float getMoveSpeedMultiplier() const;
     float getJumpForceMultiplier() const;
+    void setPlayerAnimationProfile(PlayerAnimationProfile playerAnimationProfile);
 
     explicit Character(float x = 0.f, float y = 0.f);
     Character(
@@ -94,6 +98,7 @@ public:
     virtual void moveLeft(float dt);
     virtual void moveRight(float dt);
     virtual void jump();
+    void setJumpHeld(bool status);
     virtual void shootFireball();
     void useSpecialAbility();
 

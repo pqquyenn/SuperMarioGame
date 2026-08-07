@@ -125,6 +125,10 @@ bool Level::loadMap(const std::string& mapFile) {
 }
 
 void Level::update(float dt) {
+    // Update tile animations (question block shimmer, bump effects)
+    map.update(dt);
+    map.updateDebris(dt);
+
     sf::FloatRect camBounds = camera.getViewBounds();
     const float spawnMargin = 80.f;
 
@@ -189,6 +193,9 @@ void Level::render(sf::RenderWindow& window) {
     }
 
     map.render(window, camera);
+
+    // Render brick debris on top of everything
+    map.renderDebris(window);
 }
 
 void Level::spawnItemFromBlock(float x, float y) {

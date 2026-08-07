@@ -37,14 +37,17 @@ void TileMap::initFlyweights() {
     // 3. Destructible Brick Block ('S')
     const sf::Texture* brickTex = &assets.getTexture("Brick");
     add("S", brickTex, 0, 0, 16, 16, true);
+    m_tileRegistry["S"]->isBrick = true;
 
     // 4. Question Block ('?', 'Q') and Empty Block ('E')
     const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
     add("?", mysteryTex, 0, 0, 16, 16, true);
     m_tileRegistry["?"]->isQuestionBlock = true;
+    m_tileRegistry["?"]->isAnimated = true;
 
     add("Q", mysteryTex, 0, 0, 16, 16, true);
     m_tileRegistry["Q"]->isQuestionBlock = true;
+    m_tileRegistry["Q"]->isAnimated = true;
 
     const sf::Texture* emptyTex = &assets.getTexture("EmptyBlock");
     add("E", emptyTex, 0, 0, 16, 16, true);
@@ -86,6 +89,7 @@ void TileMap::initFlyweights() {
     const sf::Texture* upHardBlockTex= &assets.getTexture("UndergroundHardBlock");
     add("u", ugBlockTex, 0, 0, 16, 16, true);
     add("r", ugBrickTex, 0, 0, 16, 16, true);
+    m_tileRegistry["r"]->isBrick = true;
     add("c", ugCoinTex, 0, 0, 16, 16, false);
     add("g",upHardBlockTex,0,0,16,16,true);
     m_tileRegistry["c"]->isCoinTile = true;
@@ -328,5 +332,76 @@ void TileMap::removeTile(Tile* tile) {
                 return;
             }
         }
+    }
+}
+
+void TileMap::update(float dt) {
+    for (auto& row : m_grid) {
+        for (auto& tile : row) {
+            if (tile) {
+                tile->update(dt);
+            }
+        }
+    }
+}
+
+void TileMap::breakBrick(Tile* tile) {
+    if (!tile) return;
+    
+    sf::FloatRect bounds = tile->getBounds();
+    float cx = bounds.left + bounds.width * 0.5f;
+    float cy = bounds.top + bounds.height * 0.5f;
+    
+    // Spawn 4 debris pieces flying in different directions
+    // Top-left piece
+    m_debris.push_back({{bounds.left, bounds.top}, {-60.f, -250.f}, 0.f, 400.f, 0.f, true});
+    // Top-right piece
+    m_debris.push_back({{bounds.left + 8.f, bounds.top}, {60.f, -250.f}, 0.f, -350.f, 0.f, true});
+    // Bottom-left piece
+    m_debris.push_back({{bounds.left, bounds.top + 8.f}, {-50.f, -180.f}, 0.f, 300.f, 0.f, true});
+    // Bottom-right piece
+    m_debris.push_back({{bounds.left + 8.f, bounds.top + 8.f}, {50.f, -180.f}, 0.f, -280.f, 0.f, true});
+    
+    removeTile(tile);
+}
+
+void TileMap::updateDebris(float dt) {
+    const float gravity = 980.f;
+    
+    for (auto& d : m_debris) {
+        if (!d.active) continue;
+        
+        d.velocity.y += gravity * dt;
+        d.position += d.velocity * dt;
+        d.rotation += d.rotationSpeed * dt;
+        d.lifetime += dt;
+        
+        // Remove after 2 seconds or if fallen off screen
+        if (d.lifetime > 2.f || d.position.y > 500.f) {
+            d.active = false;
+        }
+    }
+    
+    // Cleanup inactive debris
+    m_debris.erase(
+        std::remove_if(m_debris.begin(), m_debris.end(),
+            [](const BrickDebris& d) { return !d.active; }),
+        m_debris.end()
+    );
+}
+
+void TileMap::renderDebris(sf::RenderTarget& target) const {
+    AssetManager& assets = AssetManager::getInstance();
+    const sf::Texture& brickTex = assets.getTexture("Brick");
+    
+    for (const auto& d : m_debris) {
+        if (!d.active) continue;
+        
+        // Each debris piece is an 8x8 quarter of the brick texture
+        sf::Sprite sprite(brickTex, sf::IntRect(0, 0, 8, 8));
+        sprite.setOrigin(4.f, 4.f);
+        sprite.setPosition(d.position);
+        sprite.setRotation(d.rotation);
+        target.draw(sprite);
     }
 }

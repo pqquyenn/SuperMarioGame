@@ -14,6 +14,15 @@
 #include "Level/Tile.h"
 #include "Level/Camera.h"
 
+struct BrickDebris {
+    sf::Vector2f position;
+    sf::Vector2f velocity;
+    float rotation = 0.f;
+    float rotationSpeed = 0.f;
+    float lifetime = 0.f;
+    bool active = true;
+};
+
 class TileMap {
 public:
     TileMap();
@@ -25,6 +34,10 @@ public:
     TileMap& operator=(TileMap&&) = delete;
 
     bool readFromFile(const std::string& filepath);
+    void update(float dt);
+    void breakBrick(Tile* tile);
+    void updateDebris(float dt);
+    void renderDebris(sf::RenderTarget& target) const;
     void updateBuffer(const Camera& camera);
     void render(sf::RenderTarget& target, const Camera& camera);
     std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
@@ -57,4 +70,5 @@ private:
     sf::RenderTexture m_backBuffer;
     bool m_needsRedraw;
     sf::Vector2f m_tileOffset{0.f, 0.f};
+    std::vector<BrickDebris> m_debris;
 };
