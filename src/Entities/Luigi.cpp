@@ -7,7 +7,8 @@ CharacterProfile makeLuigiProfile() {
     profile.walkSpeed = 150.f;
     profile.runSpeed = 220.f;
     profile.jumpForce = 400.f;
-    profile.jumpHoldAcceleration = 1000.f;
+    profile.jumpHoldGravityMultiplier = 0.4f;
+    profile.jumpReleaseGravityMultiplier = 2.35f;
     profile.maxJumpHoldTime = 0.22f;
     return profile;
 }

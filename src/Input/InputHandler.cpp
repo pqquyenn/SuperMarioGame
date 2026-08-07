@@ -33,8 +33,10 @@ InputHandler::InputHandler(const InputBindings& inputBindings)
 void InputHandler::handleInput(Character& character, float dt) {
     if (!character.isActive()) {
         character.setRunning(false);
-        // Preserve the physical key history so holding action through death or
-        // respawn is not mistaken for a new press on the first active frame.
+        character.setJumpHeld(false);
+        // Preserve physical key history so held buttons through death or
+        // respawn are not mistaken for new presses on the first active frame.
+        jumpWasHeld = isHeld(bindings.jump);
         actionWasHeld = isHeld(bindings.action);
         return;
     }
@@ -58,8 +60,11 @@ void InputHandler::handleInput(Character& character, float dt) {
         }
     }
 
-    // Jump is evaluated every frame so holding the key produces a higher jump.
-    if (jumpHeld) {
+    // A fresh press starts a jump. Holding the button after takeoff continues
+    // to produce a higher jump, but holding it through landing does not start
+    // another jump automatically.
+    character.setJumpHeld(jumpHeld);
+    if (jumpHeld && !jumpWasHeld) {
         jumpCommand->execute(character, dt);
     }
 
@@ -68,11 +73,13 @@ void InputHandler::handleInput(Character& character, float dt) {
         actionCommand->execute(character, dt);
     }
 
+    jumpWasHeld = jumpHeld;
     actionWasHeld = actionHeld;
 }
 
 void InputHandler::setBindings(const InputBindings& inputBindings) {
     bindings = inputBindings;
+    jumpWasHeld = false;
     actionWasHeld = false;
 }
 
