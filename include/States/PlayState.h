@@ -6,15 +6,17 @@
 #include "Entities/Mario.h"
 #include "Input/InputHandler.h"
 #include <memory>
+#include <string>
 
 class PlayState : public GameState {
 private:
     Level level;
     std::unique_ptr<Mario> mario;
     InputHandler inputHandler;
+    std::string initialMapPath;
 
 public:
-    PlayState() = default;
+    PlayState(const std::string& mapPath = "1.1/1-1.txt");
 
     void onEnter() override;
     void onExit() override;

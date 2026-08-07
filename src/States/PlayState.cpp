@@ -7,10 +7,12 @@
 #include <iostream>
 #include <memory>
 
+PlayState::PlayState(const std::string& mapPath) : initialMapPath(mapPath) {}
+
 void PlayState::onEnter() {
-    std::cout << "[PlayState] onEnter - Bat dau map 1-1" << std::endl;
-    if (!level.loadLevel("1.1/1-1.txt")) {
-        std::cerr << "[PlayState] Failed to load level 1.1/1-1.txt!" << std::endl;
+    std::cout << "[PlayState] onEnter - Bat dau map " << initialMapPath << std::endl;
+    if (!level.loadLevel(initialMapPath)) {
+        std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!" << std::endl;
     }
 
     // Khởi tạo con Mario tại vị trí xuất phát (40, 160)
@@ -50,8 +52,8 @@ void PlayState::handleInput(sf::Event& event, sf::RenderWindow& window) {
             }
         }
         else if (event.key.code == sf::Keyboard::M || event.key.code == sf::Keyboard::Num1) {
-            std::cout << "[PlayState] Return to Main Overworld Map..." << std::endl;
-            if (level.loadLevel("1.1/1-1.txt")) {
+            std::cout << "[PlayState] Return to Main Overworld Map (" << initialMapPath << ")..." << std::endl;
+            if (level.loadLevel(initialMapPath)) {
                 if (mario) {
                     mario->setPosition(40.f, 160.f);
                 }

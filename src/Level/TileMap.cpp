@@ -64,6 +64,8 @@ void TileMap::initFlyweights() {
     add("5",pipeConnTex,32,0,16,16,true,true,1);
     add("6",pipeConnTex,32,16,16,16,true,true,1);
     add("7",pipeConnTex,32,32,16,16,true,true,1);
+    add("0",pipeConnTex,48,0,16,16,true,true,1);
+    
    
 
     // 5. End-Level Elements (Castle, FlagPole, Flag)
@@ -71,8 +73,8 @@ void TileMap::initFlyweights() {
     const sf::Texture* largeCastleTex = &assets.getTexture("LargeCastle");
     const sf::Texture* flagPoleTex = &assets.getTexture("FlagPole");
     const sf::Texture* flagTex = &assets.getTexture("Flag");
-    add("C", castleTex, 0, 0, 80, 80, false);
-    add("LC", largeCastleTex, 0, 0, 148, 176, false);
+    add("j", castleTex, 0, 0, 80, 80, false);
+    add("C", largeCastleTex, 0, 0, 148, 176, false);
     add("P", flagPoleTex, 0, 0, 16, 16, false);
     add("|", flagPoleTex, 0, 16, 16, 16, false);
     add("F", flagTex, 0, 0, 16, 16, false);
@@ -81,10 +83,11 @@ void TileMap::initFlyweights() {
     const sf::Texture* ugBlockTex = &assets.getTexture("UndergroundBlock");
     const sf::Texture* ugBrickTex = &assets.getTexture("UndergroundBrick");
     const sf::Texture* ugCoinTex = &assets.getTexture("Coin_Underground");
-
+    const sf::Texture* upHardBlockTex= &assets.getTexture("UndergroundHardBlock");
     add("u", ugBlockTex, 0, 0, 16, 16, true);
     add("r", ugBrickTex, 0, 0, 16, 16, true);
     add("c", ugCoinTex, 0, 0, 16, 16, false);
+    add("g",upHardBlockTex,0,0,16,16,true);
     m_tileRegistry["c"]->isCoinTile = true;
     
     // Background Black Tile for 1-2

@@ -13,13 +13,15 @@ private:
     // === Texts ===
     sf::Text titleText;         // "SUPER MARIO BROS"
     sf::Text subtitleText;      // "© Nintendo / Student Project"
-    sf::Text startText;         // "START GAME"
+    sf::Text startText;         // "PLAY 1-1"
+    sf::Text play12Text;        // "PLAY 1-2"
+    sf::Text play13Text;        // "PLAY 1-3"
     sf::Text exitText;          // "EXIT"
     sf::Text selectorText;      // ">" ky tu chi muc dang chon
 
     // === Menu Navigation ===
-    int selectedIndex = 0;      // 0 = START GAME, 1 = EXIT
-    static const int MENU_ITEMS = 2;
+    int selectedIndex = 0;      // 0 = PLAY 1-1, 1 = PLAY 1-2, 2 = PLAY 1-3, 3 = EXIT
+    static const int MENU_ITEMS = 4;
 
     // === Animation ===
     float blinkTimer = 0.f;

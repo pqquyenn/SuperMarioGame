@@ -62,13 +62,33 @@ void MenuState::onEnter() {
 
     // --- Menu item: "START GAME" ---
     startText.setFont(font);
-    startText.setString("START GAME");
+    startText.setString("PLAY 1-1");
     startText.setCharacterSize(16);
     startText.setFillColor(sf::Color::White);
     sf::FloatRect startBounds = startText.getLocalBounds();
     startText.setOrigin(startBounds.left + startBounds.width / 2.f,
                         startBounds.top + startBounds.height / 2.f);
-    startText.setPosition(400.f, 340.f);
+    startText.setPosition(400.f, 310.f);
+
+    // --- Menu item: "PLAY 1-2" ---
+    play12Text.setFont(font);
+    play12Text.setString("PLAY 1-2");
+    play12Text.setCharacterSize(16);
+    play12Text.setFillColor(sf::Color::White);
+    sf::FloatRect p12Bounds = play12Text.getLocalBounds();
+    play12Text.setOrigin(p12Bounds.left + p12Bounds.width / 2.f,
+                         p12Bounds.top + p12Bounds.height / 2.f);
+    play12Text.setPosition(400.f, 350.f);
+
+    // --- Menu item: "PLAY 1-3" ---
+    play13Text.setFont(font);
+    play13Text.setString("PLAY 1-3");
+    play13Text.setCharacterSize(16);
+    play13Text.setFillColor(sf::Color::White);
+    sf::FloatRect p13Bounds = play13Text.getLocalBounds();
+    play13Text.setOrigin(p13Bounds.left + p13Bounds.width / 2.f,
+                         p13Bounds.top + p13Bounds.height / 2.f);
+    play13Text.setPosition(400.f, 390.f);
 
     // --- Menu item: "EXIT" ---
     exitText.setFont(font);
@@ -78,7 +98,7 @@ void MenuState::onEnter() {
     sf::FloatRect exitBounds = exitText.getLocalBounds();
     exitText.setOrigin(exitBounds.left + exitBounds.width / 2.f,
                        exitBounds.top + exitBounds.height / 2.f);
-    exitText.setPosition(400.f, 390.f);
+    exitText.setPosition(400.f, 430.f);
 
     // --- Selector ">" ---
     selectorText.setFont(font);
@@ -189,12 +209,18 @@ void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
             case sf::Keyboard::Enter:
                 // Xac nhan lua chon
                 if (selectedIndex == 0) {
-                    // START GAME -> chuyen sang PlayState
                     if (stateManager) {
-                        stateManager->changeState(std::make_unique<PlayState>());
+                        stateManager->changeState(std::make_unique<PlayState>("1.1/1-1.txt"));
                     }
                 } else if (selectedIndex == 1) {
-                    // EXIT -> dong cua so
+                    if (stateManager) {
+                        stateManager->changeState(std::make_unique<PlayState>("1.2/1-2.txt"));
+                    }
+                } else if (selectedIndex == 2) {
+                    if (stateManager) {
+                        stateManager->changeState(std::make_unique<PlayState>("1.3/1-3.txt"));
+                    }
+                } else if (selectedIndex == 3) {
                     window.close();
                 }
                 break;
@@ -243,6 +269,8 @@ void MenuState::render(sf::RenderWindow& window) {
 
     // Ve menu items
     window.draw(startText);
+    window.draw(play12Text);
+    window.draw(play13Text);
     window.draw(exitText);
 
     // Ve selector ">" (nhap nhay)
@@ -256,10 +284,12 @@ void MenuState::render(sf::RenderWindow& window) {
 // updateSelectorPosition() - Cap nhat vi tri ">" theo muc dang chon
 // ==============================================================
 void MenuState::updateSelectorPosition() {
-    float yPositions[] = { 340.f, 390.f };
+    float yPositions[] = { 310.f, 350.f, 390.f, 430.f };
     selectorText.setPosition(280.f, yPositions[selectedIndex]);
 
     // Highlight muc dang chon = mau vang, muc khac = trang
     startText.setFillColor(selectedIndex == 0 ? sf::Color(228, 166, 61) : sf::Color::White);
-    exitText.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
+    play12Text.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
+    play13Text.setFillColor(selectedIndex == 2 ? sf::Color(228, 166, 61) : sf::Color::White);
+    exitText.setFillColor(selectedIndex == 3 ? sf::Color(228, 166, 61) : sf::Color::White);
 }
