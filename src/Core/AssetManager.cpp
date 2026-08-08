@@ -48,6 +48,7 @@ void AssetManager::loadLevelAssets() {
     }
   };
   // tryLoad("BlockTileSheet", "assets/sprites/blocks/BlockTileSheet.png");
+  tryLoad("BlockTileSheet", "assets/sprites/blocks/BlockTileSheet.png");
   tryLoad("DecorSheet", "assets/textures/blocks/DecorSheet.png");
   tryLoad("Overworld", "assets/maps/Mario Game Assets/Overworld.png");
   tryLoad("Underground", "assets/maps/Mario Game Assets/Underground.png");
@@ -106,53 +107,7 @@ void AssetManager::loadLevelAssets() {
       "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower
   tryLoad("Koopa_Shell", "assets/maps/Mario Game Assets/Koopa_Shell.png");
   tryLoad("PlayerSpriteSheet",
-          "assets/textures/characters/PlayerSpriteSheet.png");
-
-  if (textures.find("PlayerSpriteSheet") == textures.end() ||
-      textures["PlayerSpriteSheet"].getSize().x == 0) {
-    sf::Image sheetImg;
-    sheetImg.create(403, 266, sf::Color::Transparent);
-
-    auto copyToSheet = [&](const std::string &relPath, unsigned int destX,
-                           unsigned int destY) {
-      std::string actualPath;
-      if (std::filesystem::exists(relPath))
-        actualPath = relPath;
-      else if (std::filesystem::exists("../" + relPath))
-        actualPath = "../" + relPath;
-      else if (std::filesystem::exists("../../" + relPath))
-        actualPath = "../../" + relPath;
-      else if (std::filesystem::exists("../../../" + relPath))
-        actualPath = "../../../" + relPath;
-
-      if (!actualPath.empty()) {
-        sf::Image img;
-        if (img.loadFromFile(actualPath)) {
-          sheetImg.copy(img, destX, destY, sf::IntRect(0, 0, 0, 0), true);
-        }
-      }
-    };
-
-    // Small Mario frames (Row Y = 9, 16x16)
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Idle.png", 1, 9);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Death.png", 17, 9);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Run1.png", 33, 9);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Run2.png", 49, 9);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Run3.png", 65, 9);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Slide.png", 81, 9);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Small_Jump.png", 97, 9);
-
-    // Big Mario frames (Row Y = 25, 16x32)
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Big_Idle.png", 1, 25);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Big_Run1.png", 33, 25);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Big_Run2.png", 49, 25);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Big_Run3.png", 65, 25);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Big_Slide.png", 81, 25);
-    copyToSheet("assets/maps/Mario Game Assets/Mario_Big_Jump.png", 97, 25);
-
-    textures["PlayerSpriteSheet"].loadFromImage(sheetImg);
-    textures["PlayerSpriteSheet"].setSmooth(false);
-  }
+          "assets/sprites/characters/PlayerSpriteSheet.png");
 
   // Generate solid black tile
   if (textures.find("BlackTile") == textures.end()) {

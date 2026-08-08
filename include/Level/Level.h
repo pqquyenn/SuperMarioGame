@@ -8,6 +8,7 @@
 
 class Enemy;
 class Item;
+class Character;
 
 class Level {
 private:
@@ -32,6 +33,7 @@ public:
     void update(float dt);
     void render(sf::RenderWindow& window);
     void spawnItemFromBlock(float x, float y);
+    void spawnItemFromBlock(float x, float y, Character* character);
     void warpToUnderground(class Mario* mario = nullptr);
     void warpToOverworldExit(class Mario* mario = nullptr);
 

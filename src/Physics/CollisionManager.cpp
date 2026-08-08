@@ -2,7 +2,9 @@
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Entity.h"
+#include "Entities/Fireball.h"
 #include "Entities/Items/Coin.h"
+#include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Mario.h"
 #include "Level/Level.h"
@@ -71,6 +73,10 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
     if (shroom->isEmerging())
       return;
   }
+  if (FireFlower *flower = dynamic_cast<FireFlower *>(&entity)) {
+    if (flower->isEmerging())
+      return;
+  }
 
   sf::FloatRect bounds = entity.getBounds();
 
@@ -81,6 +87,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   sf::Vector2f vel = entity.getVelocity();
   Mario *mario = dynamic_cast<Mario *>(&entity);
   Enemy *enemy = dynamic_cast<Enemy *>(&entity);
+  Fireball *fireball = dynamic_cast<Fireball *>(&entity);
+  bool landedThisFrame = false;
 
   // ──────────────────────────────────────────────────────────────
   // PASS 1 — Y-axis resolution (Ground & Ceiling landing)
@@ -96,6 +104,7 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
       if (overlap.height <= overlap.width) {
         if (bounds.top < tileBounds.top) {
           pos.y -= overlap.height; // Landed on top of the tile (ground)
+          landedThisFrame = true;
 
           if (auto *character = dynamic_cast<Character *>(&entity)) {
             character->setGrounded(true);
@@ -122,7 +131,7 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
             mutableTile->startBump();
             map.hitTile(mutableTile);
             if (level) {
-              level->spawnItemFromBlock(tileBounds.left, tileBounds.top);
+              level->spawnItemFromBlock(tileBounds.left, tileBounds.top, mario);
             }
             mario->notify(GameEvent{GameEventType::COIN_COLLECTED, 200});
           }
@@ -170,6 +179,12 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           enemy->reverseDirection();
         } else if (Mushroom *shroom = dynamic_cast<Mushroom *>(&entity)) {
           shroom->reverseDirection();
+        } else if (fireball) {
+          // Fireball chạm tường thì nổ / biến mất
+          fireball->explode();
+          entity.setPosition(pos);
+          entity.setVelocity(vel);
+          return;
         }
 
         // Check horizontal pipe warp (Exit from underground)
@@ -208,4 +223,9 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
   // Write the constrained velocity back to the entity
   entity.setVelocity(vel);
+
+  // Fireball bounces back up when it touches ground.
+  if (fireball && landedThisFrame) {
+    fireball->bounce();
+  }
 }

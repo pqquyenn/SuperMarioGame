@@ -4,9 +4,11 @@
 #include "States/GameStateManager.h"
 #include "Level/Level.h"
 #include "Entities/Mario.h"
+#include "Entities/Fireball.h"
 #include "Input/InputHandler.h"
 #include "UI/HUD.h"
 #include <memory>
+#include <vector>
 
 class PlayState : public GameState {
 private:
@@ -14,6 +16,9 @@ private:
     std::unique_ptr<Mario> mario;
     InputHandler inputHandler;
     HUD hud;
+    std::vector<std::unique_ptr<Fireball>> fireballs;
+
+    void spawnFireball(const ProjectileRequest& request);
 
 public:
     PlayState() = default;

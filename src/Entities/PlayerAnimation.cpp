@@ -4,14 +4,32 @@
 
 namespace {
 constexpr int FrameLeft = 1;
+constexpr int FrameStep = 16;
 constexpr int FrameWidth = 16;
+
+// Fire Mario strip: 7 frames of 16x32 starting at (1, 153) laid out
+// horizontally on PlayerSpriteSheet.png with 16px step.
+constexpr int FireRowLeft = 1;
+constexpr int FireRowTop = 153;
+constexpr int FireFrameStep = 16;
+constexpr int FireFrameWidth = 16;
+constexpr int FireFrameHeight = 32;
 
 sf::IntRect frameAt(int index, int rowY, int height) {
     return sf::IntRect{
-        FrameLeft + index * FrameWidth,
+        FrameLeft + index * FrameStep,
         rowY,
         FrameWidth,
         height
+    };
+}
+
+sf::IntRect fireFrameAt(int index) {
+    return sf::IntRect{
+        FireRowLeft + index * FireFrameStep,
+        FireRowTop,
+        FireFrameWidth,
+        FireFrameHeight
     };
 }
 
@@ -42,6 +60,26 @@ PlayerAnimationSet makeAnimationSet(
     set.jumping = staticClip(frameAt(6, rowY, frameHeight));
     set.sliding = staticClip(frameAt(5, rowY, frameHeight));
     set.dead = staticClip(deathFrame, 0.15f, false);
+    set.shooting = staticClip(frameAt(0, rowY, frameHeight));
+    return set;
+}
+
+PlayerAnimationSet makeFireAnimationSet(const sf::IntRect& deathFrame) {
+    PlayerAnimationSet set;
+    set.idle = staticClip(fireFrameAt(0));
+    set.shooting = staticClip(fireFrameAt(1));
+    set.running = AnimationClip{
+        {
+            fireFrameAt(2),
+            fireFrameAt(3),
+            fireFrameAt(4)
+        },
+        0.09f,
+        true
+    };
+    set.jumping = staticClip(fireFrameAt(6));
+    set.sliding = staticClip(fireFrameAt(5));
+    set.dead = staticClip(deathFrame, 0.15f, false);
     return set;
 }
 }
@@ -58,6 +96,8 @@ const AnimationClip* PlayerAnimationSet::findClip(PlayerMotion motion) const {
             return &sliding;
         case PlayerMotion::Dead:
             return &dead;
+        case PlayerMotion::Shooting:
+            return &shooting;
     }
 
     return nullptr;
@@ -95,7 +135,7 @@ const AnimationClip* PlayerAnimationProfile::findClip(
 PlayerAnimationProfile makeClassicPlayerAnimationProfile(
     int normalSmallRowY,
     int normalPoweredRowY,
-    int firePoweredRowY
+    int /*firePoweredRowY*/
 ) {
     PlayerAnimationProfile profile;
     const sf::IntRect deathFrame =
@@ -111,7 +151,7 @@ PlayerAnimationProfile makeClassicPlayerAnimationProfile(
     );
     profile.registerForm(
         "Fire",
-        makeAnimationSet(firePoweredRowY, 32, deathFrame)
+        makeFireAnimationSet(deathFrame)
     );
 
     return profile;

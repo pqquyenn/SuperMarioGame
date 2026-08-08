@@ -5,7 +5,10 @@
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
+#include "Entities/Items/FireFlower.h"
 #include "Entities/Mario.h"
+#include "Entities/Character.h"
+#include "PlayerStates/PlayerState.h"
 #include <algorithm>
 #include <vector>
 #include <filesystem>
@@ -27,7 +30,7 @@ void Level::spawnEntitiesFromMap() {
 
     if (levelId == 1) {
         enemySpawns = {
-            {"Goomba", {336.f, 192.f}},
+            {"Goomba", {384.f, 192.f}},   // Lệch khỏi ô mushroom x=336 để tránh va chạm với FireFlower
             {"Goomba", {656.f, 192.f}},
             {"Koopa", {1712.f, 176.f}}
         };
@@ -156,6 +159,8 @@ void Level::update(float dt) {
                 if (coin->isPopping()) isEthereal = true;
             } else if (auto* shroom = dynamic_cast<Mushroom*>(item.get())) {
                 if (shroom->isEmerging()) isEthereal = true;
+            } else if (auto* flower = dynamic_cast<FireFlower*>(item.get())) {
+                if (flower->isEmerging()) isEthereal = true;
             }
             
             if (!isEthereal) {
@@ -199,9 +204,30 @@ void Level::render(sf::RenderWindow& window) {
 }
 
 void Level::spawnItemFromBlock(float x, float y) {
+    spawnItemFromBlock(x, y, nullptr);
+}
+
+void Level::spawnItemFromBlock(float x, float y, Character* character) {
     std::string itemType = "Coin";
-    if (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f || std::abs(x - 1744.f) < 1.f) {
-        itemType = "Mushroom";
+
+    // Legacy mushroom spots (kept from the old tuned map)
+    bool mushroomSpot = std::abs(x - 336.f) < 1.f ||
+                        std::abs(x - 1248.f) < 1.f ||
+                        std::abs(x - 1744.f) < 1.f;
+
+    if (mushroomSpot) {
+        if (character) {
+            const std::string_view form = character->getCurrentFormName();
+            // Super hoặc Fire Mario đập ô mushroom -> ra FireFlower.
+            // Các ô ? khác (không phải mushroomSpot) vẫn spawn Coin bình thường.
+            if (form == "Super" || form == "Fire") {
+                itemType = "FireFlower";
+            } else {
+                itemType = "Mushroom";
+            }
+        } else {
+            itemType = "Mushroom";
+        }
     }
 
     sf::Vector2f spawnPos = (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
@@ -216,6 +242,8 @@ void Level::spawnItemFromBlock(float x, float y) {
             if (auto* item = dynamic_cast<Item*>(entity.get())) {
                 if (auto* shroom = dynamic_cast<Mushroom*>(item)) {
                     shroom->startEmerge();
+                } else if (auto* flower = dynamic_cast<FireFlower*>(item)) {
+                    flower->startEmerge();
                 }
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(item));

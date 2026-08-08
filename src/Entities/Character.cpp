@@ -40,6 +40,10 @@ void Character::update(float dt) {
         return;
     }
 
+    if (shootTimer > 0.f) {
+        shootTimer -= dt;
+    }
+
     updatePlayerEffects(dt);
 
     if (isActive()) {
@@ -107,6 +111,7 @@ void Character::shootFireball() {
         return;
     }
 
+    shootTimer = 0.15f;
     requestProjectile(ProjectileType::Fireball);
 }
 
@@ -168,6 +173,10 @@ PlayerMotion Character::choosePlayerMotion() const {
 
     if (!isActive()) {
         return PlayerMotion::Dead;
+    }
+
+    if (shootTimer > 0.f) {
+        return PlayerMotion::Shooting;
     }
 
     // The current sheet has one airborne pose, shared by rising and falling.
