@@ -42,9 +42,9 @@ Fireball::Fireball(
     velocity.y = 0.f;
 
     animator.play(clip);
-    if (const sf::IntRect* frame = animator.getCurrentFrame()) {
-        sprite.setTextureRect(*frame);
-        const float frameWidth = static_cast<float>(std::abs(frame->width));
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
+        const float frameWidth = static_cast<float>(std::abs(frame->textureRect.width));
         sprite.setScale(displaySize / frameWidth, displaySize / frameWidth);
     }
 }
@@ -90,8 +90,8 @@ void Fireball::update(float dt) {
     if (exploding) {
         explosionTimer -= dt;
         animator.update(dt);
-        if (const sf::IntRect* frame = animator.getCurrentFrame()) {
-            sprite.setTextureRect(*frame);
+        if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+            sprite.setTextureRect(frame->textureRect);
         }
         if (explosionTimer <= 0.f) {
             active = false;
@@ -108,8 +108,8 @@ void Fireball::update(float dt) {
     integrateVelocity(dt);
 
     animator.update(dt);
-    if (const sf::IntRect* frame = animator.getCurrentFrame()) {
-        sprite.setTextureRect(*frame);
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
     }
 }
 

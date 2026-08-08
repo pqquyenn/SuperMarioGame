@@ -25,8 +25,8 @@ FireFlower::FireFlower(float x, float y)
       clip{buildAnimationClip()} {
     size = {16.f, 16.f};
     animator.play(clip);
-    if (const sf::IntRect* frame = animator.getCurrentFrame()) {
-        sprite.setTextureRect(*frame);
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
     }
     // Đồng bộ sprite ngay để tránh lệch 1 frame khi vừa spawn
     sprite.setPosition(position);
@@ -62,8 +62,8 @@ void FireFlower::update(float dt) {
     }
 
     animator.update(dt);
-    if (const sf::IntRect* frame = animator.getCurrentFrame()) {
-        sprite.setTextureRect(*frame);
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
     }
     sprite.setPosition(position);
 }
