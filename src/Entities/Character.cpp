@@ -93,17 +93,17 @@ void Character::moveRight(float dt) {
 }
 
 void Character::jump() {
-    if (!profile.canJump) {
+    if (!profile.canJump || !grounded) {
         return;
     }
 
-    jumpHeldThisFrame = true;
+    velocity.y = -profile.jumpForce * getJumpForceMultiplier();
+    grounded = false;
+    jumpHoldTime = 0.f;
+}
 
-    if (grounded) {
-        velocity.y = -profile.jumpForce * getJumpForceMultiplier();
-        grounded = false;
-        jumpHoldTime = 0.f;
-    }
+void Character::setJumpHeld(bool status) {
+    jumpHeldThisFrame = profile.canJump && status;
 }
 
 void Character::shootFireball() {
@@ -136,22 +136,37 @@ void Character::applyHorizontalDeceleration(float dt) {
 }
 
 void Character::applyGravity(float dt) {
+    float gravityMultiplier = 1.f;
+
     if (jumpHeldThisFrame &&
         velocity.y < 0.f &&
         jumpHoldTime < profile.maxJumpHoldTime) {
-        velocity.y -= profile.jumpHoldAcceleration *
-                      getJumpForceMultiplier() * dt;
-        jumpHoldTime += dt;
-    } else if (!jumpHeldThisFrame &&
-               velocity.y < 0.f &&
-               jumpHoldTime < profile.maxJumpHoldTime) {
-        // Releasing jump early shortens the jump.
-        velocity.y *= 0.5f;
-        jumpHoldTime = profile.maxJumpHoldTime;
+        // Holding jump supplies its strongest lift just after takeoff, then
+        // smoothly fades back to normal gravity. This keeps the initial jump
+        // impulse and held-jump assistance from feeling like two separate
+        // forces while still allowing variable jump height.
+        const float holdProgress = std::clamp(
+            jumpHoldTime / profile.maxJumpHoldTime,
+            0.f,
+            1.f
+        );
+        const float easedProgress =
+            holdProgress * holdProgress * (3.f - 2.f * holdProgress);
+        gravityMultiplier =
+            profile.jumpHoldGravityMultiplier +
+            (1.f - profile.jumpHoldGravityMultiplier) * easedProgress;
+        jumpHoldTime = std::min(
+            profile.maxJumpHoldTime,
+            jumpHoldTime + dt
+        );
+    } else if (!jumpHeldThisFrame && velocity.y < 0.f) {
+        // Early release produces a shorter jump without abruptly changing
+        // the velocity that was accumulated on previous frames.
+        gravityMultiplier = profile.jumpReleaseGravityMultiplier;
     }
 
     velocity.y = std::min(
-        velocity.y + profile.gravity * dt,
+        velocity.y + profile.gravity * gravityMultiplier * dt,
         profile.maxFallSpeed
     );
 }
@@ -210,18 +225,31 @@ void Character::updatePlayerAnimation(float dt) {
     animator.play(*clip);
     animator.update(dt);
 
-    const sf::IntRect* frame = animator.getCurrentFrame();
+    const AnimationFrame* frame = animator.getCurrentFrame();
     if (!frame) {
         return;
     }
 
-    sprite.setTextureRect(*frame);
+    if (frame->texture) {
+        sprite.setTexture(*frame->texture);
+    }
+    sprite.setTextureRect(frame->textureRect);
 
     // Keep the sprite anchored to the collision body's left edge while using
     // negative X scale to reuse right-facing frames for left-facing movement.
-    const float frameWidth = static_cast<float>(std::abs(frame->width));
+    const float frameWidth = static_cast<float>(
+        std::abs(frame->textureRect.width)
+    );
     sprite.setOrigin(facingRight ? 0.f : frameWidth, 0.f);
     sprite.setScale(facingRight ? 1.f : -1.f, 1.f);
+}
+
+void Character::setPlayerAnimationProfile(
+    PlayerAnimationProfile playerAnimationProfile
+) {
+    animator.stop();
+    animationProfile = std::move(playerAnimationProfile);
+    updatePlayerAnimation(0.f);
 }
 
 void Character::updatePlayerEffects(float dt) {
