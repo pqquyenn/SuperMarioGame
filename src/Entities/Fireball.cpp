@@ -1,26 +1,33 @@
 #include "Entities/Fireball.h"
 
 namespace {
-constexpr int FireballRowLeft = 1;
-constexpr int FireballRowTop = 154;
+constexpr int FireballRowLeft = 600;
+constexpr int FireballRowTop = 209;
 constexpr int FireballFrameStep = 17;
-constexpr int FireballFrameWidth = 16;
+constexpr int FireballFrameWidth = 7;
+constexpr int FireballFrameHeight = 7;
+
+constexpr int ExplosionRowLeft = 613;
+constexpr int ExplosionRowTop = 222;
+constexpr int ExplosionFrameStep = 17;
+constexpr int ExplosionFrameWidth = 16;
+constexpr int ExplosionFrameHeight = 16;
 
 sf::IntRect fireballFrameAt(int index) {
     return sf::IntRect{
         FireballRowLeft + index * FireballFrameStep,
         FireballRowTop,
         FireballFrameWidth,
-        FireballFrameWidth
+        FireballFrameHeight
     };
 }
 
 sf::IntRect fireballExplosionFrameAt(int index) {
     return sf::IntRect{
-        FireballRowLeft + (4 + index) * FireballFrameStep,
-        FireballRowTop,
-        FireballFrameWidth,
-        FireballFrameWidth
+        ExplosionRowLeft + index * ExplosionFrameStep,
+        ExplosionRowTop,
+        ExplosionFrameWidth,
+        ExplosionFrameHeight
     };
 }
 }
@@ -80,6 +87,11 @@ void Fireball::explode() {
     velocity = {0.f, 0.f};
     explosionTimer = 0.15f;
     animator.play(explosionClip);
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
+        sprite.setScale(1.f, 1.f);
+        sprite.setPosition(position.x - 4.f, position.y - 4.f);
+    }
 }
 
 void Fireball::update(float dt) {
@@ -92,6 +104,8 @@ void Fireball::update(float dt) {
         animator.update(dt);
         if (const AnimationFrame* frame = animator.getCurrentFrame()) {
             sprite.setTextureRect(frame->textureRect);
+            sprite.setScale(1.f, 1.f);
+            sprite.setPosition(position.x - 4.f, position.y - 4.f);
         }
         if (explosionTimer <= 0.f) {
             active = false;

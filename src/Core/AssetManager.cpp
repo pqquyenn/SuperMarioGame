@@ -108,7 +108,6 @@ void AssetManager::loadLevelAssets() {
   tryLoad("Koopa_Shell", "assets/maps/Mario Game Assets/Koopa_Shell.png");
   tryLoad("PlayerSpriteSheet",
           "assets/sprites/characters/PlayerSpriteSheet.png");
-
   // Generate solid black tile
   if (textures.find("BlackTile") == textures.end()) {
     sf::Image blackImg;

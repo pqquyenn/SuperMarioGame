@@ -7,8 +7,8 @@
 // ============================================================
 // Fireball – Đạn lửa Fire Mario bắn ra khi người chơi bấm phím
 // hành động. Bay thẳng theo hướng, nảy khi chạm đất, biến mất
-// khi chạm tường hoặc tiêu diệt kẻ thù. Sprite 8x8 lấy từ
-// BlockTileSheet.png vùng bắt đầu (306,183), 4 frame shimmer.
+// khi chạm tường hoặc tiêu diệt kẻ thù. Sprite 7x7 lấy từ
+// BlockTileSheet.png vùng bắt đầu (600, 209), 4 frame cách nhau 17px.
 // ============================================================
 class Fireball : public Entity {
 public:
