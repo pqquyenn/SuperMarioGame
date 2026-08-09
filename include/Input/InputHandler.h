@@ -18,7 +18,7 @@ struct InputBindings {
         sf::Keyboard::Key::W,
         sf::Keyboard::Key::Up
     };
-    KeyBinding action{sf::Keyboard::Key::Z, sf::Keyboard::Key::J};
+    KeyBinding action{sf::Keyboard::Key::Z, sf::Keyboard::Key::J, sf::Keyboard::Key::Q};
     KeyBinding run{sf::Keyboard::Key::LShift, sf::Keyboard::Key::RShift};
 };
 
@@ -29,6 +29,7 @@ private:
     std::unique_ptr<Command> moveRightCommand;
     std::unique_ptr<Command> actionCommand;
 
+    bool jumpWasHeld{false};
     bool actionWasHeld{false};
     InputBindings bindings;
 

@@ -4,6 +4,8 @@
 #include "Physics/CollisionManager.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Item.h"
+#include "UI/HUD.h"
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -16,6 +18,9 @@ void PlayState::onEnter() {
     // Khởi tạo con Mario tại vị trí xuất phát (40, 160)
     mario = std::make_unique<Mario>(40.f, 160.f);
     mario->setTexture(AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
+    mario->setProjectileRequestHandler(
+        [this](const ProjectileRequest& request) { spawnFireball(request); }
+    );
     mario->update(0.f);
 
     // Đăng ký HUD làm Observer của Mario (nhận sự kiện coin, enemy, die, powerup)
@@ -97,6 +102,45 @@ void PlayState::update(float dt) {
         }
     }
 
+    // Cập nhật Fireball: di chuyển, va chạm tile, va chạm enemy
+    for (auto& fireball : fireballs) {
+        if (!fireball || !fireball->isActive()) continue;
+
+        fireball->update(dt);
+        CollisionManager::resolveTileCollisions(*fireball, level.getTileMap(), &level);
+        if (!fireball->isActive()) continue;
+
+        const sf::FloatRect fbBounds = fireball->getBounds();
+        for (auto& enemy : level.getEnemies()) {
+            if (!enemy || !enemy->isActive()) continue;
+            sf::FloatRect overlap;
+            if (CollisionManager::checkAABB(fbBounds, enemy->getBounds(), overlap)) {
+                enemy->onStomped();
+                fireball->explode();
+                if (mario) {
+                    mario->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+                }
+                break;
+            }
+        }
+
+        // Huỷ fireball nếu bay quá xa khỏi tầm camera
+        if (fireball->isActive()) {
+            const sf::FloatRect camBounds = level.getCamera().getViewBounds();
+            if (fireball->getPosition().x < camBounds.left - 64.f ||
+                fireball->getPosition().x > camBounds.left + camBounds.width + 64.f ||
+                fireball->getPosition().y > 400.f) {
+                fireball->explode();
+            }
+        }
+    }
+
+    fireballs.erase(
+        std::remove_if(fireballs.begin(), fireballs.end(),
+            [](const auto& f) { return !f || !f->isActive(); }),
+        fireballs.end()
+    );
+
     // Cập nhật các entity trong level
     level.update(dt);
 
@@ -112,6 +156,9 @@ void PlayState::update(float dt) {
             level.getCamera().update(mario->getPosition());
         }
     }
+
+    // Cập nhật HUD (thời gian, điểm số...)
+    hud.update(dt);
 }
 
 void PlayState::render(sf::RenderWindow& window) {
@@ -129,5 +176,39 @@ void PlayState::render(sf::RenderWindow& window) {
     if (mario && mario->isActive()) {
         mario->render(window);
     }
+
+    for (const auto& fireball : fireballs) {
+        if (fireball && fireball->isActive()) {
+            fireball->render(window);
+        }
+    }
+
+    // Vẽ HUD (score, coins, world, time) cố định trên màn hình
+    hud.render(window);
+}
+
+void PlayState::spawnFireball(const ProjectileRequest& request) {
+    if (request.type != ProjectileType::Fireball) {
+        return;
+    }
+
+    sf::Texture& sheet = AssetManager::getInstance().getTexture("BlockTileSheet");
+    if (sheet.getSize().x == 0) {
+        return; // Sheet chưa load, bỏ qua để tránh crash
+    }
+
+    // Giới hạn 2 fireball cùng lúc như Mario 1985
+    if (fireballs.size() >= 2) {
+        return;
+    }
+
+    auto fireball = std::make_unique<Fireball>(
+        request.position.x,
+        request.position.y - 4.f,
+        request.facingRight,
+        sheet,
+        8.f
+    );
+    fireballs.push_back(std::move(fireball));
 }
 

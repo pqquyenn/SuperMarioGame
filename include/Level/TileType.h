@@ -11,6 +11,10 @@ struct TileType {
     bool isQuestionBlock = false;
     bool isCoinTile = false;
     bool isBrick = false;
+<<<<<<< HEAD
+=======
+    bool isAnimated = false;
+>>>>>>> dev
     
     void render(sf::RenderTarget& target, const sf::Vector2f& position) const {
         if (!texture) return;
