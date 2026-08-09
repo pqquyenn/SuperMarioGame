@@ -1,5 +1,6 @@
 #include "States/PlayState.h"
 #include "States/PauseState.h"
+#include "States/GameOverState.h"
 #include "Core/AssetManager.h"
 #include "Physics/CollisionManager.h"
 #include "Entities/Enemies/Enemy.h"
@@ -71,34 +72,47 @@ void PlayState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 }
 
 void PlayState::update(float dt) {
-    if (mario && mario->isActive()) {
-        // 1. Phím bấm điều khiển Mario
-        inputHandler.handleInput(*mario, dt);
+    if (mario) {
+        if (mario->isDying()) {
+            // Cập nhật hoạt ảnh chết của Mario (đứng yên -> bật lên -> rơi xuống)
+            mario->update(dt);
 
-        // 2. Cập nhật vật lý & animation của Mario
-        mario->update(dt);
-
-        // 3. Xử lý va chạm Mario với địa hình gạch / đất
-        CollisionManager::resolveTileCollisions(*mario, level.getTileMap(), &level);
-
-        // 4. Xử lý va chạm Mario với Quái (Enemies)
-        for (auto& enemy : level.getEnemies()) {
-            if (enemy && enemy->isActive()) {
-                CollisionManager::resolveEntityCollisions(*mario, *enemy);
+            // Khi hoạt ảnh chết kết thúc và Mario bị ẩn
+            if (!mario->isActive()) {
+                if (hud.getLives() > 0) {
+                    mario->respawn(40.f, 160.f);
+                } else if (stateManager) {
+                    stateManager->changeState(std::make_unique<GameOverState>(hud.getScore()));
+                }
             }
-        }
+        } else if (mario->isActive()) {
+            // 1. Phím bấm điều khiển Mario
+            inputHandler.handleInput(*mario, dt);
 
-        // 5. Xử lý va chạm Mario với Vật phẩm (Items)
-        for (auto& item : level.getItems()) {
-            if (item && item->isActive()) {
-                CollisionManager::resolveEntityCollisions(*mario, *item);
+            // 2. Cập nhật vật lý & animation của Mario
+            mario->update(dt);
+
+            // 3. Xử lý va chạm Mario với địa hình gạch / đất
+            CollisionManager::resolveTileCollisions(*mario, level.getTileMap(), &level);
+
+            // 4. Xử lý va chạm Mario với Quái (Enemies)
+            for (auto& enemy : level.getEnemies()) {
+                if (enemy && enemy->isActive()) {
+                    CollisionManager::resolveEntityCollisions(*mario, *enemy);
+                }
             }
-        }
 
-        // 6. Kiểm tra rơi xuống vực (Void Death & Respawn)
-        if (mario->getPosition().y > 300.f) {
-            mario->die(DeathCause::Void);
-            mario->respawn(40.f, 160.f);
+            // 5. Xử lý va chạm Mario với Vật phẩm (Items)
+            for (auto& item : level.getItems()) {
+                if (item && item->isActive()) {
+                    CollisionManager::resolveEntityCollisions(*mario, *item);
+                }
+            }
+
+            // 6. Kiểm tra rơi xuống vực (Void Death)
+            if (mario->getPosition().y > 260.f) {
+                mario->die(DeathCause::Void);
+            }
         }
     }
 

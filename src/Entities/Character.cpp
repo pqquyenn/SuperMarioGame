@@ -40,6 +40,36 @@ void Character::update(float dt) {
         return;
     }
 
+    if (dying) {
+        deathTimer += dt;
+
+        // Classic Mario Death Sequence:
+        // 1. Freeze for 0.4s on the death frame (18, 9, 16, 16)
+        // 2. Hop upward at 0.4s
+        // 3. Fall downward with gravity ignoring collisions
+        if (deathTimer >= 0.4f && !deathHopStarted) {
+            deathHopStarted = true;
+            velocity.y = -360.f;
+        }
+
+        if (deathHopStarted) {
+            velocity.y += 980.f * dt;
+            if (velocity.y > 600.f) {
+                velocity.y = 600.f;
+            }
+            position.y += velocity.y * dt;
+            syncSpritePosition();
+        }
+
+        updatePlayerAnimation(dt);
+
+        if (deathTimer >= 2.6f) {
+            dying = false;
+            setActive(false);
+        }
+        return;
+    }
+
     if (shootTimer > 0.f) {
         shootTimer -= dt;
     }
@@ -186,7 +216,7 @@ void Character::updateCharacterPhysics(float dt) {
 PlayerMotion Character::choosePlayerMotion() const {
     constexpr float motionThreshold = 1.f;
 
-    if (!isActive()) {
+    if (!isActive() || dying) {
         return PlayerMotion::Dead;
     }
 
@@ -349,9 +379,17 @@ void Character::takeDamage() {
 }
 
 void Character::die(DeathCause cause) {
-    if (!isActive()) {
+    if (dying || !isActive()) {
         return;
     }
+
+    dying = true;
+    deathTimer = 0.f;
+    deathHopStarted = false;
+
+    // Reset to Small Mario form so the death frame uses Small Mario's (18, 9, 16, 16)
+    currentFormName = "Small";
+    changeState(std::make_unique<SmallState>());
 
     clearEffects();
     setVelocity(0.f, 0.f);
@@ -359,7 +397,7 @@ void Character::die(DeathCause cause) {
     running = false;
     horizontalInputThisFrame = false;
     jumpHeldThisFrame = false;
-    setActive(false);
+    setActive(true);
 
     notify(GameEvent{
         GameEventType::PLAYER_DIED,
@@ -368,6 +406,9 @@ void Character::die(DeathCause cause) {
 }
 
 void Character::respawn(float x, float y) {
+    dying = false;
+    deathTimer = 0.f;
+    deathHopStarted = false;
     clearEffects();
     setVelocity(0.f, 0.f);
 
@@ -535,4 +576,8 @@ void Character::requestProjectile(ProjectileType type) {
         },
         facingRight
     });
+}
+
+bool Character::isDying() const {
+    return dying;
 }

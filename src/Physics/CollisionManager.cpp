@@ -35,7 +35,7 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
     enemy = dynamic_cast<Enemy *>(&a);
   }
 
-  if (mario && enemy && enemy->isActive()) {
+  if (mario && !mario->isDying() && enemy && enemy->isActive()) {
     sf::FloatRect marioBounds = mario->getBounds();
     sf::FloatRect enemyBounds = enemy->getBounds();
 
@@ -50,9 +50,6 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
       return;
     } else {
       mario->takeDamage();
-      if (!mario->isActive()) {
-        mario->respawn(40.f, 160.f);
-      }
       return;
     }
   }
