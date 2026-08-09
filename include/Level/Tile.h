@@ -12,14 +12,10 @@ public:
     int getWarpDirection() const;
     bool isQuestionBlock() const;
     bool isCoinTile() const;
-<<<<<<< HEAD
-    bool isBrick() const;
-=======
     void update(float dt);
     bool isBrick() const;
     bool isAnimated() const;
     void startBump();
->>>>>>> dev
     void setType(const TileType* type) { m_type = type; }
     const TileType* getType() const { return m_type; }
 
