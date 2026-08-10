@@ -6,6 +6,7 @@
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/FireFlower.h"
+#include "Entities/Items/StarItem.h"
 #include "Entities/Mario.h"
 #include "Entities/MovingPlatform.h"
 #include <algorithm>
@@ -256,13 +257,22 @@ void Level::spawnItemFromBlock(float x, float y) {
 void Level::spawnItemFromBlock(float x, float y, Character* character) {
     std::string itemType = "Coin";
 
-    // 1-1 overworld mushroom blocks
-    if (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f || std::abs(x - 1744.f) < 1.f) {
-        itemType = "Mushroom";
-    }
-    // 1-2 underground mushroom block: 3rd of the 5 consecutive ? blocks (x=256, y=416)
+    bool powerupSpot = (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f || std::abs(x - 1744.f) < 1.f);
     if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
-        itemType = "Mushroom";
+        powerupSpot = true;
+    }
+
+    if (powerupSpot) {
+        if (character) {
+            const std::string_view form = character->getCurrentFormName();
+            if (form == "Super" || form == "Fire") {
+                itemType = "FireFlower";
+            } else {
+                itemType = "Mushroom";
+            }
+        } else {
+            itemType = "Mushroom";
+        }
     }
 
     sf::Vector2f spawnPos = (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
@@ -279,6 +289,8 @@ void Level::spawnItemFromBlock(float x, float y, Character* character) {
                     shroom->startEmerge();
                 } else if (auto* flower = dynamic_cast<FireFlower*>(item)) {
                     flower->startEmerge();
+                } else if (auto* star = dynamic_cast<StarItem*>(item)) {
+                    star->startEmerge();
                 }
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(item));
@@ -290,10 +302,10 @@ void Level::spawnItemFromBlock(float x, float y, Character* character) {
 void Level::warpToUnderground(Mario* mario) {
     std::cout << "[Level] Teleporting to hidden underground map area..." << std::endl;
     if (mario) {
-        mario->setPosition(3928.f, 32.f);
+        mario->setPosition(3736.f, 32.f);
         mario->setVelocity(sf::Vector2f(0.f, 0.f));
     }
-    camera.setCenter(3928.f, 120.f);
+    camera.setCenter(3736.f, 120.f);
 }
 
 void Level::warpToUnderground1_2(Mario* mario) {
