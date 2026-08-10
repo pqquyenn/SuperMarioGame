@@ -112,6 +112,7 @@ public:
     bool addEffect(std::unique_ptr<PlayerEffect> effect);
     void clearEffects();
     bool defeatsEnemiesOnContact() const;
+    bool isStarInvincible() const;
 
     void setRunning(bool status);
     bool isRunning() const;
@@ -135,6 +136,7 @@ private:
     bool dying{false};
     float deathTimer{0.f};
     bool deathHopStarted{false};
+    float starColorTimer{0.f};
 
     std::unique_ptr<PlayerState> currentState;
     std::vector<std::unique_ptr<PlayerEffect>> activeEffects;

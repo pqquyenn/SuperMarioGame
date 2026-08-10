@@ -24,3 +24,13 @@ int StarEffect::getDamagePriority() const {
 bool StarEffect::defeatsEnemiesOnContact() const {
     return !hasExpired();
 }
+
+float StarEffect::getMoveSpeedMultiplier() const {
+    return hasExpired() ? 1.f : 1.5f;
+}
+
+bool StarEffect::isCharacterVisible() const {
+    return true;
+}
+
+

@@ -82,6 +82,81 @@ PlayerAnimationSet makeFireAnimationSet(const sf::IntRect& deathFrame) {
     set.dead = staticClip(deathFrame, 0.15f, false);
     return set;
 }
+
+// Star Mario frames:
+// Small Mario: (3, 217), size (11, 15), step 16 -> (3,217), (19,217), (35,217), (51,217)
+constexpr int StarSmallLeft = 3;
+constexpr int StarSmallTop = 217;
+constexpr int StarSmallStep = 16;
+constexpr int StarSmallWidth = 11;
+constexpr int StarSmallHeight = 15;
+
+// Super Mario: (1, 233), size (15, 31), step 16 -> (1,233), (17,233), (33,233), (49,233)
+constexpr int StarSuperLeft = 1;
+constexpr int StarSuperTop = 233;
+constexpr int StarSuperStep = 16;
+constexpr int StarSuperWidth = 15;
+constexpr int StarSuperHeight = 31;
+
+sf::IntRect starSmallFrameAt(int index) {
+    return sf::IntRect{
+        StarSmallLeft + index * StarSmallStep,
+        StarSmallTop,
+        StarSmallWidth,
+        StarSmallHeight
+    };
+}
+
+sf::IntRect starSuperFrameAt(int index) {
+    return sf::IntRect{
+        StarSuperLeft + index * StarSuperStep,
+        StarSuperTop,
+        StarSuperWidth,
+        StarSuperHeight
+    };
+}
+
+PlayerAnimationSet makeStarSmallAnimationSet(const sf::IntRect& deathFrame) {
+    PlayerAnimationSet set;
+    AnimationClip starClip{
+        {
+            starSmallFrameAt(0),
+            starSmallFrameAt(1),
+            starSmallFrameAt(2),
+            starSmallFrameAt(3)
+        },
+        0.08f,
+        true
+    };
+    set.idle = starClip;
+    set.running = starClip;
+    set.jumping = starClip;
+    set.sliding = starClip;
+    set.dead = staticClip(deathFrame, 0.15f, false);
+    set.shooting = starClip;
+    return set;
+}
+
+PlayerAnimationSet makeStarSuperAnimationSet(const sf::IntRect& deathFrame) {
+    PlayerAnimationSet set;
+    AnimationClip starClip{
+        {
+            starSuperFrameAt(0),
+            starSuperFrameAt(1),
+            starSuperFrameAt(2),
+            starSuperFrameAt(3)
+        },
+        0.08f,
+        true
+    };
+    set.idle = starClip;
+    set.running = starClip;
+    set.jumping = starClip;
+    set.sliding = starClip;
+    set.dead = staticClip(deathFrame, 0.15f, false);
+    set.shooting = starClip;
+    return set;
+}
 }
 
 const AnimationClip* PlayerAnimationSet::findClip(PlayerMotion motion) const {
@@ -152,6 +227,26 @@ PlayerAnimationProfile makeClassicPlayerAnimationProfile(
         "Fire",
         makeFireAnimationSet(deathFrame)
     );
+    profile.registerForm(
+        "StarSmall",
+        makeStarSmallAnimationSet(deathFrame)
+    );
+    profile.registerForm(
+        "StarSuper",
+        makeStarSuperAnimationSet(deathFrame)
+    );
 
     return profile;
 }
+
+PlayerAnimationProfile makeLuigiAnimationProfile() {
+    constexpr int LuigiSmallRowY = 73;
+    constexpr int LuigiPoweredRowY = 89;
+    constexpr int FirePoweredRowY = 153;
+    return makeClassicPlayerAnimationProfile(
+        LuigiSmallRowY,
+        LuigiPoweredRowY,
+        FirePoweredRowY
+    );
+}
+

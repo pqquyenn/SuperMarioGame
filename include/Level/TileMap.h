@@ -40,6 +40,7 @@ public:
     void renderDebris(sf::RenderTarget& target) const;
     void updateBuffer(const Camera& camera);
     void render(sf::RenderTarget& target, const Camera& camera);
+    bool isSolidAt(float worldX, float worldY) const;
     std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
@@ -59,9 +60,6 @@ public:
     int getMapWidth()  const { return getWidth(); }
     int getMapHeight() const { return getHeight(); }
 
-    // Moving platform spawn points collected while parsing map 'O' tiles
-    const std::vector<sf::Vector2f>& getPlatformSpawnPoints() const { return m_platformSpawnPoints; }
-
 private:
     void initFlyweights();
 
@@ -74,5 +72,4 @@ private:
     bool m_needsRedraw;
     sf::Vector2f m_tileOffset{0.f, 0.f};
     std::vector<BrickDebris> m_debris;
-    std::vector<sf::Vector2f> m_platformSpawnPoints; // positions of 'O' tiles
 };

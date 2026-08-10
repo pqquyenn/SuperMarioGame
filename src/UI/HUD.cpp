@@ -43,16 +43,22 @@ HUD::HUD() {
     coinsText.setPosition(130.f, 8.f);
 
     // World
+    worldText.setFont(hudFont);
+    worldText.setCharacterSize(fontSize);
+    worldText.setFillColor(sf::Color::White);
+    worldText.setPosition(200.f, 8.f);
+
+    // Lives
     livesText.setFont(hudFont);
     livesText.setCharacterSize(fontSize);
     livesText.setFillColor(sf::Color::White);
-    livesText.setPosition(230.f, 8.f);
+    livesText.setPosition(280.f, 8.f);
 
     // Time
     timeText.setFont(hudFont);
     timeText.setCharacterSize(fontSize);
     timeText.setFillColor(sf::Color::White);
-    timeText.setPosition(330.f, 8.f);
+    timeText.setPosition(345.f, 8.f);
 }
 
 void HUD::onNotify(const GameEvent& event) {
@@ -113,6 +119,7 @@ void HUD::render(sf::RenderWindow& window) {
 
     window.draw(scoreText);
     window.draw(coinsText);
+    window.draw(worldText);
     window.draw(livesText);
     window.draw(timeText);
 

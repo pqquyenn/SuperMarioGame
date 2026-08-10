@@ -12,20 +12,20 @@
  */
 class MovingPlatform : public Entity {
 public:
-    enum class Axis { Vertical, Horizontal };
+    enum class Mode { OscillateVertical, OscillateHorizontal, LoopDown, LoopUp };
 
     /**
-     * @param x, y   Spawn position (top-left corner)
-     * @param w      Platform width in pixels
-     * @param minY   Upper Y bound (smallest y the platform reaches)
-     * @param maxY   Lower Y bound (largest y the platform reaches)
-     * @param speed  Oscillation speed in pixels/sec (default 50)
-     * @param axis   Axis of movement (default Vertical)
+     * @param x, y    Spawn position (top-left corner)
+     * @param w       Platform width in pixels
+     * @param bound1  Min bound (or reset position for LoopDown / trigger for LoopUp)
+     * @param bound2  Max bound (or trigger position for LoopDown / reset for LoopUp)
+     * @param speed   Movement speed in pixels/sec (default 50)
+     * @param mode    Movement mode (default OscillateVertical)
      */
     MovingPlatform(float x, float y, float w,
-                   float minY, float maxY,
+                   float bound1, float bound2,
                    float speed = 50.f,
-                   Axis axis = Axis::Vertical);
+                   Mode mode = Mode::OscillateVertical);
 
     void update(float dt) override;
     void render(sf::RenderWindow& window) const override;
@@ -35,6 +35,7 @@ public:
     sf::Vector2f getDelta() const { return m_delta; }
 
     float getWidth() const { return m_width; }
+    Mode getMode() const { return m_mode; }
 
 private:
     float m_width;
@@ -42,7 +43,7 @@ private:
     float m_maxBound;
     float m_speed;
     float m_direction = 1.f;
-    Axis  m_axis;
+    Mode  m_mode;
     sf::Vector2f m_prevPosition;
     sf::Vector2f m_delta;
 
