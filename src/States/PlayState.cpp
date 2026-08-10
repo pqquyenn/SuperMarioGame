@@ -111,18 +111,19 @@ void PlayState::update(float dt) {
                 }
             }
 
-        // 6. Resolve Mario vs. Moving Platforms (carry riding logic)
-        for (auto& platform : level.getMovingPlatforms()) {
-            if (platform && platform->isActive()) {
-                CollisionManager::resolveMovingPlatform(*mario, *platform);
+            // 6. Resolve Mario vs. Moving Platforms (carry riding logic)
+            for (auto& platform : level.getMovingPlatforms()) {
+                if (platform && platform->isActive()) {
+                    CollisionManager::resolveMovingPlatform(*mario, *platform);
+                }
             }
-        }
 
-        // 7. Kiểm tra rơi xuống vực (Void Death & Respawn)
-        // Threshold is 900px to cover the full 1-2 vertical layout (overworld+underground+bonus room)
-        if (mario->getPosition().y > 900.f) {
-            mario->die(DeathCause::Void);
-            mario->respawn(40.f, 160.f);
+            // 7. Kiểm tra rơi xuống vực (Void Death & Respawn)
+            // Threshold is 900px to cover the full 1-2 vertical layout (overworld+underground+bonus room)
+            if (mario->getPosition().y > 900.f) {
+                mario->die(DeathCause::Void);
+                mario->respawn(40.f, 160.f);
+            }
         }
     }
 
