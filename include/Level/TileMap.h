@@ -8,6 +8,7 @@
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
+#include <cstdint>
 
 #include "Core/AssetManager.h"
 #include "Level/TileType.h"
@@ -23,6 +24,12 @@ struct BrickDebris {
     bool active = true;
 };
 
+struct TileHandle {
+    std::size_t row{0};
+    std::size_t column{0};
+    std::uint64_t mapRevision{0};
+};
+
 class TileMap {
 public:
     TileMap();
@@ -35,16 +42,18 @@ public:
 
     bool readFromFile(const std::string& filepath);
     void update(float dt);
-    void breakBrick(Tile* tile);
+    void breakBrick(const TileHandle& handle);
     void updateDebris(float dt);
     void renderDebris(sf::RenderTarget& target) const;
     void updateBuffer(const Camera& camera);
     void render(sf::RenderTarget& target, const Camera& camera);
-    std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
+    std::vector<TileHandle> getTilesInBounds(const sf::FloatRect& bounds) const;
+    Tile* getTile(const TileHandle& handle);
+    const Tile* getTile(const TileHandle& handle) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
-    void hitTile(Tile* tile);
-    void removeTile(Tile* tile);
+    void hitTile(const TileHandle& handle);
+    void removeTile(const TileHandle& handle);
     
     int getWidth() const {
         int maxW = 0;
@@ -65,6 +74,7 @@ private:
 private:
     std::unordered_map<std::string, std::shared_ptr<TileType>> m_tileRegistry;
     std::vector<std::vector<std::unique_ptr<Tile>>> m_grid;
+    std::uint64_t m_mapRevision{0};
     int m_tileSize;
     sf::RenderTexture m_frontBuffer;
     sf::RenderTexture m_backBuffer;

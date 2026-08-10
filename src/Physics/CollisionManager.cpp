@@ -110,7 +110,7 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   }
 
   // Retrieve only tiles physically near the entity to minimize comparisons
-  const std::vector<Tile *> nearbyTiles = map.getTilesInBounds(bounds);
+  const std::vector<TileHandle> nearbyTiles = map.getTilesInBounds(bounds);
 
   sf::Vector2f pos = entity.getPosition();
   sf::Vector2f vel = entity.getVelocity();
@@ -122,7 +122,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   // ──────────────────────────────────────────────────────────────
   // PASS 1 — Y-axis resolution (Ground & Ceiling landing)
   // ──────────────────────────────────────────────────────────────
-  for (const Tile *tile : nearbyTiles) {
+  for (const TileHandle& handle : nearbyTiles) {
+    Tile *tile = map.getTile(handle);
     if (!tile || !tile->isSolid()) {
       continue;
     }
@@ -172,9 +173,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           // Question block bump logic
           if (mario && tile->isQuestionBlock()) {
-            Tile* mutableTile = const_cast<Tile *>(tile);
-            mutableTile->startBump();
-            map.hitTile(mutableTile);
+            tile->startBump();
+            map.hitTile(handle);
             if (level) {
               level->spawnItemFromBlock(tileBounds.left, tileBounds.top, mario);
             }
@@ -183,8 +183,6 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           // Brick block logic
           if (mario && tile->isBrick()) {
-            Tile* mutableTile = const_cast<Tile *>(tile);
-            
             // Check if this brick contains an item (e.g. Star in 1-1 at x=1616)
             bool isItemBrick = false;
             if (level && level->getLevelId() == 1 && std::abs(tileBounds.left - 1616.f) < 2.f) {
@@ -192,17 +190,17 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
             }
 
             if (isItemBrick) {
-              mutableTile->startBump();
-              map.hitTile(mutableTile);
+              tile->startBump();
+              map.hitTile(handle);
               if (level) {
                 level->spawnItemFromBlock(tileBounds.left, tileBounds.top, mario);
               }
             } else if (mario->hasAbility(PlayerAbility::BreakBricks)) {
               // Super/Fire Mario breaks the brick
-              map.breakBrick(mutableTile);
+              map.breakBrick(handle);
             } else {
               // Small Mario just bumps the brick
-              mutableTile->startBump();
+              tile->startBump();
             }
           }
         }
@@ -217,7 +215,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   // ──────────────────────────────────────────────────────────────
   // PASS 2 — X-axis resolution (Wall contact & Direction reversal)
   // ──────────────────────────────────────────────────────────────
-  for (const Tile *tile : nearbyTiles) {
+  for (const TileHandle& handle : nearbyTiles) {
+    Tile *tile = map.getTile(handle);
     if (!tile || !tile->isSolid()) {
       continue;
     }
@@ -268,13 +267,14 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   // PASS 3 — Collectibles & Warp Exits (non-solid tile checks)
   // ──────────────────────────────────────────────────────────────
   if (mario) {
-    for (Tile *tile : nearbyTiles) {
+    for (const TileHandle& handle : nearbyTiles) {
+      Tile *tile = map.getTile(handle);
       if (!tile)
         continue;
       sf::FloatRect tileBounds = tile->getBounds();
       if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
         if (tile->isCoinTile()) {
-          map.removeTile(tile);
+          map.removeTile(handle);
           mario->notify(GameEvent{GameEventType::COIN_COLLECTED, 200});
         }
       }
