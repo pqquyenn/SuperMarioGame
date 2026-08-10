@@ -39,7 +39,13 @@ void EntityFactory::registerDefaultEntities() {
     });
     registerType("FireFlower", [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<FireFlower>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("FireFlower"));
+        auto& assets = AssetManager::getInstance();
+        sf::Texture& sheet = assets.getTexture("BlockTileSheet");
+        if (sheet.getSize().x > 0) {
+            entity->setTexture(sheet);
+        } else {
+            entity->setTexture(assets.getTexture("FireFlower"));
+        }
         return entity;
     });
 

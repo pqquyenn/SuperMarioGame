@@ -5,6 +5,7 @@
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
+#include "Entities/Items/FireFlower.h"
 #include "Entities/Mario.h"
 #include "Entities/MovingPlatform.h"
 #include <algorithm>
@@ -28,7 +29,7 @@ void Level::spawnEntitiesFromMap() {
 
     if (levelId == 1) {
         enemySpawns = {
-            {"Goomba", {336.f, 192.f}},
+            {"Goomba", {384.f, 192.f}},   // Lệch khỏi ô mushroom x=336 để tránh va chạm với FireFlower
             {"Goomba", {656.f, 192.f}},
             {"Koopa", {1712.f, 176.f}}
         };
@@ -193,6 +194,8 @@ void Level::update(float dt) {
                 if (coin->isPopping()) isEthereal = true;
             } else if (auto* shroom = dynamic_cast<Mushroom*>(item.get())) {
                 if (shroom->isEmerging()) isEthereal = true;
+            } else if (auto* flower = dynamic_cast<FireFlower*>(item.get())) {
+                if (flower->isEmerging()) isEthereal = true;
             }
             
             if (!isEthereal) {
@@ -247,6 +250,10 @@ void Level::render(sf::RenderWindow& window) {
 }
 
 void Level::spawnItemFromBlock(float x, float y) {
+    spawnItemFromBlock(x, y, nullptr);
+}
+
+void Level::spawnItemFromBlock(float x, float y, Character* character) {
     std::string itemType = "Coin";
 
     // 1-1 overworld mushroom blocks
@@ -270,6 +277,8 @@ void Level::spawnItemFromBlock(float x, float y) {
             if (auto* item = dynamic_cast<Item*>(entity.get())) {
                 if (auto* shroom = dynamic_cast<Mushroom*>(item)) {
                     shroom->startEmerge();
+                } else if (auto* flower = dynamic_cast<FireFlower*>(item)) {
+                    flower->startEmerge();
                 }
                 entity.release();
                 items.push_back(std::unique_ptr<Item>(item));

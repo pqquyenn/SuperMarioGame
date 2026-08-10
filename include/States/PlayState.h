@@ -4,6 +4,7 @@
 #include "States/GameStateManager.h"
 #include "Level/Level.h"
 #include "Entities/Mario.h"
+#include "Entities/Fireball.h"
 #include "Input/InputHandler.h"
 #include "UI/HUD.h"
 #include <memory>
@@ -16,6 +17,9 @@ private:
     InputHandler inputHandler;
     std::string initialMapPath;
     HUD hud;
+    std::vector<std::unique_ptr<Fireball>> fireballs;
+
+    void spawnFireball(const ProjectileRequest& request);
 
 public:
     PlayState(const std::string& mapPath = "1.1/1-1.txt");

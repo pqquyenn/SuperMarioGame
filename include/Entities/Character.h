@@ -71,6 +71,7 @@ protected:
     bool facingRight{true};               // True for right-facing; false for left-facing.
     bool horizontalInputThisFrame{false}; // Prevents friction while movement input is active.
     bool jumpHeldThisFrame{false};        // True when jump input was received this frame.
+    float shootTimer{0.f};                // Timer for shoot pose animation.
 
     void applyHorizontalDeceleration(float dt);
     void applyGravity(float dt);
