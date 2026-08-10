@@ -38,6 +38,12 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
   }
 
   if (mario && !mario->isDying() && enemy && enemy->isActive()) {
+    // A flattened enemy remains active briefly so its defeat animation can be
+    // rendered. It must not damage the player again during that interval.
+    if (enemy->isSquished()) {
+      return;
+    }
+
     // Star invincibility: Mario defeats any enemy on contact (not just stomp)
     if (mario->defeatsEnemiesOnContact()) {
       enemy->onStomped();
@@ -52,6 +58,12 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
     if (mario->getVelocity().y > 0.f &&
         (marioBounds.top + marioBounds.height - overlap.height <=
          enemyBounds.top + 8.f)) {
+      // Resolve the overlap before bouncing. Without this separation Mario
+      // can still overlap the active defeat/shell animation on the next frame,
+      // where his new upward velocity would misclassify it as side damage.
+      mario->setPosition(
+          mario->getPosition().x,
+          enemyBounds.top - marioBounds.height);
       enemy->onStomped();
       // enemy->setActive(false);
       mario->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
@@ -90,6 +102,14 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
   sf::FloatRect bounds = entity.getBounds();
 
+  // Grounded is contact state, not a persistent movement state. Clear the
+  // previous frame's result before testing the current position; landing on a
+  // tile (or the later moving-platform pass) will set it back to true.
+  Character *character = dynamic_cast<Character *>(&entity);
+  if (character) {
+    character->setGrounded(false);
+  }
+
   // Retrieve only tiles physically near the entity to minimize comparisons
   const std::vector<Tile *> nearbyTiles = map.getTilesInBounds(bounds);
 
@@ -116,7 +136,7 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           pos.y -= overlap.height; // Landed on top of the tile (ground)
           landedThisFrame = true;
 
-          if (auto *character = dynamic_cast<Character *>(&entity)) {
+          if (character) {
             character->setGrounded(true);
           } else if (auto *star = dynamic_cast<StarItem *>(&entity)) {
             star->notifyGrounded();

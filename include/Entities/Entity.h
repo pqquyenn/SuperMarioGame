@@ -31,7 +31,10 @@ public:
     // getters, setters and movement handling
     virtual sf::FloatRect getBounds() const;
 
-    void setTexture(const sf::Texture& texture, bool resetRect = false);
+    virtual void setTexture(
+        const sf::Texture& texture,
+        bool resetRect = false
+    );
     void setTextureRect(const sf::IntRect& textureRect);
 
     const sf::Vector2f& getPosition() const;
