@@ -9,6 +9,7 @@
 #include "States/PauseState.h"
 #include "UI/HUD.h"
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 
@@ -41,6 +42,30 @@ void PlayState::onEnter() {
   const float levelPixelH = level.getTileMap().getMapHeight() * 16.f;
   cam.setLevelBounds(levelPixelW, levelPixelH);
   cam.setCenter(200.f, 112.f);
+
+  // Khởi tạo font & text cho chế độ Map Viewer
+  if (!freeCamFontLoaded) {
+    const std::string fontPaths[] = {
+        "assets/fonts/press-start-2p.ttf",
+        "../assets/fonts/press-start-2p.ttf",
+        "../../assets/fonts/press-start-2p.ttf",
+        "../../../assets/fonts/press-start-2p.ttf"
+    };
+    for (const auto &path : fontPaths) {
+      if (std::filesystem::exists(path) && freeCamFont.loadFromFile(path)) {
+        freeCamFontLoaded = true;
+        break;
+      }
+    }
+  }
+  if (freeCamFontLoaded) {
+    freeCamText.setFont(freeCamFont);
+    freeCamText.setCharacterSize(8);
+    freeCamText.setFillColor(sf::Color::Yellow);
+    freeCamText.setOutlineColor(sf::Color::Black);
+    freeCamText.setOutlineThickness(1.f);
+    freeCamText.setString("[MAP VIEWER MODE] WASD/Arrows: Pan | Shift: Fast | V: Exit");
+  }
 }
 
 void PlayState::onExit() {
@@ -87,11 +112,56 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
           }
         }
       }
+    } else if (event.key.code == sf::Keyboard::V) {
+      isFreeCameraMode = !isFreeCameraMode;
+      if (isFreeCameraMode) {
+        std::cout << "[PlayState] Free Camera Mode ENABLED (Map Viewer)" << std::endl;
+      } else {
+        std::cout << "[PlayState] Free Camera Mode DISABLED" << std::endl;
+        if (mario) {
+          level.getCamera().update(mario->getPosition());
+        }
+      }
     }
   }
 }
 
 void PlayState::update(float dt) {
+  if (isFreeCameraMode) {
+    float speed = freeCamSpeed;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) {
+      speed *= 2.5f;
+    }
+
+    float dx = 0.f;
+    float dy = 0.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+      dx -= speed * dt;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+      dx += speed * dt;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+      dy -= speed * dt;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+      dy += speed * dt;
+    }
+
+    if (dx != 0.f || dy != 0.f) {
+      level.getCamera().move(dx, dy);
+    }
+
+    // Vẫn cập nhật hoạt ảnh entity trong level (sàn di chuyển...)
+    level.update(dt);
+    return;
+  }
+
   if (mario) {
     if (mario->isDying()) {
       // Cập nhật hoạt ảnh chết của Mario (đứng yên -> bật lên -> rơi xuống)
@@ -245,6 +315,17 @@ void PlayState::render(sf::RenderWindow &window) {
 
   // Vẽ HUD (score, coins, world, time) cố định trên màn hình
   hud.render(window);
+
+  // Hiển thị Overlay khi đang ở chế độ Map Viewer
+  if (isFreeCameraMode && freeCamFontLoaded) {
+    sf::Vector2f camCenter = cam.getView().getCenter();
+    sf::Vector2f camSize = cam.getView().getSize();
+    sf::FloatRect textBounds = freeCamText.getLocalBounds();
+    freeCamText.setOrigin(textBounds.left + textBounds.width / 2.f,
+                          textBounds.top + textBounds.height);
+    freeCamText.setPosition(camCenter.x, camCenter.y + camSize.y / 2.f - 6.f);
+    window.draw(freeCamText);
+  }
 }
 
 void PlayState::spawnFireball(const ProjectileRequest &request) {

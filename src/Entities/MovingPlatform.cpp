@@ -3,14 +3,14 @@
 #include <SFML/Graphics.hpp>
 
 MovingPlatform::MovingPlatform(float x, float y, float w,
-                               float minY, float maxY,
-                               float speed, Axis axis)
+                               float bound1, float bound2,
+                               float speed, Mode mode)
     : Entity(x, y)
     , m_width(w)
-    , m_minBound(minY)
-    , m_maxBound(maxY)
+    , m_minBound(bound1)
+    , m_maxBound(bound2)
     , m_speed(speed)
-    , m_axis(axis)
+    , m_mode(mode)
     , m_prevPosition(x, y)
     , m_delta(0.f, 0.f)
 {
@@ -21,7 +21,8 @@ MovingPlatform::MovingPlatform(float x, float y, float w,
 void MovingPlatform::update(float dt) {
     m_prevPosition = position;
 
-    if (m_axis == Axis::Vertical) {
+    switch (m_mode) {
+    case Mode::OscillateVertical:
         position.y += m_speed * m_direction * dt;
         if (position.y >= m_maxBound) {
             position.y = m_maxBound;
@@ -30,7 +31,9 @@ void MovingPlatform::update(float dt) {
             position.y = m_minBound;
             m_direction = 1.f;
         }
-    } else {
+        break;
+
+    case Mode::OscillateHorizontal:
         position.x += m_speed * m_direction * dt;
         if (position.x >= m_maxBound) {
             position.x = m_maxBound;
@@ -39,6 +42,23 @@ void MovingPlatform::update(float dt) {
             position.x = m_minBound;
             m_direction = 1.f;
         }
+        break;
+
+    case Mode::LoopDown:
+        position.y += m_speed * dt;
+        if (position.y >= m_maxBound) {
+            position.y = m_minBound;
+            m_prevPosition = position;
+        }
+        break;
+
+    case Mode::LoopUp:
+        position.y -= m_speed * dt;
+        if (position.y <= m_minBound) {
+            position.y = m_maxBound;
+            m_prevPosition = position;
+        }
+        break;
     }
 
     m_delta = position - m_prevPosition;

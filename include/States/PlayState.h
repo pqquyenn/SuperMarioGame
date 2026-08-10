@@ -19,6 +19,12 @@ private:
     HUD hud;
     std::vector<std::unique_ptr<Fireball>> fireballs;
 
+    bool isFreeCameraMode = false;
+    float freeCamSpeed = 900.f;
+    sf::Text freeCamText;
+    sf::Font freeCamFont;
+    bool freeCamFontLoaded = false;
+
     void spawnFireball(const ProjectileRequest& request);
 
 public:
