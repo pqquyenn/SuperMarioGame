@@ -3,6 +3,9 @@
 #include "Entities/Enemies/Goomba.h"
 #include "Entities/Enemies/Koopa.h"
 #include "Entities/Enemies/PiranhaPlant.h"
+#include "Entities/Enemies/RedKoopa.h"
+#include "Entities/Enemies/GreenParatroopa.h"
+#include "Entities/Enemies/RedParatroopa.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/FireFlower.h"
@@ -21,6 +24,21 @@ void EntityFactory::registerDefaultEntities() {
     registerType("Koopa", [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<Koopa>(pos.x, pos.y);
         entity->setTexture(AssetManager::getInstance().getTexture("Koopa"));
+        return entity;
+    });
+    registerType("RedKoopa", [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<RedKoopa>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("RedKoopa_Walk1"));
+        return entity;
+    });
+    registerType("GreenParatroopa", [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<GreenParatroopa>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("GreenParatroopa_Walk1"));
+        return entity;
+    });
+    registerType("RedParatroopa", [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<RedParatroopa>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("RedParatroopa_Walk1"));
         return entity;
     });
     registerType("PiranhaPlant", [](const sf::Vector2f& pos) {

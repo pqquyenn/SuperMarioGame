@@ -37,6 +37,11 @@ void Enemy::applyPhysics(float dt) {
 
 void Enemy::reverseDirection() { direction = -direction; }
 
+void Enemy::onFireball() {
+    active = false;
+    isAlive = false;
+}
+
 int Enemy::getDirection() const { return direction; }
 
 void Enemy::setDirection(int dir) { direction = dir; }
