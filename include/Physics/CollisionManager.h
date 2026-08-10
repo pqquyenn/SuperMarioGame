@@ -35,4 +35,10 @@ public:
      * Uses double-dispatch or simple callback logic on the Entity class.
      */
     static void resolveEntityCollisions(Entity& a, Entity& b);
+
+    /**
+     * @brief Checks if Mario is standing on a MovingPlatform and carries him with it.
+     * Call once per platform per frame after Mario's tile collisions are resolved.
+     */
+    static void resolveMovingPlatform(class Mario& mario, class MovingPlatform& platform);
 };

@@ -68,8 +68,12 @@ void TileMap::initFlyweights() {
     add("6",pipeConnTex,32,16,16,16,true,true,1);
     add("7",pipeConnTex,32,32,16,16,true,true,1);
     add("0",pipeConnTex,48,0,16,16,true,true,1);
+
+    // 'a' = horizontal auto-entry warp pipe (used for Pipe A and Pipe C1 in 1-2)
+    // Visually identical to '<' but triggers warp on horizontal contact, not Down key.
+    add("a", pipeTopTex, 0, 0, 16, 16, true, true, 2);
+    m_tileRegistry["a"]->isHorizontalWarpPipe = true;
     
-   
 
     // 5. End-Level Elements (Castle, FlagPole, Flag)
     const sf::Texture* castleTex = &assets.getTexture("Castle");
@@ -219,15 +223,19 @@ bool TileMap::readFromFile(const std::string& filepath) {
                     row.push_back(nullptr);
                     continue;
                 }
+                // 'O' tiles are moving platform spawn points — skip static tile, record position
+                if (c == 'O') {
+                    m_platformSpawnPoints.push_back(sf::Vector2f(
+                        float(x * m_tileSize) + m_tileOffset.x,
+                        float(y * m_tileSize) + m_tileOffset.y));
+                    row.push_back(nullptr);
+                    continue;
+                }
                 auto it = m_tileRegistry.find(std::string(1, c));
                 if (it != m_tileRegistry.end()) {
-                    if (c == 'O') {
-                        row.push_back(nullptr);
-                    } else {
-                        row.push_back(std::make_unique<Tile>(
-                            it->second.get(),
-                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
-                    }
+                    row.push_back(std::make_unique<Tile>(
+                        it->second.get(),
+                        sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
                 } else {
                     if (c != 'e' && c != 'E' && c != 'o') {
                         std::cerr << "TileMap Warning: Unregistered char '" << c << "' at row " << y << ", col " << x << " in " << filepath << std::endl;

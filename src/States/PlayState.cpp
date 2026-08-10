@@ -27,8 +27,8 @@ void PlayState::onEnter() {
     Camera& cam = level.getCamera();
     cam.setSize(400.f, 225.f);
 
-    const float levelPixelW = 264.f * 16.f; // 4224px
-    const float levelPixelH = 16.f * 16.f;  // 256px
+    const float levelPixelW = level.getTileMap().getMapWidth() * 16.f;
+    const float levelPixelH = level.getTileMap().getMapHeight() * 16.f;
     cam.setLevelBounds(levelPixelW, levelPixelH);
     cam.setCenter(200.f, 112.f);
 }
@@ -93,8 +93,16 @@ void PlayState::update(float dt) {
             }
         }
 
-        // 6. Kiểm tra rơi xuống vực (Void Death & Respawn)
-        if (mario->getPosition().y > 300.f) {
+        // 6. Resolve Mario vs. Moving Platforms (carry riding logic)
+        for (auto& platform : level.getMovingPlatforms()) {
+            if (platform && platform->isActive()) {
+                CollisionManager::resolveMovingPlatform(*mario, *platform);
+            }
+        }
+
+        // 7. Kiểm tra rơi xuống vực (Void Death & Respawn)
+        // Threshold is 900px to cover the full 1-2 vertical layout (overworld+underground+bonus room)
+        if (mario->getPosition().y > 900.f) {
             mario->die(DeathCause::Void);
             mario->respawn(40.f, 160.f);
         }
@@ -105,9 +113,13 @@ void PlayState::update(float dt) {
 
     // Camera tự động cuộn theo vị trí Mario
     if (mario) {
-        if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
-            // Standalone underground map
-            level.getCamera().setCenter(160.f, 120.f);
+        if (level.getIsInBonusRoom()) {
+            // Bonus room (rows 31-45, y=480-720): fix camera on vault
+            level.getCamera().setCenter(200.f, 600.f);
+        } else if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
+            // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
+            float camX = std::max(200.f, mario->getPosition().x);
+            level.getCamera().setCenter(camX, 400.f);
         } else if (mario->getPosition().x >= 3600.f) {
             // Appended underground area in 1-1.txt
             level.getCamera().setCenter(3840.f, 120.f);
@@ -126,7 +138,8 @@ void PlayState::render(sf::RenderWindow& window) {
 
     float camX = cam.getView().getCenter().x;
     float camY = cam.getView().getCenter().y;
-    bool isUndergroundArea = level.getIsUnderground() || camY >= 240.f || camX > 3600.f;
+    bool isUndergroundArea = level.getIsUnderground() || level.getIsInBonusRoom()
+                             || camY >= 240.f || camX > 3600.f;
     sf::Color bgColor = isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
 
     window.clear(bgColor);

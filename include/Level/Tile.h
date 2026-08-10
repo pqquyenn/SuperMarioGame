@@ -9,6 +9,7 @@ public:
     sf::FloatRect getBounds() const;
     bool isSolid() const;
     bool isWarpPipe() const;
+    bool isHorizontalWarpPipe() const;
     int getWarpDirection() const;
     bool isQuestionBlock() const;
     bool isCoinTile() const;
