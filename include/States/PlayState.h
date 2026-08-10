@@ -8,20 +8,21 @@
 #include "Input/InputHandler.h"
 #include "UI/HUD.h"
 #include <memory>
-#include <vector>
+#include <string>
 
 class PlayState : public GameState {
 private:
     Level level;
     std::unique_ptr<Mario> mario;
     InputHandler inputHandler;
+    std::string initialMapPath;
     HUD hud;
     std::vector<std::unique_ptr<Fireball>> fireballs;
 
     void spawnFireball(const ProjectileRequest& request);
 
 public:
-    PlayState() = default;
+    PlayState(const std::string& mapPath = "1.1/1-1.txt");
 
     void onEnter() override;
     void onExit() override;

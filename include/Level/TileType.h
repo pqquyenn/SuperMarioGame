@@ -12,6 +12,7 @@ struct TileType {
     bool isCoinTile = false;
     bool isBrick = false;
     bool isAnimated = false;
+    bool isHorizontalWarpPipe = false; // auto-entry on horizontal contact (Pipe A, Pipe C1)
     
     void render(sf::RenderTarget& target, const sf::Vector2f& position) const {
         if (!texture) return;

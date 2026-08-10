@@ -110,16 +110,30 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
             character->setGrounded(true);
           }
 
-          // Check 4th pipe warp (Warp down to Underground when pressing Down/S
-          // on pipe)
           if (mario && tile->isWarpPipe() && level) {
-            bool downPressed =
-                sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) ||
-                sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S);
-            if (downPressed && pos.x >= 880.f && pos.x <= 960.f &&
-                !level->getIsUnderground()) {
-              level->warpToUnderground(mario);
-              return;
+            bool downPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S);
+            if (downPressed) {
+                if (!level->getIsUnderground() && level->getLevelId() == 1 && pos.x >= 880.f && pos.x <= 960.f) {
+                    level->warpToUnderground(mario);
+                    return;
+                }
+                if (level->getIsUnderground() && level->getLevelId() == 2 && !level->getIsInBonusRoom() && pos.x >= 1850.f && pos.x <= 2050.f) {
+                    level->warpPipeB_Entry(mario);
+                    return;
+                }
+            }
+          }
+          if (mario && tile->isHorizontalWarpPipe() && level) {
+            bool rightPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
+            if (rightPressed && mario->getBounds().left + mario->getBounds().width <= tileBounds.left + 5.f) {
+                if (!level->getIsUnderground() && level->getLevelId() == 2) {
+                    level->warpPipeA_Entry(mario);
+                    return;
+                }
+                if (level->getIsUnderground() && level->getLevelId() == 1) {
+                    level->warpToOverworldExit(mario);
+                    return;
+                }
             }
           }
         } else {
@@ -228,4 +242,17 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   if (fireball && landedThisFrame) {
     fireball->bounce();
   }
+}
+void CollisionManager::resolveMovingPlatform(Mario& mario, MovingPlatform& platform) {
+    if (!mario.isActive() || !platform.isActive()) return;
+    sf::FloatRect marioBounds = mario.getBounds();
+    sf::FloatRect platBounds = platform.getBounds();
+    if (marioBounds.left + marioBounds.width > platBounds.left && marioBounds.left < platBounds.left + platBounds.width) {
+        if (mario.getVelocity().y >= 0.f && marioBounds.top + marioBounds.height >= platBounds.top && marioBounds.top + marioBounds.height <= platBounds.top + 8.f) {
+            mario.setPosition(mario.getPosition().x, platBounds.top - marioBounds.height);
+            mario.setVelocity(sf::Vector2f(mario.getVelocity().x, 0.f));
+            mario.setGrounded(true);
+            mario.move(platform.getVelocity() * (1.f/60.f));
+        }
+    }
 }
