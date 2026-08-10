@@ -67,7 +67,7 @@ PlayerAnimationSet makeAnimationSet(
 PlayerAnimationSet makeFireAnimationSet(const sf::IntRect& deathFrame) {
     PlayerAnimationSet set;
     set.idle = staticClip(fireFrameAt(0));
-    set.shooting = staticClip(fireFrameAt(1));
+    set.shooting = staticClip(sf::IntRect{241, 155, 16, 32});
     set.running = AnimationClip{
         {
             fireFrameAt(2),
@@ -138,8 +138,7 @@ PlayerAnimationProfile makeClassicPlayerAnimationProfile(
     int /*firePoweredRowY*/
 ) {
     PlayerAnimationProfile profile;
-    const sf::IntRect deathFrame =
-        frameAt(1, normalSmallRowY, 16);
+    const sf::IntRect deathFrame{18, normalSmallRowY, 16, 16};
 
     profile.registerForm(
         "Small",

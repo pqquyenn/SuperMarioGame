@@ -31,7 +31,7 @@ InputHandler::InputHandler(const InputBindings& inputBindings)
       bindings{inputBindings} {}
 
 void InputHandler::handleInput(Character& character, float dt) {
-    if (!character.isActive()) {
+    if (!character.isActive() || character.isDying()) {
         character.setRunning(false);
         character.setJumpHeld(false);
         // Preserve physical key history so held buttons through death or

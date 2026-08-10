@@ -120,6 +120,7 @@ public:
     bool isGrounded() const;
 
     bool isFacingRight() const;
+    bool isDying() const;
     sf::FloatRect getBounds() const override;
 
     void applyForm(std::string_view formName, float heightMultiplier);
@@ -131,6 +132,10 @@ public:
     void requestProjectile(ProjectileType type);
 
 private:
+    bool dying{false};
+    float deathTimer{0.f};
+    bool deathHopStarted{false};
+
     std::unique_ptr<PlayerState> currentState;
     std::vector<std::unique_ptr<PlayerEffect>> activeEffects;
     std::vector<std::unique_ptr<PlayerEffect>> pendingEffects;

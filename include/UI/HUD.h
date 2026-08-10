@@ -20,4 +20,7 @@ public:
     void onNotify(const GameEvent& event) override;
     void update(float dt);
     void render(sf::RenderWindow& window);
+
+    int getLives() const { return lives; }
+    int getScore() const { return score; }
 };
