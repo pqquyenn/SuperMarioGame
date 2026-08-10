@@ -7,6 +7,7 @@
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Mario.h"
+#include "Entities/MovingPlatform.h"
 #include "Level/Level.h"
 #include "Level/Tile.h"
 #include "Level/TileMap.h"
@@ -242,14 +243,57 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 }
 void CollisionManager::resolveMovingPlatform(Mario& mario, MovingPlatform& platform) {
     if (!mario.isActive() || !platform.isActive()) return;
-    sf::FloatRect marioBounds = mario.getBounds();
-    sf::FloatRect platBounds = platform.getBounds();
-    if (marioBounds.left + marioBounds.width > platBounds.left && marioBounds.left < platBounds.left + platBounds.width) {
-        if (mario.getVelocity().y >= 0.f && marioBounds.top + marioBounds.height >= platBounds.top && marioBounds.top + marioBounds.height <= platBounds.top + 8.f) {
-            mario.setPosition(mario.getPosition().x, platBounds.top - marioBounds.height);
-            mario.setVelocity(sf::Vector2f(mario.getVelocity().x, 0.f));
+
+    sf::FloatRect mb = mario.getBounds();
+    sf::FloatRect pb = platform.getBounds();
+
+    // Quick broad-phase: no horizontal overlap → skip
+    if (mb.left + mb.width <= pb.left || mb.left >= pb.left + pb.width) return;
+    // Quick broad-phase: no vertical overlap → skip
+    if (mb.top + mb.height <= pb.top || mb.top >= pb.top + pb.height) return;
+
+    // Compute penetration on each axis
+    float overlapLeft   = (mb.left + mb.width) - pb.left;   // Mario right past platform left
+    float overlapRight  = (pb.left + pb.width) - mb.left;   // Mario left past platform right
+    float overlapTop    = (mb.top + mb.height) - pb.top;    // Mario bottom past platform top
+    float overlapBottom = (pb.top + pb.height) - mb.top;    // Mario top past platform bottom
+
+    float minOverlapX = std::min(overlapLeft, overlapRight);
+    float minOverlapY = std::min(overlapTop, overlapBottom);
+
+    sf::Vector2f marioPos = mario.getPosition();
+    sf::Vector2f marioVel = mario.getVelocity();
+
+    if (minOverlapY <= minOverlapX) {
+        // ── Vertical resolution ──────────────────────────────────────
+        if (overlapTop < overlapBottom) {
+            // Mario landed on TOP of the platform
+            marioPos.y = pb.top - mb.height;
+            mario.setPosition(marioPos.x, marioPos.y);
+            mario.setVelocity(sf::Vector2f(marioVel.x, 0.f));
             mario.setGrounded(true);
-            mario.move(platform.getVelocity() * (1.f/60.f));
+            // Carry Mario along with the platform's movement
+            sf::Vector2f delta = platform.getDelta();
+            mario.setPosition(marioPos.x + delta.x, marioPos.y + delta.y);
+        } else {
+            // Mario hit the UNDERSIDE (ceiling collision when jumping up)
+            marioPos.y = pb.top + pb.height;
+            mario.setPosition(marioPos.x, marioPos.y);
+            if (marioVel.y < 0.f) {
+                mario.setVelocity(sf::Vector2f(marioVel.x, 0.f));
+            }
         }
+    } else {
+        // ── Horizontal resolution (side push) ────────────────────────
+        if (overlapLeft < overlapRight) {
+            // Mario is to the LEFT of platform → push left
+            marioPos.x = pb.left - mb.width;
+        } else {
+            // Mario is to the RIGHT of platform → push right
+            marioPos.x = pb.left + pb.width;
+        }
+        mario.setPosition(marioPos.x, marioPos.y);
+        mario.setVelocity(sf::Vector2f(0.f, marioVel.y));
     }
 }
+

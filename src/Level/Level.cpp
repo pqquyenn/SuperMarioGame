@@ -61,44 +61,66 @@ void Level::spawnEntitiesFromMap() {
         }
     }
 
-    // Promote 'O' tile spawn points into MovingPlatform entities (read from TileMap)
-    if (levelId == 2) {
-        const auto& pts = map.getPlatformSpawnPoints();
-        // Group consecutive O-tiles (within 17px) into single platforms
-        // Each 'O' tile is 16px wide; 3 consecutive Oes form a 48px platform.
-        std::vector<sf::Vector2f> sorted = pts;
-        std::sort(sorted.begin(), sorted.end(),
-            [](const sf::Vector2f& a, const sf::Vector2f& b) {
-                return (a.y < b.y) || (a.y == b.y && a.x < b.x);
-            });
+  // Data-driven MovingPlatform configuration for Level 2 (based on 000
+  // positions in 1-2.txt)
+  if (levelId == 2) {
+    struct PlatformConfig {
+      float x, y, width;
+      float bound1, bound2;
+      float speed;
+      MovingPlatform::Mode mode;
+    };
 
-        size_t i = 0;
-        while (i < sorted.size()) {
-            float px = sorted[i].x;
-            float py = sorted[i].y;
-            float pw = 16.f;
-            size_t j = i + 1;
-            while (j < sorted.size()
-                   && std::abs(sorted[j].y - py) < 2.f
-                   && sorted[j].x <= sorted[j-1].x + 17.f) {
-                pw += 16.f;
-                ++j;
-            }
-            // Underground floor is at y=448 (rows 29-30). Platforms oscillate
-            // between their spawn position (top) and the underground floor.
-            float undergroundFloor = 432.f; // y of platform lower bound (above floor tiles)
-            auto plat = std::make_unique<MovingPlatform>(
-                px, py, pw,
-                py,                  // minBound = spawn y (topmost point)
-                undergroundFloor,    // maxBound = near floor
-                45.f,
-                MovingPlatform::Axis::Vertical);
-            std::cout << "[Level] Spawned MovingPlatform at (" << px << "," << py
-                      << ") width=" << pw << std::endl;
-            movingPlatforms.push_back(std::move(plat));
-            i = j;
-        }
+    // Shaft 1 (Col 151, x=2416px): 2 platforms moving DOWN (LoopDown)
+    // Shaft 2 (Col 166, x=2656px): 2 platforms moving UP (LoopUp)
+    const PlatformConfig level2Platforms[] = {
+        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f,
+         MovingPlatform::Mode::LoopDown},
+        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f,
+         MovingPlatform::Mode::LoopDown},
+        {2656.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
+        {2656.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
+    };
+
+    for (const auto &cfg : level2Platforms) {
+      movingPlatforms.push_back(
+          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
+                                           cfg.bound2, cfg.speed, cfg.mode));
+      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
+                << cfg.y << ") width=" << cfg.width
+                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
     }
+  }
+
+  if (levelId == 3) {
+    struct PlatformConfig {
+      float x, y, width;
+      float bound1, bound2;
+      float speed;
+      MovingPlatform::Mode mode;
+    };
+    // Picture 1 gap: 1 platform (UP/DOWN)
+    // Picture 2 gap: 2 platforms (LEFT/RIGHT)
+    // Picture 3 gap: 1 platform (LEFT/RIGHT)
+    const PlatformConfig level3Platforms[] = {
+        // Platform 1 (Picture 1 gap: cols 55-67, x=976)
+        {976.f,  96.f, 48.f,  64.f, 160.f, 40.f, MovingPlatform::Mode::OscillateVertical},
+        // Platform 2 (Picture 2 gap left: cols 99-109, x=1584)
+        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f, MovingPlatform::Mode::OscillateHorizontal},
+        // Platform 3 (Picture 2 gap right: cols 110-119, x=1760)
+        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f, MovingPlatform::Mode::OscillateHorizontal},
+        // Platform 4 (Picture 3 gap: cols 135-149, x=2160)
+        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f, MovingPlatform::Mode::OscillateHorizontal},
+    };
+    for (const auto &cfg : level3Platforms) {
+      movingPlatforms.push_back(
+          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
+                                           cfg.bound2, cfg.speed, cfg.mode));
+      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
+                << cfg.y << ") width=" << cfg.width
+                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
+    }
+  }
 }
 
 bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
