@@ -51,3 +51,6 @@ PlayerAnimationProfile makeClassicPlayerAnimationProfile(
     int normalPoweredRowY,
     int firePoweredRowY
 );
+
+// Builds the animation profile for Luigi's rows in PlayerSpriteSheet.png.
+PlayerAnimationProfile makeLuigiAnimationProfile();

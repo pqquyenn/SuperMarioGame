@@ -239,3 +239,14 @@ PlayerAnimationProfile makeClassicPlayerAnimationProfile(
     return profile;
 }
 
+PlayerAnimationProfile makeLuigiAnimationProfile() {
+    constexpr int LuigiSmallRowY = 73;
+    constexpr int LuigiPoweredRowY = 89;
+    constexpr int FirePoweredRowY = 153;
+    return makeClassicPlayerAnimationProfile(
+        LuigiSmallRowY,
+        LuigiPoweredRowY,
+        FirePoweredRowY
+    );
+}
+
