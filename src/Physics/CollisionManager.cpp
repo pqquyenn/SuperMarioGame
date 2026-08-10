@@ -82,6 +82,10 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
     if (flower->isEmerging())
       return;
   }
+  if (StarItem *star = dynamic_cast<StarItem *>(&entity)) {
+    if (star->isEmerging())
+      return;
+  }
 
   sf::FloatRect bounds = entity.getBounds();
 
@@ -160,7 +164,20 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           // Brick block logic
           if (mario && tile->isBrick()) {
             Tile* mutableTile = const_cast<Tile *>(tile);
-            if (mario->hasAbility(PlayerAbility::BreakBricks)) {
+            
+            // Check if this brick contains an item (e.g. Star in 1-1 at x=1616)
+            bool isItemBrick = false;
+            if (level && level->getLevelId() == 1 && std::abs(tileBounds.left - 1616.f) < 2.f) {
+              isItemBrick = true;
+            }
+
+            if (isItemBrick) {
+              mutableTile->startBump();
+              map.hitTile(mutableTile);
+              if (level) {
+                level->spawnItemFromBlock(tileBounds.left, tileBounds.top, mario);
+              }
+            } else if (mario->hasAbility(PlayerAbility::BreakBricks)) {
               // Super/Fire Mario breaks the brick
               map.breakBrick(mutableTile);
             } else {

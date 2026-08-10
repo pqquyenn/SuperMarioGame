@@ -223,6 +223,9 @@ void Level::update(float dt) {
       } else if (auto *flower = dynamic_cast<FireFlower *>(item.get())) {
         if (flower->isEmerging())
           isEthereal = true;
+      } else if (auto *star = dynamic_cast<StarItem *>(item.get())) {
+        if (star->isEmerging())
+          isEthereal = true;
       }
 
       if (!isEthereal) {
@@ -282,13 +285,16 @@ void Level::spawnItemFromBlock(float x, float y) {
 void Level::spawnItemFromBlock(float x, float y, Character *character) {
   std::string itemType = "Coin";
 
+  bool starSpot = (levelId == 1 && std::abs(x - 1616.f) < 2.f);
   bool powerupSpot = (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f ||
                       std::abs(x - 1744.f) < 1.f);
   if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
     powerupSpot = true;
   }
 
-  if (powerupSpot) {
+  if (starSpot) {
+    itemType = "StarItem";
+  } else if (powerupSpot) {
     if (character) {
       const std::string_view form = character->getCurrentFormName();
       if (form == "Super" || form == "Fire") {

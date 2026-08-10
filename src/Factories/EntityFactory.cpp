@@ -51,7 +51,13 @@ void EntityFactory::registerDefaultEntities() {
     });
     auto starCreator = [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<StarItem>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("Starman"));
+        auto& assets = AssetManager::getInstance();
+        sf::Texture& sheet = assets.getTexture("BlockTileSheet");
+        if (sheet.getSize().x > 0) {
+            entity->setTexture(sheet);
+        } else {
+            entity->setTexture(assets.getTexture("Starman"));
+        }
         return entity;
     };
     registerType("StarItem", starCreator);
