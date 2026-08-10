@@ -50,6 +50,7 @@ public:
     std::vector<TileHandle> getTilesInBounds(const sf::FloatRect& bounds) const;
     Tile* getTile(const TileHandle& handle);
     const Tile* getTile(const TileHandle& handle) const;
+    bool isSolidAt(float worldX, float worldY) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
     void hitTile(const TileHandle& handle);
