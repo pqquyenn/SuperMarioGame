@@ -30,8 +30,7 @@ float StarEffect::getMoveSpeedMultiplier() const {
 }
 
 bool StarEffect::isCharacterVisible() const {
-    if (hasExpired()) return true;
-    const int flashPhase = static_cast<int>(remainingTime / flashInterval);
-    return flashPhase % 2 == 0;
+    return true;
 }
+
 

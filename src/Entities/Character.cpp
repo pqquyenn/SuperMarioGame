@@ -272,6 +272,25 @@ void Character::updatePlayerAnimation(float dt) {
     );
     sprite.setOrigin(facingRight ? 0.f : frameWidth, 0.f);
     sprite.setScale(facingRight ? 1.f : -1.f, 1.f);
+
+    // Dynamic Star Color Tinting (Rainbow color cycling every 0.06s)
+    if (isStarInvincible() && !dying) {
+        starColorTimer += dt;
+        static const sf::Color starColors[] = {
+            sf::Color(255, 255, 255), // Trắng sáng nguyên bản
+            sf::Color(255, 225, 60),  // Vàng Gold phát sáng
+            sf::Color(90, 255, 120),  // Xanh lá neon
+            sf::Color(255, 100, 70),  // Đỏ cam rực lửa
+            sf::Color(80, 230, 255),  // Xanh Cyan
+            sf::Color(255, 130, 240)  // Tím hồng
+        };
+        constexpr int numColors = sizeof(starColors) / sizeof(starColors[0]);
+        const int colorIdx = static_cast<int>(starColorTimer / 0.06f) % numColors;
+        sprite.setColor(starColors[colorIdx]);
+    } else {
+        starColorTimer = 0.f;
+        sprite.setColor(sf::Color::White);
+    }
 }
 
 void Character::setPlayerAnimationProfile(
@@ -392,6 +411,8 @@ void Character::die(DeathCause cause) {
     changeState(std::make_unique<SmallState>());
 
     clearEffects();
+    starColorTimer = 0.f;
+    sprite.setColor(sf::Color::White);
     setVelocity(0.f, 0.f);
     grounded = false;
     running = false;
@@ -410,6 +431,8 @@ void Character::respawn(float x, float y) {
     deathTimer = 0.f;
     deathHopStarted = false;
     clearEffects();
+    starColorTimer = 0.f;
+    sprite.setColor(sf::Color::White);
     setVelocity(0.f, 0.f);
 
     grounded = false;
@@ -474,6 +497,10 @@ bool Character::defeatsEnemiesOnContact() const {
             return effect->defeatsEnemiesOnContact();
         }
     );
+}
+
+bool Character::isStarInvincible() const {
+    return defeatsEnemiesOnContact();
 }
 
 float Character::getMoveSpeedMultiplier() const {

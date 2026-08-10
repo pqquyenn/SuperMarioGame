@@ -1,15 +1,53 @@
 #include "Entities/Items/StarItem.h"
 #include "Entities/Character.h"
+#include "Observer/Event.h"
 #include "PlayerEffects/StarEffect.h"
 #include <SFML/Graphics/CircleShape.hpp>
 #include <SFML/Graphics/ConvexShape.hpp>
+
+namespace {
+constexpr int StarRowLeft = 2;
+constexpr int StarRowTop = 35;
+constexpr int StarFrameStep = 17;
+constexpr int StarFrameWidth = 13;
+constexpr int StarFrameHeight = 15;
+
+sf::IntRect starFrameAt(int index) {
+    return sf::IntRect{
+        StarRowLeft + index * StarFrameStep,
+        StarRowTop,
+        StarFrameWidth,
+        StarFrameHeight
+    };
+}
+}
 
 // ============================================================
 // Constructor
 // Kích thước Star: 16x16 pixels
 // ============================================================
-StarItem::StarItem(float x, float y) : Item(x, y) {
+StarItem::StarItem(float x, float y)
+    : Item(x, y),
+      clip{buildAnimationClip()} {
     size = {16.f, 16.f};
+    animator.play(clip);
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
+    }
+    sprite.setPosition(position);
+}
+
+AnimationClip StarItem::buildAnimationClip() const {
+    return AnimationClip{
+        {
+            starFrameAt(0), // (2, 35, 13, 15)
+            starFrameAt(1), // (19, 35, 13, 15)
+            starFrameAt(2), // (36, 35, 13, 15)
+            starFrameAt(3)  // (53, 35, 13, 15)
+        },
+        0.12f,
+        true
+    };
 }
 
 // ============================================================
@@ -17,6 +55,11 @@ StarItem::StarItem(float x, float y) : Item(x, y) {
 // ============================================================
 void StarItem::update(float dt) {
     if (!active || collected) return;
+
+    animator.update(dt);
+    if (const AnimationFrame* frame = animator.getCurrentFrame()) {
+        sprite.setTextureRect(frame->textureRect);
+    }
 
     if (emerging) {
         emergeDistance += emergeSpeed * dt;
@@ -79,6 +122,7 @@ bool StarItem::tryCollect(Character& character) {
     // Gắn StarEffect 10 giây bất tử + tăng tốc cho Mario
     if (character.addEffect(std::make_unique<StarEffect>(10.f))) {
         onCollect();
+        character.notify(GameEvent{GameEventType::POWERUP_COLLECTED, 1000});
         return true;
     }
     return false;
@@ -106,3 +150,4 @@ void StarItem::notifyGrounded() {
         velocity.y = bounceForce;
     }
 }
+
