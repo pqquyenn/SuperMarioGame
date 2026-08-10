@@ -75,6 +75,10 @@ bool Tile::isWarpPipe() const {
     return m_type ? m_type->isWarpPipe : false;
 }
 
+bool Tile::isHorizontalWarpPipe() const {
+    return m_type ? m_type->isHorizontalWarpPipe : false;
+}
+
 int Tile::getWarpDirection() const {
     return m_type ? m_type->warpDirection : 0;
 }

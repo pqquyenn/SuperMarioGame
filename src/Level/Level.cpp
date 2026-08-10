@@ -7,8 +7,7 @@
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Mario.h"
-#include "Entities/Character.h"
-#include "PlayerStates/PlayerState.h"
+#include "Entities/MovingPlatform.h"
 #include <algorithm>
 #include <vector>
 #include <filesystem>
@@ -35,12 +34,7 @@ void Level::spawnEntitiesFromMap() {
             {"Koopa", {1712.f, 176.f}}
         };
     } else if (levelId == 2) {
-        enemySpawns = {
-            {"Goomba", {200.f, 200.f}}
-        };
-        itemSpawns = {
-            {"Coin", {160.f, 160.f}}
-        };
+        // No hardcoded enemies for 1-2 overworld; underground section has tile-based content
     } else if (levelId == 3) {
         enemySpawns = {
             {"PiranhaPlant", {300.f, 150.f}}
@@ -66,12 +60,53 @@ void Level::spawnEntitiesFromMap() {
             }
         }
     }
+
+    // Promote 'O' tile spawn points into MovingPlatform entities (read from TileMap)
+    if (levelId == 2) {
+        const auto& pts = map.getPlatformSpawnPoints();
+        // Group consecutive O-tiles (within 17px) into single platforms
+        // Each 'O' tile is 16px wide; 3 consecutive Oes form a 48px platform.
+        std::vector<sf::Vector2f> sorted = pts;
+        std::sort(sorted.begin(), sorted.end(),
+            [](const sf::Vector2f& a, const sf::Vector2f& b) {
+                return (a.y < b.y) || (a.y == b.y && a.x < b.x);
+            });
+
+        size_t i = 0;
+        while (i < sorted.size()) {
+            float px = sorted[i].x;
+            float py = sorted[i].y;
+            float pw = 16.f;
+            size_t j = i + 1;
+            while (j < sorted.size()
+                   && std::abs(sorted[j].y - py) < 2.f
+                   && sorted[j].x <= sorted[j-1].x + 17.f) {
+                pw += 16.f;
+                ++j;
+            }
+            // Underground floor is at y=448 (rows 29-30). Platforms oscillate
+            // between their spawn position (top) and the underground floor.
+            float undergroundFloor = 432.f; // y of platform lower bound (above floor tiles)
+            auto plat = std::make_unique<MovingPlatform>(
+                px, py, pw,
+                py,                  // minBound = spawn y (topmost point)
+                undergroundFloor,    // maxBound = near floor
+                45.f,
+                MovingPlatform::Axis::Vertical);
+            std::cout << "[Level] Spawned MovingPlatform at (" << px << "," << py
+                      << ") width=" << pw << std::endl;
+            movingPlatforms.push_back(std::move(plat));
+            i = j;
+        }
+    }
 }
 
 bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
     isUnderground = isUndergroundFlag;
+    isInBonusRoom = false;
     enemies.clear();
     items.clear();
+    movingPlatforms.clear();
     
     EntityFactory::getInstance().registerDefaultEntities();
 
@@ -169,6 +204,10 @@ void Level::update(float dt) {
         }
     }
 
+    for (auto& platform : movingPlatforms) {
+        if (platform) platform->update(dt);
+    }
+
     enemies.erase(
         std::remove_if(enemies.begin(), enemies.end(),
             [](const auto& e) { return !e || !e->isActive(); }),
@@ -191,6 +230,13 @@ void Level::render(sf::RenderWindow& window) {
         }
     }
 
+    // Render moving platforms
+    for (const auto& platform : movingPlatforms) {
+        if (platform && platform->isActive()) {
+            platform->render(window);
+        }
+    }
+
     for (const auto& enemy : enemies) {
         if (enemy && enemy->isActive()) {
             enemy->render(window);
@@ -210,24 +256,13 @@ void Level::spawnItemFromBlock(float x, float y) {
 void Level::spawnItemFromBlock(float x, float y, Character* character) {
     std::string itemType = "Coin";
 
-    // Legacy mushroom spots (kept from the old tuned map)
-    bool mushroomSpot = std::abs(x - 336.f) < 1.f ||
-                        std::abs(x - 1248.f) < 1.f ||
-                        std::abs(x - 1744.f) < 1.f;
-
-    if (mushroomSpot) {
-        if (character) {
-            const std::string_view form = character->getCurrentFormName();
-            // Super hoặc Fire Mario đập ô mushroom -> ra FireFlower.
-            // Các ô ? khác (không phải mushroomSpot) vẫn spawn Coin bình thường.
-            if (form == "Super" || form == "Fire") {
-                itemType = "FireFlower";
-            } else {
-                itemType = "Mushroom";
-            }
-        } else {
-            itemType = "Mushroom";
-        }
+    // 1-1 overworld mushroom blocks
+    if (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f || std::abs(x - 1744.f) < 1.f) {
+        itemType = "Mushroom";
+    }
+    // 1-2 underground mushroom block: 3rd of the 5 consecutive ? blocks (x=256, y=416)
+    if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
+        itemType = "Mushroom";
     }
 
     sf::Vector2f spawnPos = (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
@@ -255,10 +290,63 @@ void Level::spawnItemFromBlock(float x, float y, Character* character) {
 void Level::warpToUnderground(Mario* mario) {
     std::cout << "[Level] Teleporting to hidden underground map area..." << std::endl;
     if (mario) {
-        mario->setPosition(3736.f, 32.f);
+        mario->setPosition(3928.f, 32.f);
         mario->setVelocity(sf::Vector2f(0.f, 0.f));
     }
-    camera.setCenter(3736.f, 120.f);
+    camera.setCenter(3928.f, 120.f);
+}
+
+void Level::warpToUnderground1_2(Mario* mario) {
+    std::cout << "[Level] Teleporting to hidden underground coin room in 1-2..." << std::endl;
+    if (mario) {
+        mario->setPosition(48.f, 528.f);
+        mario->setVelocity(sf::Vector2f(0.f, 0.f));
+    }
+    camera.setCenter(200.f, 608.f);
+}
+
+// ── World 1-2 Warp Methods ─────────────────────────────────────────────────
+
+// Pipe A: Automatic horizontal contact → underground main corridor
+void Level::warpPipeA_Entry(Mario* mario) {
+    std::cout << "[Level][1-2] Pipe A entered — warping to underground." << std::endl;
+    isUnderground = true;
+    isInBonusRoom = false;
+    if (mario) {
+        // Underground floor tile tops are at y=464 (lines 30-31, row 29-30).
+        // For a 16px-tall Small Mario, spawn with feet at y=464 → top at y=448.
+        // Update per step 3: spawn at y=432.f so he safely lands on the floor.
+        mario->setPosition(256.f, 432.f);
+        mario->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
+    }
+    // Underground corridor: ceiling y=304, floor y=480, midpoint=400
+    camera.setCenter(300.f, 400.f);
+}
+
+// Pipe B: Down key on underground pipe → bonus room (hidden vault)
+void Level::warpPipeB_Entry(Mario* mario) {
+    std::cout << "[Level][1-2] Pipe B entered — warping to bonus room." << std::endl;
+    isInBonusRoom = true;
+    if (mario) {
+        // Bonus room entry: left side, just below the ceiling pipe (rows 32-34, x=48, y=528)
+        mario->setPosition(48.f, 528.f);
+        mario->setVelocity(sf::Vector2f(0.f, 0.f));
+    }
+    // Camera: center on bonus room (rows 31-45 span y=480-720, center ≈ 600)
+    camera.setCenter(200.f, 600.f);
+}
+
+// Pipe C1: Automatic horizontal exit from bonus room → resurface at Pipe C2 in underground
+void Level::warpPipeC1_Exit(Mario* mario) {
+    std::cout << "[Level][1-2] Pipe C1 exit — returning to underground at Pipe C2." << std::endl;
+    isInBonusRoom = false;
+    if (mario) {
+        // Pipe C2 destination: back in the underground corridor, slightly to the right
+        // of Pipe B so Mario exits moving right. y=400 is above the underground floor.
+        mario->setPosition(672.f, 400.f);
+        mario->setVelocity(sf::Vector2f(0.f, -80.f)); // pop upward out of pipe
+    }
+    camera.setCenter(672.f, 352.f);
 }
 
 void Level::warpToOverworldExit(Mario* mario) {
@@ -267,5 +355,6 @@ void Level::warpToOverworldExit(Mario* mario) {
         mario->setPosition(2608.f, 160.f);
         mario->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
     }
+
     camera.setCenter(2608.f, 120.f);
 }
