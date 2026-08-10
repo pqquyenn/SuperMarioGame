@@ -6,7 +6,7 @@
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/StarItem.h"
-#include "Entities/Mario.h"
+#include "Entities/Character.h"
 #include "Entities/MovingPlatform.h"
 #include "Factories/EntityFactory.h"
 #include "Physics/CollisionManager.h"
@@ -327,22 +327,22 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
   }
 }
 
-void Level::warpToUnderground(Mario *mario) {
+void Level::warpToUnderground(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground map area..."
             << std::endl;
-  if (mario) {
-    mario->setPosition(3736.f, 32.f);
-    mario->setVelocity(sf::Vector2f(0.f, 0.f));
+  if (character) {
+    character->setPosition(3736.f, 32.f);
+    character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
   camera.setCenter(3736.f, 120.f);
 }
 
-void Level::warpToUnderground1_2(Mario *mario) {
+void Level::warpToUnderground1_2(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground coin room in 1-2..."
             << std::endl;
-  if (mario) {
-    mario->setPosition(48.f, 528.f);
-    mario->setVelocity(sf::Vector2f(0.f, 0.f));
+  if (character) {
+    character->setPosition(48.f, 528.f);
+    character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
   camera.setCenter(200.f, 608.f);
 }
@@ -350,32 +350,32 @@ void Level::warpToUnderground1_2(Mario *mario) {
 // ── World 1-2 Warp Methods ─────────────────────────────────────────────────
 
 // Pipe A: Automatic horizontal contact → underground main corridor
-void Level::warpPipeA_Entry(Mario *mario) {
+void Level::warpPipeA_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe A entered — warping to underground."
             << std::endl;
   isUnderground = true;
   isInBonusRoom = false;
-  if (mario) {
+  if (character) {
     // Underground floor tile tops are at y=464 (lines 30-31, row 29-30).
     // For a 16px-tall Small Mario, spawn with feet at y=464 → top at y=448.
     // Update per step 3: spawn at y=432.f so he safely lands on the floor.
-    mario->setPosition(256.f, 432.f);
-    mario->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
+    character->setPosition(256.f, 432.f);
+    character->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
   }
   // Underground corridor: ceiling y=304, floor y=480, midpoint=400
   camera.setCenter(300.f, 400.f);
 }
 
 // Pipe B: Down key on underground pipe → bonus room (hidden vault)
-void Level::warpPipeB_Entry(Mario *mario) {
+void Level::warpPipeB_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe B entered — warping to bonus room."
             << std::endl;
   isInBonusRoom = true;
-  if (mario) {
+  if (character) {
     // Bonus room entry: left side, just below the ceiling pipe (rows 32-34,
     // x=48, y=528)
-    mario->setPosition(48.f, 528.f);
-    mario->setVelocity(sf::Vector2f(0.f, 0.f));
+    character->setPosition(48.f, 528.f);
+    character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
   // Camera: center on bonus room (rows 31-45 span y=480-720, center ≈ 600)
   camera.setCenter(200.f, 600.f);
@@ -383,27 +383,27 @@ void Level::warpPipeB_Entry(Mario *mario) {
 
 // Pipe C1: Automatic horizontal exit from bonus room → resurface at Pipe C2
 // in underground
-void Level::warpPipeC1_Exit(Mario *mario) {
+void Level::warpPipeC1_Exit(Character *character) {
   std::cout
       << "[Level][1-2] Pipe C1 exit — returning to underground at Pipe C2."
       << std::endl;
   isInBonusRoom = false;
-  if (mario) {
+  if (character) {
     // Pipe C2 destination: back in the underground corridor, slightly to the
     // right of Pipe B so Mario exits moving right. y=400 is above the
     // underground floor.
-    mario->setPosition(672.f, 400.f);
-    mario->setVelocity(sf::Vector2f(0.f, -80.f)); // pop upward out of pipe
+    character->setPosition(672.f, 400.f);
+    character->setVelocity(sf::Vector2f(0.f, -80.f)); // pop upward out of pipe
   }
   camera.setCenter(672.f, 352.f);
 }
 
-void Level::warpToOverworldExit(Mario *mario) {
+void Level::warpToOverworldExit(Character *character) {
   std::cout << "[Level] Teleporting back to Overworld (5th pipe)..."
             << std::endl;
-  if (mario) {
-    mario->setPosition(2608.f, 160.f);
-    mario->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
+  if (character) {
+    character->setPosition(2608.f, 160.f);
+    character->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
   }
 
   camera.setCenter(2608.f, 120.f);

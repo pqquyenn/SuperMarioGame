@@ -1,41 +1,58 @@
 #pragma once
 
 #include "States/GameState.h"
-#include "States/GameStateManager.h"
 #include <SFML/Graphics.hpp>
+#include <string>
+#include <vector>
 
 class MenuState : public GameState {
 private:
-    // === Font ===
+    enum class Page {
+        GameMode,
+        Solo,
+        Play,
+        Character,
+        Settings,
+        KeyBindings
+    };
+
+    struct MenuEntry {
+        std::string label;
+        bool enabled{true};
+    };
+
     sf::Font font;
-    bool fontLoaded = false;
+    bool fontLoaded{false};
 
-    // === Texts ===
-    sf::Text titleText;         // "SUPER MARIO BROS"
-    sf::Text subtitleText;      // "© Nintendo / Student Project"
-    sf::Text startText;         // "PLAY 1-1"
-    sf::Text play12Text;        // "PLAY 1-2"
-    sf::Text play13Text;        // "PLAY 1-3"
-    sf::Text exitText;          // "EXIT"
-    sf::Text selectorText;      // ">" ky tu chi muc dang chon
+    sf::Text titleText;
+    sf::Text pageTitleText;
+    sf::Text statusText;
+    sf::Text footerText;
+    sf::Text selectorText;
+    sf::Text keyBindingsText;
+    std::vector<sf::Text> entryTexts;
 
-    // === Menu Navigation ===
-    int selectedIndex = 0;      // 0 = PLAY 1-1, 1 = PLAY 1-2, 2 = PLAY 1-3, 3 = EXIT
-    static const int MENU_ITEMS = 4;
-
-    // === Animation ===
-    float blinkTimer = 0.f;
-    bool showSelector = true;
-
-    // === Background ===
     sf::Texture bgTexture;
     sf::Sprite bgSprite;
-    bool bgLoaded = false;
-    sf::RectangleShape groundBlock;   // Gia lap dat nen phia duoi
+    bool bgLoaded{false};
+    sf::RectangleShape groundBlock;
+    sf::RectangleShape panel;
 
+    Page page{Page::GameMode};
+    std::vector<MenuEntry> entries;
+    int selectedIndex{0};
 
-    // === Helpers ===
-    void updateSelectorPosition();
+    float blinkTimer{0.f};
+    bool showSelector{true};
+
+    void setPage(Page newPage);
+    void rebuildEntries();
+    void updateVisuals();
+    void moveSelection(int direction);
+    void activateSelection(sf::RenderWindow& window);
+    void goBack();
+    void adjustVolume(float delta);
+    bool loadBackground();
 
 public:
     MenuState() = default;

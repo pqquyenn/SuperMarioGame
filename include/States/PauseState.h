@@ -36,4 +36,5 @@ public:
     void handleInput(sf::Event& event, sf::RenderWindow& window) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
+    bool isTransparent() const override { return true; }
 };

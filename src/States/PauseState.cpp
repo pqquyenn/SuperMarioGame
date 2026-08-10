@@ -67,7 +67,7 @@ void PauseState::onEnter() {
 }
 
 void PauseState::onExit() {
-    std::cout << "[PauseState] onExit - Tiep tuc game" << std::endl;
+    std::cout << "[PauseState] Leaving pause menu" << std::endl;
 }
 
 void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
@@ -94,7 +94,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                         stateManager->popState();
                     } else if (selectedIndex == 1) {
                         // QUIT TO MENU -> thay bang MenuState
-                        stateManager->changeState(std::make_unique<MenuState>());
+                        stateManager->clearAndPushState(std::make_unique<MenuState>());
                     }
                 }
                 break;
@@ -123,13 +123,17 @@ void PauseState::update(float dt) {
 }
 
 void PauseState::render(sf::RenderWindow& window) {
-    // LUU Y: Khong goi window.clear() o day
-    // Vi PlayState da ve truoc do roi, PauseState chi ve OVERLAY len tren
+    const sf::View previousView = window.getView();
+    const sf::View uiView(sf::FloatRect(0.f, 0.f, 800.f, 600.f));
+    window.setView(uiView);
 
     // 1. Ve overlay den ban trong suot
     window.draw(overlay);
 
-    if (!fontLoaded) return;
+    if (!fontLoaded) {
+        window.setView(previousView);
+        return;
+    }
 
     // 2. Ve texts
     window.draw(pausedText);
@@ -140,6 +144,8 @@ void PauseState::render(sf::RenderWindow& window) {
     if (showSelector) {
         window.draw(selectorText);
     }
+
+    window.setView(previousView);
 }
 
 void PauseState::updateSelectorPosition() {

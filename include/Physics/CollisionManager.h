@@ -37,8 +37,8 @@ public:
     static void resolveEntityCollisions(Entity& a, Entity& b);
 
     /**
-     * @brief Checks if Mario is standing on a MovingPlatform and carries him with it.
-     * Call once per platform per frame after Mario's tile collisions are resolved.
+     * @brief Checks if a character is standing on a MovingPlatform and carries it.
+     * Call once per platform per frame after tile collisions are resolved.
      */
-    static void resolveMovingPlatform(class Mario& mario, class MovingPlatform& platform);
+    static void resolveMovingPlatform(class Character& character, class MovingPlatform& platform);
 };

@@ -13,6 +13,7 @@ private:
     // === Luu tru am thanh ===
     sf::Music backgroundMusic;
     std::map<std::string, sf::Sound> sounds;
+    float masterVolume{100.f};
 
 public:
     // === Xoa copy & move de dam bao chi co 1 instance duy nhat ===
@@ -31,4 +32,7 @@ public:
 
     // === Sound Effects ===
     void playSound(const std::string& name);
+
+    void setMasterVolume(float volume);
+    float getMasterVolume() const { return masterVolume; }
 };
