@@ -40,6 +40,7 @@ public:
     void renderDebris(sf::RenderTarget& target) const;
     void updateBuffer(const Camera& camera);
     void render(sf::RenderTarget& target, const Camera& camera);
+    bool isSolidAt(float worldX, float worldY) const;
     std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }

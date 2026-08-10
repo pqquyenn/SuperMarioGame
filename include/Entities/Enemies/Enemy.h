@@ -34,6 +34,7 @@ public:
   virtual ~Enemy() = default;
 
   virtual void onStomped() = 0;
+  virtual void onFireball();
   virtual void reverseDirection();
 
   int getDirection() const;

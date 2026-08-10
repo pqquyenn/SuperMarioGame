@@ -239,7 +239,7 @@ void PlayState::update(float dt) {
         continue;
       sf::FloatRect overlap;
       if (CollisionManager::checkAABB(fbBounds, enemy->getBounds(), overlap)) {
-        enemy->onStomped();
+        enemy->onFireball();
         fireball->explode();
         if (mario) {
           mario->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
