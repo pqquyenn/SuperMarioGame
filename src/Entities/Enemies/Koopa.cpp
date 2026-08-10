@@ -38,6 +38,11 @@ void Koopa::onStomped() {
   }
 }
 
+void Koopa::onFireball() {
+  active = false;
+  isAlive = false;
+}
+
 void Koopa::render(sf::RenderWindow &window) const {
   if (!active)
     return;
@@ -47,11 +52,19 @@ void Koopa::render(sf::RenderWindow &window) const {
 
   if (sprite.getTexture() != nullptr) {
     sf::Sprite drawSprite = sprite;
-    drawSprite.setPosition(position.x, position.y + yOffset);
     sf::Vector2u texSize = sprite.getTexture()->getSize();
     if (texSize.x > 0 && texSize.y > 0) {
-      drawSprite.setScale(size.x / static_cast<float>(texSize.x),
-                          currentHeight / static_cast<float>(texSize.y));
+      float scaleX = size.x / static_cast<float>(texSize.x);
+      float scaleY = currentHeight / static_cast<float>(texSize.y);
+      if (direction > 0) {
+        drawSprite.setScale(-scaleX, scaleY);
+        drawSprite.setPosition(position.x + size.x, position.y + yOffset);
+      } else {
+        drawSprite.setScale(scaleX, scaleY);
+        drawSprite.setPosition(position.x, position.y + yOffset);
+      }
+    } else {
+      drawSprite.setPosition(position.x, position.y + yOffset);
     }
     window.draw(drawSprite);
     return;

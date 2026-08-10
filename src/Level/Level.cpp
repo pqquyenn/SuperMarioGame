@@ -1,5 +1,6 @@
 #include "Level/Level.h"
 #include "Entities/Enemies/Enemy.h"
+#include "Entities/Enemies/RedKoopa.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Item.h"
@@ -29,34 +30,27 @@ void Level::spawnEntitiesFromMap() {
   std::vector<SpawnData> itemSpawns;
 
   if (levelId == 1) {
-    enemySpawns = {{"Goomba", {384.f, 192.f}}, // Lệch khỏi ô mushroom x=336 để
-                                               // tránh va chạm với FireFlower
-                   {"Goomba", {656.f, 192.f}},
-                   {"Goomba", {832.f, 192.f}},
-                   {"Goomba", {848.f, 192.f}},
-                   {"Goomba", {1312.f, 64.f}},
-                   {"Goomba", {1344.f, 64.f}},
-                   {"Goomba", {1584.f, 192.f}},
-                   {"Goomba", {1600.f, 192.f}},
-                   {"Goomba", {1792.f, 192.f}},
-                   {"Goomba", {1808.f, 192.f}},
-                   {"Goomba", {2000.f, 192.f}},
-                   {"Goomba", {2016.f, 192.f}},
-                   {"Goomba", {2048.f, 192.f}},
-                   {"Goomba", {2064.f, 192.f}},
-                   {"Goomba", {2768.f, 192.f}},
-                   {"Goomba", {2784.f, 192.f}},
+    enemySpawns = {{"Goomba", {384.f, 192.f}},  {"Goomba", {656.f, 192.f}},
+                   {"Goomba", {832.f, 192.f}},  {"Goomba", {848.f, 192.f}},
+                   {"Goomba", {1312.f, 64.f}},  {"Goomba", {1344.f, 64.f}},
+                   {"Goomba", {1584.f, 192.f}}, {"Goomba", {1600.f, 192.f}},
+                   {"Goomba", {1792.f, 192.f}}, {"Goomba", {1808.f, 192.f}},
+                   {"Goomba", {2000.f, 192.f}}, {"Goomba", {2016.f, 192.f}},
+                   {"Goomba", {2048.f, 192.f}}, {"Goomba", {2064.f, 192.f}},
+                   {"Goomba", {2768.f, 192.f}}, {"Goomba", {2784.f, 192.f}},
                    {"Koopa", {1712.f, 176.f}}};
   } else if (levelId == 2) {
     // No hardcoded enemies for 1-2 overworld; underground section has
     // tile-based content
   } else if (levelId == 3) {
-    enemySpawns = {{"PiranhaPlant", {300.f, 150.f}}};
   }
 
   for (const auto &data : enemySpawns) {
     if (auto entity = factory.create(data.type, data.position)) {
       if (auto *enemy = dynamic_cast<Enemy *>(entity.get())) {
+        if (auto *rk = dynamic_cast<RedKoopa *>(enemy)) {
+          rk->setTileMap(&map);
+        }
         entity.release();
         enemies.push_back(std::unique_ptr<Enemy>(enemy));
         std::cout << "[Level] Spawned Enemy: " << data.type << " at ("
@@ -141,7 +135,8 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
   for (const auto &path : candidates) {
     if (std::filesystem::exists(path)) {
       if (map.readFromFile(path)) {
-        // Tự động phát hiện và cập nhật levelId dựa trên tên đường dẫn file map
+        // Tự động phát hiện và cập nhật levelId dựa trên tên đường dẫn file
+        // map
         if (path.find("1-1") != std::string::npos ||
             path.find("1.1") != std::string::npos) {
           levelId = 1;
@@ -386,8 +381,8 @@ void Level::warpPipeB_Entry(Mario *mario) {
   camera.setCenter(200.f, 600.f);
 }
 
-// Pipe C1: Automatic horizontal exit from bonus room → resurface at Pipe C2 in
-// underground
+// Pipe C1: Automatic horizontal exit from bonus room → resurface at Pipe C2
+// in underground
 void Level::warpPipeC1_Exit(Mario *mario) {
   std::cout
       << "[Level][1-2] Pipe C1 exit — returning to underground at Pipe C2."

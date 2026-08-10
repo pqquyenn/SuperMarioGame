@@ -3,7 +3,7 @@
 #include "Entities/Enemies/Enemy.h"
 
 class Koopa : public Enemy {
-private:
+protected:
   bool inShell = false;
   bool shellSpinning = false;
   sf::Vector2f size{16.f, 32.f}; // Kích thước chuẩn 1x2 tiles (16x32 pixels)
@@ -20,6 +20,7 @@ public:
   void update(float dt) override;
   void render(sf::RenderWindow& window) const override;
   void onStomped() override;
+  void onFireball() override;
 
   sf::FloatRect getBounds() const override;
 

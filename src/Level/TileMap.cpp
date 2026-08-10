@@ -138,7 +138,14 @@ void TileMap::initFlyweights() {
     add("8", &assets.getTexture("SpriteIsland"), 0, 0, 16, 16, true);  // Green Cap
     add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);
     add("9", &assets.getTexture("SpriteIsland"), 48, 0, 16, 16, true);
-    add("O", platformTex, 16, 0, 16, 8, true);                          // Orange Wood Platform
+}
+
+bool TileMap::isSolidAt(float worldX, float worldY) const {
+    int col = static_cast<int>((worldX - m_tileOffset.x) / m_tileSize);
+    int row = static_cast<int>((worldY - m_tileOffset.y) / m_tileSize);
+    if (row < 0 || row >= static_cast<int>(m_grid.size())) return false;
+    if (col < 0 || col >= static_cast<int>(m_grid[row].size())) return false;
+    return m_grid[row][col] && m_grid[row][col]->isSolid();
 }
 
 bool TileMap::readFromFile(const std::string& filepath) {

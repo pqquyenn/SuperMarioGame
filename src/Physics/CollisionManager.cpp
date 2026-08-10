@@ -1,6 +1,7 @@
 #include "Physics/CollisionManager.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
+#include "Entities/Enemies/GreenParatroopa.h"
 #include "Entities/Entity.h"
 #include "Entities/Fireball.h"
 #include "Entities/Items/Coin.h"
@@ -140,6 +141,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
             character->setGrounded(true);
           } else if (auto *star = dynamic_cast<StarItem *>(&entity)) {
             star->notifyGrounded();
+          } else if (auto *gp = dynamic_cast<GreenParatroopa *>(&entity)) {
+            gp->notifyLanded();
           }
 
           if (mario && tile->isWarpPipe() && level) {
