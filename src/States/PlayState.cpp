@@ -9,11 +9,22 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <filesystem>
 
 PlayState::PlayState(const std::string& mapPath) : initialMapPath(mapPath) {}
 
 void PlayState::onEnter() {
     std::cout << "[PlayState] onEnter - Bat dau map " << initialMapPath << std::endl;
+    
+    // Extract level name (e.g., "1-3" from "1.3/1-3.txt")
+    std::filesystem::path p(initialMapPath);
+    std::string rawFilename = p.filename().string();
+    if (rawFilename.size() >= 3 && rawFilename.substr(rawFilename.size() - 4) == ".txt") {
+        hud.setLevelName(rawFilename.substr(0, rawFilename.size() - 4));
+    } else {
+        hud.setLevelName("1-1");
+    }
+
     if (!level.loadLevel(initialMapPath)) {
         std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!" << std::endl;
     }

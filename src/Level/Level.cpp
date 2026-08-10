@@ -36,9 +36,7 @@ void Level::spawnEntitiesFromMap() {
     } else if (levelId == 2) {
         // No hardcoded enemies for 1-2 overworld; underground section has tile-based content
     } else if (levelId == 3) {
-        enemySpawns = {
-            {"PiranhaPlant", {300.f, 150.f}}
-        };
+        // Athletic sky level - no ground enemies/pipes
     }
 
     for (const auto& data : enemySpawns) {
@@ -61,34 +59,26 @@ void Level::spawnEntitiesFromMap() {
         }
     }
 
-  // Data-driven MovingPlatform configuration for Level 2 (based on 000
-  // positions in 1-2.txt)
+  // Data-driven MovingPlatform configuration for Level 2
   if (levelId == 2) {
     struct PlatformConfig {
       float x, y, width;
       float bound1, bound2;
       float speed;
-      MovingPlatform::Mode mode;
+      MovingPlatform::Axis axis;
     };
-
-    // Shaft 1 (Col 151, x=2416px): 2 platforms moving DOWN (LoopDown)
-    // Shaft 2 (Col 166, x=2656px): 2 platforms moving UP (LoopUp)
     const PlatformConfig level2Platforms[] = {
-        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f,
-         MovingPlatform::Mode::LoopDown},
-        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f,
-         MovingPlatform::Mode::LoopDown},
-        {2656.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
-        {2656.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
+        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
+        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
+        {2656.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
+        {2656.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
     };
-
     for (const auto &cfg : level2Platforms) {
       movingPlatforms.push_back(
           std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
+                                           cfg.bound2, cfg.speed, cfg.axis));
       std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") width=" << cfg.width
-                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
+                << cfg.y << ") Axis=" << static_cast<int>(cfg.axis) << std::endl;
     }
   }
 
@@ -97,28 +87,24 @@ void Level::spawnEntitiesFromMap() {
       float x, y, width;
       float bound1, bound2;
       float speed;
-      MovingPlatform::Mode mode;
+      MovingPlatform::Axis axis;
     };
-    // Picture 1 gap: 1 platform (UP/DOWN)
-    // Picture 2 gap: 2 platforms (LEFT/RIGHT)
-    // Picture 3 gap: 1 platform (LEFT/RIGHT)
     const PlatformConfig level3Platforms[] = {
-        // Platform 1 (Picture 1 gap: cols 55-67, x=976)
-        {976.f,  96.f, 48.f,  64.f, 160.f, 40.f, MovingPlatform::Mode::OscillateVertical},
+        // Early gap 1: cols 14-16, x=224
+         {976.f,  96.f, 48.f,  64.f, 160.f, 40.f, MovingPlatform::Axis::Vertical},
         // Platform 2 (Picture 2 gap left: cols 99-109, x=1584)
-        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f, MovingPlatform::Mode::OscillateHorizontal},
+        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f, MovingPlatform::Axis::Horizontal},
         // Platform 3 (Picture 2 gap right: cols 110-119, x=1760)
-        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f, MovingPlatform::Mode::OscillateHorizontal},
+        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f, MovingPlatform::Axis::Horizontal},
         // Platform 4 (Picture 3 gap: cols 135-149, x=2160)
-        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f, MovingPlatform::Mode::OscillateHorizontal},
+        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f, MovingPlatform::Axis::Horizontal},
     };
     for (const auto &cfg : level3Platforms) {
       movingPlatforms.push_back(
           std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
+                                           cfg.bound2, cfg.speed, cfg.axis));
       std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") width=" << cfg.width
-                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
+                << cfg.y << ") Axis=" << static_cast<int>(cfg.axis) << std::endl;
     }
   }
 }
@@ -134,6 +120,15 @@ bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
 
     std::filesystem::path p(filename);
     std::string rawFilename = p.filename().string();
+
+    // Auto-detect levelId from filename: "1-1.txt"->1, "1-2.txt"->2, "1-3.txt"->3
+    if (rawFilename.size() >= 3 && rawFilename[1] == '-') {
+        int parsed = rawFilename[2] - '0';
+        if (parsed >= 1 && parsed <= 9) {
+            levelId = parsed;
+            std::cout << "[Level] Detected levelId=" << levelId << " from " << rawFilename << std::endl;
+        }
+    }
 
     const std::string candidates[] = {
         filename,
