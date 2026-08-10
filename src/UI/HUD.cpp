@@ -73,6 +73,10 @@ void HUD::onNotify(const GameEvent& event) {
         case GameEventType::PLAYER_DIED:
             lives -= 1;
             break;
+        case GameEventType::LIFE_GAINED:
+            lives += (event.value > 0 ? event.value : 1);
+            score += 1000;
+            break;
         default:
             break;
     }

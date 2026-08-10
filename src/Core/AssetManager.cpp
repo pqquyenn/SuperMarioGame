@@ -102,6 +102,7 @@ void AssetManager::loadLevelAssets() {
                                                         // PiranhaPlant.png
   tryLoad("Coin", "assets/maps/Mario Game Assets/Coin.png");
   tryLoad("Mushroom", "assets/maps/Mario Game Assets/MagicMushroom.png");
+  tryLoad("1UpMushroom", "assets/maps/Mario Game Assets/1upMushroom.png");
   tryLoad(
       "FireFlower",
       "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower

@@ -8,6 +8,7 @@
 #include "Entities/Enemies/RedParatroopa.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
+#include "Entities/Items/OneUpMushroom.h"
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/StarItem.h"
 #include "Core/AssetManager.h"
@@ -54,6 +55,11 @@ void EntityFactory::registerDefaultEntities() {
     registerType("Mushroom", [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<Mushroom>(pos.x, pos.y);
         entity->setTexture(AssetManager::getInstance().getTexture("Mushroom"));
+        return entity;
+    });
+    registerType("1UpMushroom", [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<OneUpMushroom>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("1UpMushroom"));
         return entity;
     });
     registerType("FireFlower", [](const sf::Vector2f& pos) {
