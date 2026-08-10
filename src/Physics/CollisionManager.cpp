@@ -6,6 +6,7 @@
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Mushroom.h"
+#include "Entities/Items/StarItem.h"
 #include "Entities/Mario.h"
 #include "Level/Level.h"
 #include "Level/Tile.h"
@@ -36,6 +37,13 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
   }
 
   if (mario && !mario->isDying() && enemy && enemy->isActive()) {
+    // Star invincibility: Mario defeats any enemy on contact (not just stomp)
+    if (mario->defeatsEnemiesOnContact()) {
+      enemy->onStomped();
+      mario->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+      return;
+    }
+
     sf::FloatRect marioBounds = mario->getBounds();
     sf::FloatRect enemyBounds = enemy->getBounds();
 
@@ -105,6 +113,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           if (auto *character = dynamic_cast<Character *>(&entity)) {
             character->setGrounded(true);
+          } else if (auto *star = dynamic_cast<StarItem *>(&entity)) {
+            star->notifyGrounded();
           }
 
           if (mario && tile->isWarpPipe() && level) {
@@ -190,6 +200,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           enemy->reverseDirection();
         } else if (Mushroom *shroom = dynamic_cast<Mushroom *>(&entity)) {
           shroom->reverseDirection();
+        } else if (StarItem *star = dynamic_cast<StarItem *>(&entity)) {
+          star->reverseDirection();
         } else if (fireball) {
           // Fireball chạm tường thì nổ / biến mất
           fireball->explode();

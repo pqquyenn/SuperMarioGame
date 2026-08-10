@@ -105,6 +105,7 @@ void AssetManager::loadLevelAssets() {
   tryLoad(
       "FireFlower",
       "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower
+  tryLoad("Starman", "assets/maps/Mario Game Assets/Starman.png");
   tryLoad("Koopa_Shell", "assets/maps/Mario Game Assets/Koopa_Shell.png");
   tryLoad("PlayerSpriteSheet",
           "assets/sprites/characters/PlayerSpriteSheet.png");

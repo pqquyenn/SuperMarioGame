@@ -6,6 +6,7 @@
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/FireFlower.h"
+#include "Entities/Items/StarItem.h"
 #include "Core/AssetManager.h"
 
 void EntityFactory::registerDefaultEntities() {
@@ -48,6 +49,13 @@ void EntityFactory::registerDefaultEntities() {
         }
         return entity;
     });
+    auto starCreator = [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<StarItem>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("Starman"));
+        return entity;
+    };
+    registerType("StarItem", starCreator);
+    registerType("Star", starCreator);
 
     initialized = true;
 }
