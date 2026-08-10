@@ -12,50 +12,25 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <filesystem>
 
 
 PlayState::PlayState(const std::string &mapPath) : initialMapPath(mapPath) {}
 
 void PlayState::onEnter() {
-  std::cout << "[PlayState] onEnter - Bat dau map " << initialMapPath
-            << std::endl;
-  if (!level.loadLevel(initialMapPath)) {
-    std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
-              << std::endl;
-  }
+    std::cout << "[PlayState] onEnter - Bat dau map " << initialMapPath << std::endl;
+    
+    // Extract level name (e.g., "1-3" from "1.3/1-3.txt")
+    std::filesystem::path p(initialMapPath);
+    std::string rawFilename = p.filename().string();
+    if (rawFilename.size() >= 3 && rawFilename.substr(rawFilename.size() - 4) == ".txt") {
+        hud.setLevelName(rawFilename.substr(0, rawFilename.size() - 4));
+    } else {
+        hud.setLevelName("1-1");
+    }
 
-  // Khởi tạo con Mario tại vị trí xuất phát (40, 160)
-  mario = std::make_unique<Mario>(40.f, 160.f);
-  mario->setTexture(
-      AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
-  mario->setProjectileRequestHandler(
-      [this](const ProjectileRequest &request) { spawnFireball(request); });
-  mario->update(0.f);
-
-  // Đăng ký HUD làm Observer của Mario (nhận sự kiện coin, enemy, die, powerup)
-  mario->addObserver(&hud);
-
-  Camera &cam = level.getCamera();
-  cam.setSize(400.f, 225.f);
-
-  const float levelPixelW = level.getTileMap().getMapWidth() * 16.f;
-  const float levelPixelH = level.getTileMap().getMapHeight() * 16.f;
-  cam.setLevelBounds(levelPixelW, levelPixelH);
-  cam.setCenter(200.f, 112.f);
-
-  // Khởi tạo font & text cho chế độ Map Viewer
-  if (!freeCamFontLoaded) {
-    const std::string fontPaths[] = {
-        "assets/fonts/press-start-2p.ttf",
-        "../assets/fonts/press-start-2p.ttf",
-        "../../assets/fonts/press-start-2p.ttf",
-        "../../../assets/fonts/press-start-2p.ttf"
-    };
-    for (const auto &path : fontPaths) {
-      if (std::filesystem::exists(path) && freeCamFont.loadFromFile(path)) {
-        freeCamFontLoaded = true;
-        break;
-      }
+    if (!level.loadLevel(initialMapPath)) {
+        std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!" << std::endl;
     }
   }
   if (freeCamFontLoaded) {
@@ -127,11 +102,57 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
 }
 
 void PlayState::update(float dt) {
-  if (isFreeCameraMode) {
-    float speed = freeCamSpeed;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) {
-      speed *= 2.5f;
+    if (mario) {
+        if (mario->isDying()) {
+            // Cập nhật hoạt ảnh chết của Mario (đứng yên -> bật lên -> rơi xuống)
+            mario->update(dt);
+
+            // Khi hoạt ảnh chết kết thúc và Mario bị ẩn
+            if (!mario->isActive()) {
+                if (hud.getLives() > 0) {
+                    mario->respawn(40.f, 160.f);
+                } else if (stateManager) {
+                    stateManager->changeState(std::make_unique<GameOverState>(hud.getScore()));
+                }
+            }
+        } else if (mario->isActive()) {
+            // 1. Phím bấm điều khiển Mario
+            inputHandler.handleInput(*mario, dt);
+
+            // 2. Cập nhật vật lý & animation của Mario
+            mario->update(dt);
+
+            // 3. Xử lý va chạm Mario với địa hình gạch / đất
+            CollisionManager::resolveTileCollisions(*mario, level.getTileMap(), &level);
+
+            // 4. Xử lý va chạm Mario với Quái (Enemies)
+            for (auto& enemy : level.getEnemies()) {
+                if (enemy && enemy->isActive()) {
+                    CollisionManager::resolveEntityCollisions(*mario, *enemy);
+                }
+            }
+
+            // 5. Xử lý va chạm Mario với Vật phẩm (Items)
+            for (auto& item : level.getItems()) {
+                if (item && item->isActive()) {
+                    CollisionManager::resolveEntityCollisions(*mario, *item);
+                }
+            }
+
+            // 6. Resolve Mario vs. Moving Platforms (carry riding logic)
+            for (auto& platform : level.getMovingPlatforms()) {
+                if (platform && platform->isActive()) {
+                    CollisionManager::resolveMovingPlatform(*mario, *platform);
+                }
+            }
+
+            // 7. Kiểm tra rơi xuống vực (Void Death & Respawn)
+            // Threshold is 900px to cover the full 1-2 vertical layout (overworld+underground+bonus room)
+            if (mario->getPosition().y > 900.f) {
+                mario->die(DeathCause::Void);
+                mario->respawn(40.f, 160.f);
+            }
+        }
     }
 
     float dx = 0.f;
@@ -159,40 +180,39 @@ void PlayState::update(float dt) {
 
     // Vẫn cập nhật hoạt ảnh entity trong level (sàn di chuyển...)
     level.update(dt);
-    return;
+
+  // Camera tự động cuộn theo vị trí Mario
+  if (mario) {
+    if (level.getIsInBonusRoom()) {
+      // Bonus room (rows 31-45, y=480-720): fix camera on vault
+      level.getCamera().setCenter(200.f, 600.f);
+    } else if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
+      // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
+      float camX = std::max(200.f, mario->getPosition().x);
+      level.getCamera().setCenter(camX, 400.f);
+    } else if (mario->getPosition().x >= 3600.f) {
+      // Hidden underground room in 1-1 – follow Mario within room bounds
+      float camX = std::clamp(mario->getPosition().x, 3700.f, 3980.f);
+      float camY = std::clamp(mario->getPosition().y + 8.f, 80.f, 160.f);
+      level.getCamera().setCenter(camX, camY);
+    } else {
+      level.getCamera().update(mario->getPosition());
+    }
   }
 
-  if (mario) {
-    if (mario->isDying()) {
-      // Cập nhật hoạt ảnh chết của Mario (đứng yên -> bật lên -> rơi xuống)
-      mario->update(dt);
+    // Cập nhật HUD (thời gian, điểm số...)
+    hud.update(dt);
+}
 
-      // Khi hoạt ảnh chết kết thúc và Mario bị ẩn
-      if (!mario->isActive()) {
-        if (hud.getLives() > 0 && hud.getTimeRemaining() > 0.f) {
-          mario->respawn(40.f, 160.f);
-        } else if (stateManager) {
-          stateManager->changeState(
-              std::make_unique<GameOverState>(hud.getScore()));
-        }
-      }
-    } else if (mario->isActive()) {
-      // 1. Phím bấm điều khiển Mario
-      inputHandler.handleInput(*mario, dt);
+void PlayState::render(sf::RenderWindow& window) {
+    Camera& cam = level.getCamera();
+    cam.applyTo(window);
 
-      // 2. Cập nhật vật lý & animation của Mario
-      mario->update(dt);
-
-      // 3. Xử lý va chạm Mario với địa hình gạch / đất
-      CollisionManager::resolveTileCollisions(*mario, level.getTileMap(),
-                                              &level);
-
-      // 4. Xử lý va chạm Mario với Quái (Enemies)
-      for (auto &enemy : level.getEnemies()) {
-        if (enemy && enemy->isActive()) {
-          CollisionManager::resolveEntityCollisions(*mario, *enemy);
-        }
-      }
+    float camX = cam.getView().getCenter().x;
+    float camY = cam.getView().getCenter().y;
+    bool isUndergroundArea = level.getIsUnderground() || level.getIsInBonusRoom()
+                             || camY >= 240.f || camX > 3600.f;
+    sf::Color bgColor = isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
 
       // 5. Xử lý va chạm Mario với Vật phẩm (Items)
       for (auto &item : level.getItems()) {

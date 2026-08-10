@@ -9,6 +9,7 @@ private:
     int coins = 0;
     int lives = 3;
     float timeRemaining = 400.f;
+    std::string levelName = "1-1";
 
     sf::Text scoreText;
     sf::Text coinsText;
@@ -24,5 +25,5 @@ public:
 
     int getLives() const { return lives; }
     int getScore() const { return score; }
-    float getTimeRemaining() const { return timeRemaining; }
+    void setLevelName(const std::string& name) { levelName = name; }
 };
