@@ -13,6 +13,7 @@ private:
     sf::Text scoreText;
     sf::Text coinsText;
     sf::Text livesText;
+    sf::Text worldText;
     sf::Text timeText;
 
 public:
@@ -23,4 +24,5 @@ public:
 
     int getLives() const { return lives; }
     int getScore() const { return score; }
+    float getTimeRemaining() const { return timeRemaining; }
 };

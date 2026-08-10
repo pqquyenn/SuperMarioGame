@@ -81,7 +81,7 @@ void PlayState::update(float dt) {
 
             // Khi hoạt ảnh chết kết thúc và Mario bị ẩn
             if (!mario->isActive()) {
-                if (hud.getLives() > 0) {
+                if (hud.getLives() > 0 && hud.getTimeRemaining() > 0.f) {
                     mario->respawn(40.f, 160.f);
                 } else if (stateManager) {
                     stateManager->changeState(std::make_unique<GameOverState>(hud.getScore()));
@@ -118,13 +118,18 @@ void PlayState::update(float dt) {
             }
         }
 
-        // 7. Kiểm tra rơi xuống vực (Void Death & Respawn)
+        // 7. Kiểm tra rơi xuống vực (Void Death)
         // Threshold is 900px to cover the full 1-2 vertical layout (overworld+underground+bonus room)
         if (mario->getPosition().y > 900.f) {
             mario->die(DeathCause::Void);
-            mario->respawn(40.f, 160.f);
+        }
+
+        // 8. Kiểm tra hết giờ (Time Out)
+        if (hud.getTimeRemaining() <= 0.f && !mario->isDying()) {
+            mario->die(DeathCause::TimeOut);
         }
     }
+}
 
     // Cập nhật Fireball: di chuyển, va chạm tile, va chạm enemy
     for (auto& fireball : fireballs) {
