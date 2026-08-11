@@ -6,7 +6,7 @@
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/StarItem.h"
-#include "Entities/Mario.h"
+#include "Entities/Character.h"
 #include "Entities/MovingPlatform.h"
 #include "Factories/EntityFactory.h"
 #include "Physics/CollisionManager.h"
@@ -82,94 +82,71 @@ void Level::spawnEntitiesFromMap() {
       MovingPlatform::Mode mode;
     };
 
-  // Data-driven MovingPlatform configuration for Level 2
-  if (levelId == 2) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Axis axis;
-    };
+    // Shaft 1 (Col 151, x=2416px): 2 platforms moving DOWN (LoopDown)
+    // Shaft 2 (Col 166, x=2656px): 2 platforms moving UP (LoopUp)
     const PlatformConfig level2Platforms[] = {
-        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
-        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
-        {2656.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
-        {2656.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Axis::Vertical},
+        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f,
+         MovingPlatform::Mode::LoopDown},
+        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f,
+         MovingPlatform::Mode::LoopDown},
+        {2656.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
+        {2656.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
     };
+
     for (const auto &cfg : level2Platforms) {
       movingPlatforms.push_back(
           std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.axis));
+                                           cfg.bound2, cfg.speed, cfg.mode));
       std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") Axis=" << static_cast<int>(cfg.axis) << std::endl;
-    }
-  }
-
-  if (levelId == 3) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Axis axis;
-    };
-    const PlatformConfig level3Platforms[] = {
-        // Early gap 1: cols 14-16, x=224
-         {976.f,  96.f, 48.f,  64.f, 160.f, 40.f, MovingPlatform::Axis::Vertical},
-        // Platform 2 (Picture 2 gap left: cols 99-109, x=1584)
-        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f, MovingPlatform::Axis::Horizontal},
-        // Platform 3 (Picture 2 gap right: cols 110-119, x=1760)
-        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f, MovingPlatform::Axis::Horizontal},
-        // Platform 4 (Picture 3 gap: cols 135-149, x=2160)
-        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f, MovingPlatform::Axis::Horizontal},
-    };
-    for (const auto &cfg : level3Platforms) {
-      movingPlatforms.push_back(
-          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.axis));
-      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") Axis=" << static_cast<int>(cfg.axis) << std::endl;
+                << cfg.y << ") width=" << cfg.width
+                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
     }
   }
 }
 
-bool Level::loadInternal(const std::string& filename, bool isUndergroundFlag) {
-    isUnderground = isUndergroundFlag;
-    isInBonusRoom = false;
-    enemies.clear();
-    items.clear();
-    movingPlatforms.clear();
-    
-    EntityFactory::getInstance().registerDefaultEntities();
+bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
+  isUnderground = isUndergroundFlag;
+  isInBonusRoom = false;
+  enemies.clear();
+  items.clear();
+  movingPlatforms.clear();
 
-    std::filesystem::path p(filename);
-    std::string rawFilename = p.filename().string();
+  EntityFactory::getInstance().registerDefaultEntities();
 
-    // Auto-detect levelId from filename: "1-1.txt"->1, "1-2.txt"->2, "1-3.txt"->3
-    if (rawFilename.size() >= 3 && rawFilename[1] == '-') {
-        int parsed = rawFilename[2] - '0';
-        if (parsed >= 1 && parsed <= 9) {
-            levelId = parsed;
-            std::cout << "[Level] Detected levelId=" << levelId << " from " << rawFilename << std::endl;
+  std::filesystem::path p(filename);
+  std::string rawFilename = p.filename().string();
+
+  const std::string candidates[] = {filename,
+                                    "assets/maps/" + filename,
+                                    "../assets/maps/" + filename,
+                                    "../../assets/maps/" + filename,
+                                    "assets/maps/1.1/" + rawFilename,
+                                    "assets/maps/1.2/" + rawFilename,
+                                    "assets/maps/1.3/" + rawFilename,
+                                    "../assets/maps/1.1/" + rawFilename,
+                                    "../assets/maps/1.2/" + rawFilename,
+                                    "../assets/maps/1.3/" + rawFilename,
+                                    "../../assets/maps/1.1/" + rawFilename,
+                                    "../../assets/maps/1.2/" + rawFilename,
+                                    "../../assets/maps/1.3/" + rawFilename,
+                                    "../" + filename,
+                                    "../../" + filename};
+
+  for (const auto &path : candidates) {
+    if (std::filesystem::exists(path)) {
+      if (map.readFromFile(path)) {
+        // Tự động phát hiện và cập nhật levelId dựa trên tên đường dẫn file
+        // map
+        if (path.find("1-1") != std::string::npos ||
+            path.find("1.1") != std::string::npos) {
+          levelId = 1;
+        } else if (path.find("1-2") != std::string::npos ||
+                   path.find("1.2") != std::string::npos) {
+          levelId = 2;
+        } else if (path.find("1-3") != std::string::npos ||
+                   path.find("1.3") != std::string::npos) {
+          levelId = 3;
         }
-    }
-
-    const std::string candidates[] = {
-        filename,
-        "assets/maps/" + filename,
-        "../assets/maps/" + filename,
-        "../../assets/maps/" + filename,
-        "assets/maps/1.1/" + rawFilename,
-        "assets/maps/1.2/" + rawFilename,
-        "assets/maps/1.3/" + rawFilename,
-        "../assets/maps/1.1/" + rawFilename,
-        "../assets/maps/1.2/" + rawFilename,
-        "../assets/maps/1.3/" + rawFilename,
-        "../../assets/maps/1.1/" + rawFilename,
-        "../../assets/maps/1.2/" + rawFilename,
-        "../../assets/maps/1.3/" + rawFilename,
-        "../" + filename,
-        "../../" + filename
-    };
 
         std::filesystem::path bgPath =
             std::filesystem::path(path).parent_path() / "background.txt";
@@ -348,24 +325,53 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
       }
     }
   }
+
+  if (levelId == 3) {
+    struct PlatformConfig {
+      float x, y, width;
+      float bound1, bound2;
+      float speed;
+      MovingPlatform::Mode mode;
+    };
+
+    const PlatformConfig level3Platforms[] = {
+        {976.f, 96.f, 48.f, 64.f, 160.f, 40.f,
+         MovingPlatform::Mode::OscillateVertical},
+        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+    };
+
+    for (const auto &cfg : level3Platforms) {
+      movingPlatforms.push_back(
+          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
+                                           cfg.bound2, cfg.speed, cfg.mode));
+      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
+                << cfg.y << ") width=" << cfg.width
+                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
+    }
+  }
 }
 
-void Level::warpToUnderground(Mario *mario) {
+void Level::warpToUnderground(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground map area..."
             << std::endl;
-  if (mario) {
-    mario->setPosition(3736.f, 32.f);
-    mario->setVelocity(sf::Vector2f(0.f, 0.f));
+  if (character) {
+    character->setPosition(3736.f, 32.f);
+    character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
   camera.setCenter(3736.f, 120.f);
 }
 
-void Level::warpToUnderground1_2(Mario *mario) {
+void Level::warpToUnderground1_2(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground coin room in 1-2..."
             << std::endl;
-  if (mario) {
-    mario->setPosition(48.f, 528.f);
-    mario->setVelocity(sf::Vector2f(0.f, 0.f));
+  if (character) {
+    character->setPosition(48.f, 528.f);
+    character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
   camera.setCenter(200.f, 608.f);
 }
@@ -373,32 +379,32 @@ void Level::warpToUnderground1_2(Mario *mario) {
 // ── World 1-2 Warp Methods ─────────────────────────────────────────────────
 
 // Pipe A: Automatic horizontal contact → underground main corridor
-void Level::warpPipeA_Entry(Mario *mario) {
+void Level::warpPipeA_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe A entered — warping to underground."
             << std::endl;
   isUnderground = true;
   isInBonusRoom = false;
-  if (mario) {
+  if (character) {
     // Underground floor tile tops are at y=464 (lines 30-31, row 29-30).
     // For a 16px-tall Small Mario, spawn with feet at y=464 → top at y=448.
     // Update per step 3: spawn at y=432.f so he safely lands on the floor.
-    mario->setPosition(256.f, 432.f);
-    mario->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
+    character->setPosition(256.f, 432.f);
+    character->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
   }
   // Underground corridor: ceiling y=304, floor y=480, midpoint=400
   camera.setCenter(300.f, 400.f);
 }
 
 // Pipe B: Down key on underground pipe → bonus room (hidden vault)
-void Level::warpPipeB_Entry(Mario *mario) {
+void Level::warpPipeB_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe B entered — warping to bonus room."
             << std::endl;
   isInBonusRoom = true;
-  if (mario) {
+  if (character) {
     // Bonus room entry: left side, just below the ceiling pipe (rows 32-34,
     // x=48, y=528)
-    mario->setPosition(48.f, 528.f);
-    mario->setVelocity(sf::Vector2f(0.f, 0.f));
+    character->setPosition(48.f, 528.f);
+    character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
   // Camera: center on bonus room (rows 31-45 span y=480-720, center ≈ 600)
   camera.setCenter(200.f, 600.f);
@@ -406,27 +412,27 @@ void Level::warpPipeB_Entry(Mario *mario) {
 
 // Pipe C1: Automatic horizontal exit from bonus room → resurface at Pipe C2
 // in underground
-void Level::warpPipeC1_Exit(Mario *mario) {
+void Level::warpPipeC1_Exit(Character *character) {
   std::cout
       << "[Level][1-2] Pipe C1 exit — returning to underground at Pipe C2."
       << std::endl;
   isInBonusRoom = false;
-  if (mario) {
+  if (character) {
     // Pipe C2 destination: back in the underground corridor, slightly to the
     // right of Pipe B so Mario exits moving right. y=400 is above the
     // underground floor.
-    mario->setPosition(672.f, 400.f);
-    mario->setVelocity(sf::Vector2f(0.f, -80.f)); // pop upward out of pipe
+    character->setPosition(672.f, 400.f);
+    character->setVelocity(sf::Vector2f(0.f, -80.f)); // pop upward out of pipe
   }
   camera.setCenter(672.f, 352.f);
 }
 
-void Level::warpToOverworldExit(Mario *mario) {
+void Level::warpToOverworldExit(Character *character) {
   std::cout << "[Level] Teleporting back to Overworld (5th pipe)..."
             << std::endl;
-  if (mario) {
-    mario->setPosition(2608.f, 160.f);
-    mario->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
+  if (character) {
+    character->setPosition(2608.f, 160.f);
+    character->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
   }
 
   camera.setCenter(2608.f, 120.f);

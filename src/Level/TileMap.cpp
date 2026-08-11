@@ -155,6 +155,9 @@ bool TileMap::readFromFile(const std::string& filepath) {
         return false;
     }
 
+    // Handles from the previous grid must not resolve into a newly loaded map
+    // that happens to contain a tile at the same row and column.
+    ++m_mapRevision;
     m_grid.clear();
     std::string line;
 
@@ -273,8 +276,11 @@ void TileMap::updateBuffer(const Camera& camera) {
     bufView.setCenter(ctr);
     m_backBuffer.setView(bufView);
 
-    for (Tile* t : getTilesInBounds(bounds))
-        if (t) t->render(m_backBuffer);
+    for (const TileHandle& handle : getTilesInBounds(bounds)) {
+        if (const Tile* tile = getTile(handle)) {
+            tile->render(m_backBuffer);
+        }
+    }
 
     m_backBuffer.display();
 
@@ -296,8 +302,8 @@ void TileMap::render(sf::RenderTarget& target, const Camera& camera) {
     target.draw(spr);
 }
 
-std::vector<Tile*> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const {
-    std::vector<Tile*> out;
+std::vector<TileHandle> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const {
+    std::vector<TileHandle> out;
     if (m_grid.empty()) return out;
     int x0 = std::max(0, (int)std::floor(bounds.left / m_tileSize) - 1);
     int y0 = std::max(0, (int)std::floor(bounds.top  / m_tileSize) - 1);
@@ -307,15 +313,43 @@ std::vector<Tile*> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const 
     for (int y = y0; y < y1 && y < rows; ++y) {
         if (y < 0) continue;
         int cols = (int)m_grid[y].size();
-        for (int x = x0; x < x1 && x < cols; ++x)
-            if (x >= 0 && m_grid[y][x]) out.push_back(m_grid[y][x].get());
+        for (int x = x0; x < x1 && x < cols; ++x) {
+            if (x >= 0 && m_grid[y][x]) {
+                out.push_back(TileHandle{
+                    static_cast<std::size_t>(y),
+                    static_cast<std::size_t>(x),
+                    m_mapRevision
+                });
+            }
+        }
     }
     return out;
 }
 
+const Tile* TileMap::getTile(const TileHandle& handle) const {
+    if (handle.mapRevision != m_mapRevision ||
+        handle.row >= m_grid.size() ||
+        handle.column >= m_grid[handle.row].size()) {
+        return nullptr;
+    }
+
+    return m_grid[handle.row][handle.column].get();
+}
+
+Tile* TileMap::getTile(const TileHandle& handle) {
+    if (handle.mapRevision != m_mapRevision ||
+        handle.row >= m_grid.size() ||
+        handle.column >= m_grid[handle.row].size()) {
+        return nullptr;
+    }
+
+    return m_grid[handle.row][handle.column].get();
+}
+
 void TileMap::setNeedsRedraw(bool v) { m_needsRedraw = v; }
 
-void TileMap::hitTile(Tile* tile) {
+void TileMap::hitTile(const TileHandle& handle) {
+    Tile* tile = getTile(handle);
     if (!tile) return;
     auto it = m_tileRegistry.find("E");
     if (it != m_tileRegistry.end()) {
@@ -324,17 +358,11 @@ void TileMap::hitTile(Tile* tile) {
     }
 }
 
-void TileMap::removeTile(Tile* tile) {
-    if (!tile) return;
-    for (auto& row : m_grid) {
-        for (auto& t : row) {
-            if (t.get() == tile) {
-                t.reset();
-                m_needsRedraw = true;
-                return;
-            }
-        }
-    }
+void TileMap::removeTile(const TileHandle& handle) {
+    if (!getTile(handle)) return;
+
+    m_grid[handle.row][handle.column].reset();
+    m_needsRedraw = true;
 }
 
 void TileMap::update(float dt) {
@@ -347,12 +375,11 @@ void TileMap::update(float dt) {
     }
 }
 
-void TileMap::breakBrick(Tile* tile) {
+void TileMap::breakBrick(const TileHandle& handle) {
+    Tile* tile = getTile(handle);
     if (!tile) return;
     
     sf::FloatRect bounds = tile->getBounds();
-    float cx = bounds.left + bounds.width * 0.5f;
-    float cy = bounds.top + bounds.height * 0.5f;
     
     // Spawn 4 debris pieces flying in different directions
     // Top-left piece
@@ -364,7 +391,8 @@ void TileMap::breakBrick(Tile* tile) {
     // Bottom-right piece
     m_debris.push_back({{bounds.left + 8.f, bounds.top + 8.f}, {50.f, -180.f}, 0.f, -280.f, 0.f, true});
     
-    removeTile(tile);
+    // The resolved pointer becomes invalid here and must not be used again.
+    removeTile(handle);
 }
 
 void TileMap::updateDebris(float dt) {
