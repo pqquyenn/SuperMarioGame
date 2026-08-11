@@ -31,7 +31,6 @@
     "g": "UndergroundHardBlock",
     "*": "BlackTile (Solid black background fill)",
     "W": "Warp Text Placeholder (uses Brick texture currently)",
-    "uh": "UndergroundHardBlock",
     "D": "Platform (Left edge, 16x8)",
     "M": "Platform (Middle section, 16x8)",
     "N": "Platform (Right edge, 16x8)",
