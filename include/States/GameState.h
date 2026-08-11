@@ -17,6 +17,11 @@ public:
     // === Lifecycle: goi khi state duoc push/pop ===
     virtual void onEnter() {}   // Goi 1 lan khi state duoc push vao stack
     virtual void onExit() {}    // Goi 1 lan khi state bi pop ra khoi stack
+    virtual void onPause() {}   // Goi khi mot state khac duoc push len tren
+    virtual void onResume() {}  // Goi khi state phia tren bi pop
+
+    // Overlay states (for example PauseState) allow states below to render.
+    virtual bool isTransparent() const { return false; }
 
     // === Core loop: goi moi frame ===
     virtual void handleInput(sf::Event& event, sf::RenderWindow& window) = 0;  // Xu ly tung event rieng le

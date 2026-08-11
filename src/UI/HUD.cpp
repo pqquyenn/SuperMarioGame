@@ -90,7 +90,7 @@ void HUD::update(float dt) {
     // Update text strings
     {
         std::ostringstream ss;
-        ss << "MARIO\n" << std::setw(6) << std::setfill('0') << score;
+        ss << playerName << "\n" << std::setw(6) << std::setfill('0') << score;
         scoreText.setString(ss.str());
     }
 
@@ -102,7 +102,7 @@ void HUD::update(float dt) {
 
     {
         std::ostringstream ss;
-        ss << "WORLD\n 1-1";
+        ss << "WORLD\n " << levelName;
         worldText.setString(ss.str());
     }
 

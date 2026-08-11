@@ -8,6 +8,9 @@
 #include "States/GameOverState.h"
 #include "States/PauseState.h"
 #include "UI/HUD.h"
+#include "Core/GameSettings.h"
+#include "Entities/Luigi.h"
+#include "Entities/Mario.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -23,17 +26,26 @@ void PlayState::onEnter() {
     std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
               << std::endl;
   }
+  const std::string levelName =
+      std::filesystem::path(initialMapPath).stem().string();
+  hud.setLevelName(levelName.empty() ? "1-1" : levelName);
 
-  // Khởi tạo con Mario tại vị trí xuất phát (40, 160)
-  mario = std::make_unique<Mario>(40.f, 160.f);
-  mario->setTexture(
+  const CharacterChoice choice =
+      GameSettings::getInstance().getCharacterChoice();
+  if (choice == CharacterChoice::Luigi) {
+    player = std::make_unique<Luigi>(40.f, 160.f);
+    hud.setPlayerName("LUIGI");
+  } else {
+    player = std::make_unique<Mario>(40.f, 160.f);
+    hud.setPlayerName("MARIO");
+  }
+  player->setTexture(
       AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
-  mario->setProjectileRequestHandler(
+  player->setProjectileRequestHandler(
       [this](const ProjectileRequest &request) { spawnFireball(request); });
-  mario->update(0.f);
+  player->update(0.f);
 
-  // Đăng ký HUD làm Observer của Mario (nhận sự kiện coin, enemy, die, powerup)
-  mario->addObserver(&hud);
+  player->addObserver(&hud);
 
   Camera &cam = level.getCamera();
   cam.setSize(400.f, 225.f);
@@ -69,8 +81,7 @@ void PlayState::onEnter() {
 }
 
 void PlayState::onExit() {
-  std::cout << "[PlayState] onExit - Tam dung / Roi khoi PlayState"
-            << std::endl;
+  std::cout << "[PlayState] Leaving gameplay" << std::endl;
 }
 
 void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
@@ -84,8 +95,8 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
                event.key.code == sf::Keyboard::H) {
       std::cout << "[PlayState] Load Underground Map..." << std::endl;
       if (level.loadHiddenMap("underground.txt")) {
-        if (mario) {
-          mario->setPosition(32.f, 32.f);
+        if (player) {
+          player->setPosition(32.f, 32.f);
         }
         level.getCamera().setCenter(160.f, 120.f);
         level.getTileMap().setNeedsRedraw(true);
@@ -95,11 +106,22 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
       std::cout << "[PlayState] Return to Main Overworld Map ("
                 << initialMapPath << ")..." << std::endl;
       if (level.loadLevel(initialMapPath)) {
-        if (mario) {
-          mario->setPosition(40.f, 160.f);
+        if (player) {
+          player->setPosition(40.f, 160.f);
         }
         level.getCamera().setCenter(200.f, 112.f);
         level.getTileMap().setNeedsRedraw(true);
+      }
+    } else if (event.key.code == sf::Keyboard::P) {
+      // Debug: Spawn StarItem immediately in front of the player.
+      if (player) {
+        sf::Vector2f pos = player->getPosition();
+        if (auto star = EntityFactory::getInstance().create("StarItem", {pos.x + 32.f, pos.y - 16.f})) {
+          if (auto *item = dynamic_cast<Item *>(star.get())) {
+            star.release();
+            level.getItems().push_back(std::unique_ptr<Item>(item));
+          }
+        }
       }
     } else if (event.key.code == sf::Keyboard::V) {
       isFreeCameraMode = !isFreeCameraMode;
@@ -107,8 +129,8 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
         std::cout << "[PlayState] Free Camera Mode ENABLED (Map Viewer)" << std::endl;
       } else {
         std::cout << "[PlayState] Free Camera Mode DISABLED" << std::endl;
-        if (mario) {
-          level.getCamera().update(mario->getPosition());
+        if (player) {
+          level.getCamera().update(player->getPosition());
         }
       }
     }
@@ -151,62 +173,54 @@ void PlayState::update(float dt) {
     return;
   }
 
-  if (mario) {
-    if (mario->isDying()) {
-      // Cập nhật hoạt ảnh chết của Mario (đứng yên -> bật lên -> rơi xuống)
-      mario->update(dt);
+  if (player) {
+    if (player->isDying()) {
+      player->update(dt);
 
-      // Khi hoạt ảnh chết kết thúc và Mario bị ẩn
-      if (!mario->isActive()) {
+      if (!player->isActive()) {
         if (hud.getLives() > 0 && hud.getTimeRemaining() > 0.f) {
-          mario->respawn(40.f, 160.f);
+          player->respawn(40.f, 160.f);
         } else if (stateManager) {
           stateManager->changeState(
               std::make_unique<GameOverState>(hud.getScore()));
         }
       }
-    } else if (mario->isActive()) {
-      // 1. Phím bấm điều khiển Mario
-      inputHandler.handleInput(*mario, dt);
+    } else if (player->isActive()) {
+      inputHandler.handleInput(*player, dt);
 
-      // 2. Cập nhật vật lý & animation của Mario
-      mario->update(dt);
+      player->update(dt);
 
-      // 3. Xử lý va chạm Mario với địa hình gạch / đất
-      CollisionManager::resolveTileCollisions(*mario, level.getTileMap(),
+      CollisionManager::resolveTileCollisions(*player, level.getTileMap(),
                                               &level);
 
-      // 4. Xử lý va chạm Mario với Quái (Enemies)
       for (auto &enemy : level.getEnemies()) {
         if (enemy && enemy->isActive()) {
-          CollisionManager::resolveEntityCollisions(*mario, *enemy);
+          CollisionManager::resolveEntityCollisions(*player, *enemy);
         }
       }
 
-      // 5. Xử lý va chạm Mario với Vật phẩm (Items)
       for (auto &item : level.getItems()) {
         if (item && item->isActive()) {
-          CollisionManager::resolveEntityCollisions(*mario, *item);
+          CollisionManager::resolveEntityCollisions(*player, *item);
         }
       }
 
-      // 6. Resolve Mario vs. Moving Platforms (carry riding logic)
       for (auto &platform : level.getMovingPlatforms()) {
         if (platform && platform->isActive()) {
-          CollisionManager::resolveMovingPlatform(*mario, *platform);
+          CollisionManager::resolveMovingPlatform(*player, *platform);
         }
       }
 
       // 7. Kiểm tra rơi xuống vực (Void Death)
       // Threshold is 900px to cover the full 1-2 vertical layout
       // (overworld+underground+bonus room)
-      if (mario->getPosition().y > 900.f) {
-        mario->die(DeathCause::Void);
+      if (player->getPosition().y > 900.f) {
+        player->die(DeathCause::Void);
       }
 
       // 8. Kiểm tra hết giờ (Time Out)
-      if (hud.getTimeRemaining() <= 0.f && !mario->isDying()) {
-        mario->die(DeathCause::TimeOut);
+      if (hud.getTimeRemaining() <= 0.f && !player->isDying()) {
+        player->die(DeathCause::TimeOut);
       }
     }
   }
@@ -230,8 +244,8 @@ void PlayState::update(float dt) {
       if (CollisionManager::checkAABB(fbBounds, enemy->getBounds(), overlap)) {
         enemy->onFireball();
         fireball->explode();
-        if (mario) {
-          mario->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+        if (player) {
+          player->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
         }
         break;
       }
@@ -256,20 +270,22 @@ void PlayState::update(float dt) {
   // Cập nhật các entity trong level
   level.update(dt);
 
-  // Camera tự động cuộn theo vị trí Mario
-  if (mario) {
+  // Camera automatically follows the selected character.
+  if (player) {
     if (level.getIsInBonusRoom()) {
       // Bonus room (rows 31-45, y=480-720): fix camera on vault
       level.getCamera().setCenter(200.f, 600.f);
-    } else if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
+    } else if (level.getIsUnderground() && player->getPosition().x < 3600.f) {
       // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
-      float camX = std::max(200.f, mario->getPosition().x);
+      float camX = std::max(200.f, player->getPosition().x);
       level.getCamera().setCenter(camX, 400.f);
-    } else if (mario->getPosition().x >= 3600.f) {
-      // Appended underground area in 1-1.txt
-      level.getCamera().setCenter(3840.f, 120.f);
+    } else if (player->getPosition().x >= 3600.f) {
+      const float camX = std::clamp(player->getPosition().x, 3700.f, 3980.f);
+      const float camY =
+          std::clamp(player->getPosition().y + 8.f, 80.f, 160.f);
+      level.getCamera().setCenter(camX, camY);
     } else {
-      level.getCamera().update(mario->getPosition());
+      level.getCamera().update(player->getPosition());
     }
   }
 
@@ -292,8 +308,8 @@ void PlayState::render(sf::RenderWindow &window) {
   window.clear(bgColor);
   level.render(window);
 
-  if (mario && mario->isActive()) {
-    mario->render(window);
+  if (player && player->isActive()) {
+    player->render(window);
   }
 
   for (const auto &fireball : fireballs) {

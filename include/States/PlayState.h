@@ -3,7 +3,7 @@
 #include "States/GameState.h"
 #include "States/GameStateManager.h"
 #include "Level/Level.h"
-#include "Entities/Mario.h"
+#include "Entities/Character.h"
 #include "Entities/Fireball.h"
 #include "Input/InputHandler.h"
 #include "UI/HUD.h"
@@ -13,7 +13,7 @@
 class PlayState : public GameState {
 private:
     Level level;
-    std::unique_ptr<Mario> mario;
+    std::unique_ptr<Character> player;
     InputHandler inputHandler;
     std::string initialMapPath;
     HUD hud;
@@ -36,7 +36,7 @@ public:
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 
-    Mario* getMario() { return mario.get(); }
-    const Mario* getMario() const { return mario.get(); }
+    Character* getPlayer() { return player.get(); }
+    const Character* getPlayer() const { return player.get(); }
 };
 
