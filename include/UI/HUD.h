@@ -14,6 +14,7 @@ private:
     sf::Text scoreText;
     sf::Text coinsText;
     sf::Text livesText;
+    sf::Text worldText;
     sf::Text timeText;
 
 public:

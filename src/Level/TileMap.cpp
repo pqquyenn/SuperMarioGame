@@ -138,7 +138,14 @@ void TileMap::initFlyweights() {
     add("8", &assets.getTexture("SpriteIsland"), 0, 0, 16, 16, true);  // Green Cap
     add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);
     add("9", &assets.getTexture("SpriteIsland"), 48, 0, 16, 16, true);
-    add("O", platformTex, 16, 0, 16, 8, true);                          // Orange Wood Platform
+}
+
+bool TileMap::isSolidAt(float worldX, float worldY) const {
+    int col = static_cast<int>((worldX - m_tileOffset.x) / m_tileSize);
+    int row = static_cast<int>((worldY - m_tileOffset.y) / m_tileSize);
+    if (row < 0 || row >= static_cast<int>(m_grid.size())) return false;
+    if (col < 0 || col >= static_cast<int>(m_grid[row].size())) return false;
+    return m_grid[row][col] && m_grid[row][col]->isSolid();
 }
 
 bool TileMap::readFromFile(const std::string& filepath) {
@@ -183,20 +190,15 @@ bool TileMap::readFromFile(const std::string& filepath) {
                 } else {
                     auto it = m_tileRegistry.find(token);
                     if (it != m_tileRegistry.end()) {
-                        // Skip static tile rendering for Platform entities
-                        if (token == "O") {
-                            row.push_back(nullptr);
-                        } else {
-                            float yOff = m_tileOffset.y;
-                            if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
-                                yOff -= 4.f;
-                            }
-                            if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
-                            
-                            row.push_back(std::make_unique<Tile>(
-                                it->second.get(),
-                                sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
+                        float yOff = m_tileOffset.y;
+                        if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
+                            yOff -= 4.f;
                         }
+                        if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
+                        
+                        row.push_back(std::make_unique<Tile>(
+                            it->second.get(),
+                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
                     } else {
                         std::shared_ptr<TileType> typeToUse = nullptr;
                         if (token == "ground1") typeToUse = m_tileRegistry["u"];
@@ -220,14 +222,6 @@ bool TileMap::readFromFile(const std::string& filepath) {
             for (size_t x = 0; x < line.size(); ++x) {
                 char c = line[x];
                 if (c == '-' || c == ' ' || c == '.') {
-                    row.push_back(nullptr);
-                    continue;
-                }
-                // 'O' tiles are moving platform spawn points — skip static tile, record position
-                if (c == 'O') {
-                    m_platformSpawnPoints.push_back(sf::Vector2f(
-                        float(x * m_tileSize) + m_tileOffset.x,
-                        float(y * m_tileSize) + m_tileOffset.y));
                     row.push_back(nullptr);
                     continue;
                 }

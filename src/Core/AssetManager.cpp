@@ -105,7 +105,24 @@ void AssetManager::loadLevelAssets() {
   tryLoad(
       "FireFlower",
       "assets/maps/Mario Game Assets/Starman.png"); // Fallback if no FireFlower
+  tryLoad("Starman", "assets/maps/Mario Game Assets/Starman.png");
   tryLoad("Koopa_Shell", "assets/maps/Mario Game Assets/Koopa_Shell.png");
+
+  // Red Koopa & Paratroopa textures
+  tryLoad("RedKoopa_Walk1",  "assets/maps/Mario Game Assets/Redkoopa_walk1.png");
+  tryLoad("RedKoopa_Walk2",  "assets/maps/Mario Game Assets/Redkoopa_walk2.png");
+  tryLoad("RedKoopa_Shell",  "assets/maps/Mario Game Assets/Redkoopa_shell.png");
+  tryLoad("RedKoopa_Shell1", "assets/maps/Mario Game Assets/Redkoopa_shell1.png");
+  tryLoad("RedKoopa_Shell2", "assets/maps/Mario Game Assets/Redkoopa_shell2.png");
+
+  // Green Paratroopa
+  tryLoad("GreenParatroopa_Walk1", "assets/maps/Mario Game Assets/Patrakoopa_walk1.png");
+  tryLoad("GreenParatroopa_Walk2", "assets/maps/Mario Game Assets/Patrakoopa_walk2.png");
+
+  // Red Paratroopa
+  tryLoad("RedParatroopa_Walk1", "assets/maps/Mario Game Assets/Redpatrakoopa_walk1.png");
+  tryLoad("RedParatroopa_Walk2", "assets/maps/Mario Game Assets/Redpatrakoopa_walk2.png");
+
   tryLoad("PlayerSpriteSheet",
           "assets/sprites/characters/PlayerSpriteSheet.png");
   // Generate solid black tile
