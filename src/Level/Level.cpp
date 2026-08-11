@@ -5,6 +5,7 @@
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Mushroom.h"
+#include "Entities/Items/OneUpMushroom.h"
 #include "Entities/Items/StarItem.h"
 #include "Entities/Mario.h"
 #include "Entities/MovingPlatform.h"
@@ -306,6 +307,7 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
   std::string itemType = "Coin";
 
   bool starSpot = (levelId == 1 && std::abs(x - 1616.f) < 2.f);
+  bool oneUpSpot = (levelId == 1 && std::abs(x - 1024.f) < 2.f);
   bool powerupSpot = (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f ||
                       std::abs(x - 1744.f) < 1.f);
   if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
@@ -314,6 +316,8 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
 
   if (starSpot) {
     itemType = "StarItem";
+  } else if (oneUpSpot) {
+    itemType = "1UpMushroom";
   } else if (powerupSpot) {
     if (character) {
       const std::string_view form = character->getCurrentFormName();

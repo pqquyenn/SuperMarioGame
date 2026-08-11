@@ -76,17 +76,6 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
         level.getCamera().setCenter(200.f, 112.f);
         level.getTileMap().setNeedsRedraw(true);
       }
-    } else if (event.key.code == sf::Keyboard::P) {
-      // Debug: Spawn StarItem ngay phía trước Mario để test
-      if (mario) {
-        sf::Vector2f pos = mario->getPosition();
-        if (auto star = EntityFactory::getInstance().create("StarItem", {pos.x + 32.f, pos.y - 16.f})) {
-          if (auto *item = dynamic_cast<Item *>(star.get())) {
-            star.release();
-            level.getItems().push_back(std::unique_ptr<Item>(item));
-          }
-        }
-      }
     } else if (event.key.code == sf::Keyboard::V) {
       isFreeCameraMode = !isFreeCameraMode;
       if (isFreeCameraMode) {
