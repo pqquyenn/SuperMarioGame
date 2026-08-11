@@ -35,6 +35,7 @@ public:
 
   virtual void onStomped() = 0;
   virtual void onFireball();
+  virtual void onFellIntoVoid();
   virtual void reverseDirection();
 
   int getDirection() const;

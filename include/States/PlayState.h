@@ -6,6 +6,7 @@
 #include "Entities/Character.h"
 #include "Entities/Fireball.h"
 #include "Input/InputHandler.h"
+#include "AdminControl/AdminDebugView.h"
 #include "UI/HUD.h"
 #include <memory>
 #include <string>
@@ -16,7 +17,9 @@ private:
     std::unique_ptr<Character> player;
     InputHandler inputHandler;
     std::string initialMapPath;
+    sf::Vector2f playerSpawnPoint{0.f, 0.f};
     HUD hud;
+    AdminDebugView adminDebugView;
     std::vector<std::unique_ptr<Fireball>> fireballs;
 
     bool isFreeCameraMode = false;
@@ -26,6 +29,8 @@ private:
     bool freeCamFontLoaded = false;
 
     void spawnFireball(const ProjectileRequest& request);
+    void refreshPlayerSpawnPoint();
+    void centerCameraOnPlayerSpawn();
 
 public:
     PlayState(const std::string& mapPath = "1.1/1-1.txt");

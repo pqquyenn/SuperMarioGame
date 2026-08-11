@@ -155,6 +155,10 @@ Mario::Mario(float x, float y)
           makeClassicPlayerAnimationProfile(9, 25, 153)
       } {}
 
+std::string_view Mario::getCharacterType() const {
+    return "Mario";
+}
+
 bool Mario::setAnimationTextures(const MarioAnimationTextures& textures) {
     if (!textures.isValid()) {
         return false;

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <cstdint>
+#include <optional>
 
 #include "Core/AssetManager.h"
 #include "Level/TileType.h"
@@ -68,6 +69,9 @@ public:
     // Named aliases used by Level and PlayState
     int getMapWidth()  const { return getWidth(); }
     int getMapHeight() const { return getHeight(); }
+    const std::optional<sf::Vector2f>& getStartMarker() const {
+        return m_startMarker;
+    }
 
 private:
     void initFlyweights();
@@ -82,4 +86,5 @@ private:
     bool m_needsRedraw;
     sf::Vector2f m_tileOffset{0.f, 0.f};
     std::vector<BrickDebris> m_debris;
+    std::optional<sf::Vector2f> m_startMarker;
 };

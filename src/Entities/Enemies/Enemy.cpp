@@ -42,6 +42,15 @@ void Enemy::onFireball() {
     isAlive = false;
 }
 
+void Enemy::onFellIntoVoid() {
+    // Falling out of the map is an environmental removal. It should not
+    // award score or run a stomp/fireball animation, but it must stop all
+    // future updates and allow Level to erase the enemy safely.
+    velocity = {0.f, 0.f};
+    active = false;
+    isAlive = false;
+}
+
 int Enemy::getDirection() const { return direction; }
 
 void Enemy::setDirection(int dir) { direction = dir; }
