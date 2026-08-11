@@ -8,7 +8,7 @@ defaults:
 
 jobs:
   build:
-    name: ${{ matrix.platform.name }}
+    name: ${{ matrix.platform.name }} ${{ matrix.config.name }}
     runs-on: ${{ matrix.platform.os }}
 
     strategy:
@@ -17,7 +17,11 @@ jobs:
         platform:
         - { name: Windows VS2022, os: windows-2022  }
         - { name: Linux GCC,      os: ubuntu-latest }
+        - { name: Linux Clang,    os: ubuntu-latest, flags: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ }
         - { name: macOS,          os: macos-latest  }
+        config:
+        - { name: Shared, flags: -DBUILD_SHARED_LIBS=TRUE }
+        - { name: Static, flags: -DBUILD_SHARED_LIBS=FALSE }
 
     steps:
     - name: Install Linux Dependencies
@@ -34,7 +38,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.platform.flags }}
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.platform.flags }} ${{ matrix.config.flags }}
 
     - name: Build
       run: cmake --build build --config Release --parallel
