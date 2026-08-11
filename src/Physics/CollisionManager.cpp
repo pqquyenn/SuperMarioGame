@@ -189,9 +189,10 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           // Brick block logic
           if (character && tile->isBrick()) {
-            // Check if this brick contains an item (e.g. Star in 1-1 at x=1616)
+            // Check if this brick contains an item (e.g. 1UP Mushroom at x=1024, Star at x=1616 in 1-1)
             bool isItemBrick = false;
-            if (level && level->getLevelId() == 1 && std::abs(tileBounds.left - 1616.f) < 2.f) {
+            if (level && level->getLevelId() == 1 &&
+                (std::abs(tileBounds.left - 1616.f) < 2.f || std::abs(tileBounds.left - 1024.f) < 2.f)) {
               isItemBrick = true;
             }
 
