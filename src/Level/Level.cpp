@@ -44,8 +44,13 @@ void Level::spawnEntitiesFromMap() {
     // No hardcoded enemies for 1-2 overworld; underground section has
     // tile-based content
   } else if (levelId == 3) {
+    enemySpawns = {
+        {"RedKoopa", {496.f, 64.f}},        {"Goomba", {800.f, 64.f}},
+        {"Goomba", {816.f, 64.f}},          {"RedParatroopa", {1456.f, 112.f}},
+        {"Goomba", {1552.f, 96.f}},         {"RedKoopa", {2160.f, 96.f}},
+        {"RedParatroopa", {2208.f, 128.f}}, {"RedKoopa", {2676.f, 192.f}},
+    };
   }
-
   for (const auto &data : enemySpawns) {
     if (auto entity = factory.create(data.type, data.position)) {
       if (auto *enemy = dynamic_cast<Enemy *>(entity.get())) {
@@ -111,17 +116,13 @@ void Level::spawnEntitiesFromMap() {
       MovingPlatform::Mode mode;
     };
     const PlatformConfig level3Platforms[] = {
-        // Platform 1 (Picture 1 gap: cols 55-67, x=976)
-        {1008.f, 96.f, 48.f, 96.f, 240.f, 50.f,
+        {1024.f, 96.f, 48.f, 96.f, 240.f, 50.f,
          MovingPlatform::Mode::OscillateVertical},
-        // Platform 2 (Picture 2 gap left: cols 99-109, x=1584)
-        {1584.f, 112.f, 48.f, 1584.f, 1680.f, 40.f,
+        {1600.f, 112.f, 48.f, 1600.f, 1696.f, 40.f,
          MovingPlatform::Mode::OscillateHorizontal},
-        // Platform 3 (Picture 2 gap right: cols 110-119, x=1760)
-        {1824.f, 144.f, 48.f, 1728.f, 1824.f, 40.f,
+        {1840.f, 144.f, 48.f, 1744.f, 1840.f, 40.f,
          MovingPlatform::Mode::OscillateHorizontal},
-        // Platform 4 (Picture 3 gap: cols 135-149, x=2160)
-        {2432.f, 144.f, 48.f, 2432.f, 2640.f, 50.f,
+        {2432.f, 144.f, 48.f, 2432.f, 2656.f, 50.f,
          MovingPlatform::Mode::OscillateHorizontal},
     };
     for (const auto &cfg : level3Platforms) {
