@@ -182,23 +182,22 @@ void PlayState::update(float dt) {
     level.update(dt);
 
   // Camera tự động cuộn theo vị trí Mario
-  if (mario) {
-    if (level.getIsInBonusRoom()) {
-      // Bonus room (rows 31-45, y=480-720): fix camera on vault
-      level.getCamera().setCenter(200.f, 600.f);
-    } else if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
-      // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
-      float camX = std::max(200.f, mario->getPosition().x);
-      level.getCamera().setCenter(camX, 400.f);
-    } else if (mario->getPosition().x >= 3600.f) {
-      // Hidden underground room in 1-1 – follow Mario within room bounds
-      float camX = std::clamp(mario->getPosition().x, 3700.f, 3980.f);
-      float camY = std::clamp(mario->getPosition().y + 8.f, 80.f, 160.f);
-      level.getCamera().setCenter(camX, camY);
-    } else {
-      level.getCamera().update(mario->getPosition());
-    }
-  }
+// Camera tự động cuộn theo vị trí Mario
+    if (mario) {
+        if (level.getIsInBonusRoom()) {
+            // Bonus room (rows 31-45, y=480-720): fix camera on vault
+            level.getCamera().setCenter(200.f, 600.f);
+        } else if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
+            // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
+            float camX = std::max(200.f, mario->getPosition().x);
+            level.getCamera().setCenter(camX, 400.f);
+        } else if (mario->getPosition().x >= 3600.f) {
+            // Appended underground area in 1-1.txt
+            level.getCamera().setCenter(3840.f, 120.f);
+        } else {
+            level.getCamera().update(mario->getPosition());
+        }
+      } 
 
     // Cập nhật HUD (thời gian, điểm số...)
     hud.update(dt);
