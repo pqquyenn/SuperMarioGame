@@ -126,7 +126,7 @@ void TileMap::initFlyweights() {
     addMulti("H", &assets.getTexture("Hill2"), 5, 3);
     addMulti("isl", &assets.getTexture("SpriteIsland"), 4, 3);
     
-  
+    add("uh", &assets.getTexture("UndergroundHardBlock"), 0, 0, 16, 16, true);
     
     const sf::Texture* platformTex = &assets.getTexture("Platform");
     add("D", platformTex, 0, 0, 16, 8, true);

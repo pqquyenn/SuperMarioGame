@@ -170,29 +170,8 @@ void PlayState::update(float dt) {
 
     // Vẫn cập nhật hoạt ảnh entity trong level (sàn di chuyển...)
     level.update(dt);
-<<<<<<< HEAD
-
-  // Camera tự động cuộn theo vị trí Mario
-// Camera tự động cuộn theo vị trí Mario
-    if (mario) {
-        if (level.getIsInBonusRoom()) {
-            // Bonus room (rows 31-45, y=480-720): fix camera on vault
-            level.getCamera().setCenter(200.f, 600.f);
-        } else if (level.getIsUnderground() && mario->getPosition().x < 3600.f) {
-            // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
-            float camX = std::max(200.f, mario->getPosition().x);
-            level.getCamera().setCenter(camX, 400.f);
-        } else if (mario->getPosition().x >= 3600.f) {
-            // Appended underground area in 1-1.txt
-            level.getCamera().setCenter(3840.f, 120.f);
-        } else {
-            level.getCamera().update(mario->getPosition());
-        }
-      } 
-=======
     return;
   }
->>>>>>> origin/dev
 
   if (player) {
     if (player->isDying()) {
