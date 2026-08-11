@@ -18,7 +18,7 @@ private:
     TileMap bgMap;
     Camera camera;
     bool isUnderground = false;
-    bool isInBonusRoom = false;    // true while Mario is in the hidden vault
+    bool isInBonusRoom = false;    // true while the player is in the hidden vault
 
     std::vector<std::unique_ptr<Enemy>> enemies;
     std::vector<std::unique_ptr<Item>> items;
@@ -37,14 +37,14 @@ public:
     void render(sf::RenderWindow& window);
     void spawnItemFromBlock(float x, float y);
     void spawnItemFromBlock(float x, float y, Character* character);
-    void warpToUnderground(class Mario* mario = nullptr);
-    void warpToUnderground1_2(class Mario* mario = nullptr);
-    void warpToOverworldExit(class Mario* mario = nullptr);
+    void warpToUnderground(Character* character = nullptr);
+    void warpToUnderground1_2(Character* character = nullptr);
+    void warpToOverworldExit(Character* character = nullptr);
 
     // World 1-2 warp methods
-    void warpPipeA_Entry(class Mario* mario = nullptr);   // Overworld intro pipe → underground
-    void warpPipeB_Entry(class Mario* mario = nullptr);   // Underground → bonus room vault
-    void warpPipeC1_Exit(class Mario* mario = nullptr);   // Bonus room → underground Pipe C2
+    void warpPipeA_Entry(Character* character = nullptr);   // Overworld intro pipe → underground
+    void warpPipeB_Entry(Character* character = nullptr);   // Underground → bonus room vault
+    void warpPipeC1_Exit(Character* character = nullptr);   // Bonus room → underground Pipe C2
 
     TileMap& getTileMap() { return map; }
     TileMap& getBgMap() { return bgMap; }

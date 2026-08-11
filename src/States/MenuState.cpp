@@ -1,19 +1,38 @@
 #include "States/MenuState.h"
+
+#include "Core/GameSettings.h"
+#include "Core/SoundManager.h"
+#include "States/GameStateManager.h"
 #include "States/PlayState.h"
-#include <iostream>
-#include <memory>
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <iostream>
+#include <memory>
 
-// ==============================================================
-// onEnter() - Goi 1 lan khi MenuState duoc push vao stack
-// Khoi tao font, tao cac text hien thi tren man hinh menu
-// ==============================================================
+namespace {
+constexpr float UiWidth = 800.f;
+constexpr float UiHeight = 600.f;
+constexpr float EntryStartY = 270.f;
+constexpr float EntrySpacing = 46.f;
+const sf::Color Accent{228, 166, 61};
+const sf::Color Disabled{125, 125, 125};
+
+void centerText(sf::Text& text, float x, float y) {
+    const sf::FloatRect bounds = text.getLocalBounds();
+    text.setOrigin(bounds.left + bounds.width / 2.f,
+                   bounds.top + bounds.height / 2.f);
+    text.setPosition(x, y);
+}
+
+const char* characterName(CharacterChoice choice) {
+    return choice == CharacterChoice::Luigi ? "LUIGI" : "MARIO";
+}
+}
+
 void MenuState::onEnter() {
-    std::cout << "[MenuState] onEnter - Khoi tao menu chinh" << std::endl;
+    std::cout << "[MenuState] Entered main menu" << std::endl;
 
-    // --- Load font ---
-    // Thu nhieu duong dan tuong doi de tim font
     const std::string fontPaths[] = {
         "assets/fonts/press-start-2p.ttf",
         "../assets/fonts/press-start-2p.ttf",
@@ -21,222 +40,355 @@ void MenuState::onEnter() {
         "../../../assets/fonts/press-start-2p.ttf"
     };
 
-    fontLoaded = false;
     for (const auto& path : fontPaths) {
-        if (std::filesystem::exists(path)) {
-            if (font.loadFromFile(path)) {
-                fontLoaded = true;
-                std::cout << "[MenuState] Font loaded: " << path << std::endl;
-                break;
-            }
+        if (std::filesystem::exists(path) && font.loadFromFile(path)) {
+            fontLoaded = true;
+            break;
         }
     }
 
     if (!fontLoaded) {
-        std::cerr << "[MenuState] WARNING: Khong tim thay font! Text se khong hien thi." << std::endl;
-        return;
+        std::cerr << "[MenuState] Could not load menu font" << std::endl;
     }
 
-    // --- Title: "SUPER MARIO BROS" ---
     titleText.setFont(font);
     titleText.setString("SUPER MARIO BROS");
     titleText.setCharacterSize(28);
-    titleText.setFillColor(sf::Color(228, 166, 61));   // Mau vang cam giong Mario classic
+    titleText.setFillColor(Accent);
     titleText.setOutlineColor(sf::Color::Black);
     titleText.setOutlineThickness(2.f);
-    // Can giua theo chieu ngang (window 800px)
-    sf::FloatRect titleBounds = titleText.getLocalBounds();
-    titleText.setOrigin(titleBounds.left + titleBounds.width / 2.f,
-                        titleBounds.top + titleBounds.height / 2.f);
-    titleText.setPosition(400.f, 160.f);
+    centerText(titleText, UiWidth / 2.f, 105.f);
 
-    // --- Subtitle ---
-    subtitleText.setFont(font);
-    subtitleText.setString("OOP C++ / SFML Project");
-    subtitleText.setCharacterSize(10);
-    subtitleText.setFillColor(sf::Color(180, 180, 180));
-    sf::FloatRect subBounds = subtitleText.getLocalBounds();
-    subtitleText.setOrigin(subBounds.left + subBounds.width / 2.f,
-                           subBounds.top + subBounds.height / 2.f);
-    subtitleText.setPosition(400.f, 210.f);
+    pageTitleText.setFont(font);
+    pageTitleText.setCharacterSize(14);
+    pageTitleText.setFillColor(sf::Color::White);
 
-    // --- Menu item: "START GAME" ---
-    startText.setFont(font);
-    startText.setString("PLAY 1-1");
-    startText.setCharacterSize(16);
-    startText.setFillColor(sf::Color::White);
-    sf::FloatRect startBounds = startText.getLocalBounds();
-    startText.setOrigin(startBounds.left + startBounds.width / 2.f,
-                        startBounds.top + startBounds.height / 2.f);
-    startText.setPosition(400.f, 310.f);
+    statusText.setFont(font);
+    statusText.setCharacterSize(9);
+    statusText.setFillColor(Accent);
 
-    // --- Menu item: "PLAY 1-2" ---
-    play12Text.setFont(font);
-    play12Text.setString("PLAY 1-2");
-    play12Text.setCharacterSize(16);
-    play12Text.setFillColor(sf::Color::White);
-    sf::FloatRect p12Bounds = play12Text.getLocalBounds();
-    play12Text.setOrigin(p12Bounds.left + p12Bounds.width / 2.f,
-                         p12Bounds.top + p12Bounds.height / 2.f);
-    play12Text.setPosition(400.f, 350.f);
+    footerText.setFont(font);
+    footerText.setCharacterSize(8);
+    footerText.setFillColor(sf::Color(205, 205, 205));
+    footerText.setString("ARROWS / WASD: MOVE     ENTER: SELECT     ESC: BACK");
+    centerText(footerText, UiWidth / 2.f, 565.f);
 
-    // --- Menu item: "PLAY 1-3" ---
-    play13Text.setFont(font);
-    play13Text.setString("PLAY 1-3");
-    play13Text.setCharacterSize(16);
-    play13Text.setFillColor(sf::Color::White);
-    sf::FloatRect p13Bounds = play13Text.getLocalBounds();
-    play13Text.setOrigin(p13Bounds.left + p13Bounds.width / 2.f,
-                         p13Bounds.top + p13Bounds.height / 2.f);
-    play13Text.setPosition(400.f, 390.f);
-
-    // --- Menu item: "EXIT" ---
-    exitText.setFont(font);
-    exitText.setString("EXIT");
-    exitText.setCharacterSize(16);
-    exitText.setFillColor(sf::Color::White);
-    sf::FloatRect exitBounds = exitText.getLocalBounds();
-    exitText.setOrigin(exitBounds.left + exitBounds.width / 2.f,
-                       exitBounds.top + exitBounds.height / 2.f);
-    exitText.setPosition(400.f, 430.f);
-
-    // --- Selector ">" ---
     selectorText.setFont(font);
     selectorText.setString(">");
     selectorText.setCharacterSize(16);
-    selectorText.setFillColor(sf::Color::White);
+    selectorText.setFillColor(Accent);
 
-    // --- Ground block decoration ---
-    groundBlock.setSize(sf::Vector2f(800.f, 64.f));
-    groundBlock.setPosition(0.f, 536.f);
-    groundBlock.setFillColor(sf::Color(192, 96, 0));  // Mau nau dat
+    keyBindingsText.setFont(font);
+    keyBindingsText.setCharacterSize(10);
+    keyBindingsText.setFillColor(sf::Color::White);
+    keyBindingsText.setLineSpacing(1.6f);
+    keyBindingsText.setString(
+        "MOVE LEFT     A / LEFT\n"
+        "MOVE RIGHT    D / RIGHT\n"
+        "JUMP          SPACE / W / UP\n"
+        "ACTION / RUN  Z / J / Q\n"
+        "RUN           LEFT SHIFT / RIGHT SHIFT\n\n"
+        "KEY REMAPPING IS COMING SOON");
+    keyBindingsText.setPosition(175.f, 245.f);
 
-    // --- Load background image ---
-    const std::string bgPaths[] = {
+    groundBlock.setSize({UiWidth, 64.f});
+    groundBlock.setPosition(0.f, UiHeight - 64.f);
+    groundBlock.setFillColor(sf::Color(192, 96, 0));
+
+    panel.setSize({540.f, 350.f});
+    panel.setPosition(130.f, 175.f);
+    panel.setFillColor(sf::Color(0, 0, 0, 145));
+    panel.setOutlineColor(sf::Color(255, 255, 255, 70));
+    panel.setOutlineThickness(2.f);
+
+    loadBackground();
+    setPage(Page::GameMode);
+}
+
+void MenuState::onExit() {
+    std::cout << "[MenuState] Leaving main menu" << std::endl;
+}
+
+bool MenuState::loadBackground() {
+    const std::string paths[] = {
         "assets/state/MenuGameBackGround.jpg",
         "assets/state/MenuGameBackGround.png",
-        "assets/state/MenuGameBackGround.jpeg",
-        "assets/state/MenuGameBackGround.bmp",
         "../assets/state/MenuGameBackGround.jpg",
         "../assets/state/MenuGameBackGround.png",
-        "../assets/state/MenuGameBackGround.jpeg",
         "../../assets/state/MenuGameBackGround.jpg",
-        "../../assets/state/MenuGameBackGround.png",
-        "../../../assets/state/MenuGameBackGround.jpg",
-        "../../../assets/state/MenuGameBackGround.png"
+        "../../assets/state/MenuGameBackGround.png"
     };
 
-    bgLoaded = false;
-    for (const auto& path : bgPaths) {
-        if (std::filesystem::exists(path)) {
-            if (bgTexture.loadFromFile(path)) {
-                bgLoaded = true;
-                bgSprite.setTexture(bgTexture);
-                sf::Vector2u texSize = bgTexture.getSize();
-                if (texSize.x > 0 && texSize.y > 0) {
-                    bgSprite.setScale(800.f / static_cast<float>(texSize.x), 600.f / static_cast<float>(texSize.y));
-                }
-                std::cout << "[MenuState] Background image loaded: " << path << std::endl;
-                break;
+    for (const auto& path : paths) {
+        if (std::filesystem::exists(path) && bgTexture.loadFromFile(path)) {
+            bgLoaded = true;
+            bgSprite.setTexture(bgTexture);
+            const sf::Vector2u size = bgTexture.getSize();
+            if (size.x > 0 && size.y > 0) {
+                bgSprite.setScale(UiWidth / static_cast<float>(size.x),
+                                  UiHeight / static_cast<float>(size.y));
             }
+            return true;
         }
     }
+    return false;
+}
 
-    // Fallback: Check if there's any image file inside assets/state directory
-    if (!bgLoaded) {
-        const std::string stateDirs[] = { "assets/state", "../assets/state", "../../assets/state" };
-        for (const auto& dir : stateDirs) {
-            if (std::filesystem::exists(dir) && std::filesystem::is_directory(dir)) {
-                for (const auto& entry : std::filesystem::directory_iterator(dir)) {
-                    if (entry.is_regular_file()) {
-                        std::string ext = entry.path().extension().string();
-                        if (ext == ".jpg" || ext == ".png" || ext == ".jpeg" || ext == ".bmp") {
-                            if (bgTexture.loadFromFile(entry.path().string())) {
-                                bgLoaded = true;
-                                bgSprite.setTexture(bgTexture);
-                                sf::Vector2u texSize = bgTexture.getSize();
-                                if (texSize.x > 0 && texSize.y > 0) {
-                                    bgSprite.setScale(800.f / static_cast<float>(texSize.x), 600.f / static_cast<float>(texSize.y));
-                                }
-                                std::cout << "[MenuState] Background image loaded from dir scan: " << entry.path().string() << std::endl;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            if (bgLoaded) break;
-        }
-    }
-
-
-    // --- Mac dinh chon START GAME ---
+void MenuState::setPage(Page newPage) {
+    page = newPage;
     selectedIndex = 0;
-    updateSelectorPosition();
+    showSelector = true;
+    blinkTimer = 0.f;
+    rebuildEntries();
+
+    if (!entries.empty() && !entries[selectedIndex].enabled) {
+        moveSelection(1);
+    }
+    updateVisuals();
 }
 
-// ==============================================================
-// onExit() - Goi khi MenuState bi pop/change
-// ==============================================================
-void MenuState::onExit() {
-    std::cout << "[MenuState] onExit - Roi khoi menu" << std::endl;
-}
+void MenuState::rebuildEntries() {
+    entries.clear();
 
-// ==============================================================
-// handleInput() - Xu ly tung event rieng le
-// - Up/Down: chuyen lua chon menu
-// - Enter: xac nhan lua chon
-// ==============================================================
-void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
-    if (event.type == sf::Event::KeyPressed) {
-        switch (event.key.code) {
-            case sf::Keyboard::Up:
-            case sf::Keyboard::W:
-                // Di chuyen len
-                selectedIndex--;
-                if (selectedIndex < 0) selectedIndex = MENU_ITEMS - 1;
-                updateSelectorPosition();
-                break;
+    switch (page) {
+        case Page::GameMode:
+            pageTitleText.setString("GAME MODE");
+            entries = {
+                {"SOLO"},
+                {"DUO  [COMING SOON]", false},
+                {"PVP  [COMING SOON]", false},
+                {"SETTINGS"},
+                {"EXIT"}
+            };
+            break;
 
-            case sf::Keyboard::Down:
-            case sf::Keyboard::S:
-                // Di chuyen xuong
-                selectedIndex++;
-                if (selectedIndex >= MENU_ITEMS) selectedIndex = 0;
-                updateSelectorPosition();
-                break;
+        case Page::Solo:
+            pageTitleText.setString("SOLO");
+            entries = {
+                {"PLAY"},
+                {"CHARACTER"},
+                {"ACHIEVEMENTS  [COMING SOON]", false},
+                {"BACK"}
+            };
+            break;
 
-            case sf::Keyboard::Enter:
-                // Xac nhan lua chon
-                if (selectedIndex == 0) {
-                    if (stateManager) {
-                        stateManager->changeState(std::make_unique<PlayState>("1.1/1-1.txt"));
-                    }
-                } else if (selectedIndex == 1) {
-                    if (stateManager) {
-                        stateManager->changeState(std::make_unique<PlayState>("1.2/1-2.txt"));
-                    }
-                } else if (selectedIndex == 2) {
-                    if (stateManager) {
-                        stateManager->changeState(std::make_unique<PlayState>("1.3/1-3.txt"));
-                    }
-                } else if (selectedIndex == 3) {
-                    window.close();
-                }
-                break;
+        case Page::Play:
+            pageTitleText.setString("SELECT WORLD");
+            entries = {
+                {"WORLD 1-1"},
+                {"WORLD 1-2"},
+                {"WORLD 1-3"},
+                {"BACK"}
+            };
+            break;
 
-            default:
-                break;
+        case Page::Character: {
+            pageTitleText.setString("SELECT CHARACTER");
+            const CharacterChoice selected =
+                GameSettings::getInstance().getCharacterChoice();
+            entries = {
+                {std::string("MARIO") +
+                 (selected == CharacterChoice::Mario ? "  [SELECTED]" : "")},
+                {std::string("LUIGI") +
+                 (selected == CharacterChoice::Luigi ? "  [SELECTED]" : "")},
+                {"BACK"}
+            };
+            break;
         }
+
+        case Page::Settings: {
+            pageTitleText.setString("SETTINGS");
+            const int volume = static_cast<int>(std::round(
+                SoundManager::getInstance().getMasterVolume()));
+            entries = {
+                {"KEY BINDINGS"},
+                {"MASTER VOLUME  < " + std::to_string(volume) + "% >"},
+                {"BACK"}
+            };
+            break;
+        }
+
+        case Page::KeyBindings:
+            pageTitleText.setString("KEY BINDINGS");
+            entries = {{"BACK"}};
+            break;
+    }
+
+    entryTexts.clear();
+    entryTexts.reserve(entries.size());
+    for (const auto& entry : entries) {
+        sf::Text text;
+        text.setFont(font);
+        text.setString(entry.label);
+        text.setCharacterSize(entry.label.size() > 24 ? 11 : 15);
+        text.setFillColor(entry.enabled ? sf::Color::White : Disabled);
+        entryTexts.push_back(text);
     }
 }
 
-// ==============================================================
-// update() - Goi moi frame
-// - Animation nhap nhay selector ">"
-// ==============================================================
+void MenuState::moveSelection(int direction) {
+    if (entries.empty()) return;
+
+    const int count = static_cast<int>(entries.size());
+    for (int attempt = 0; attempt < count; ++attempt) {
+        selectedIndex = (selectedIndex + direction + count) % count;
+        if (entries[selectedIndex].enabled) break;
+    }
+    showSelector = true;
+    blinkTimer = 0.f;
+    updateVisuals();
+}
+
+void MenuState::updateVisuals() {
+    centerText(pageTitleText, UiWidth / 2.f, 205.f);
+
+    for (std::size_t i = 0; i < entryTexts.size(); ++i) {
+        const float firstEntryY =
+            page == Page::KeyBindings ? 445.f : EntryStartY;
+        const float y = firstEntryY + static_cast<float>(i) * EntrySpacing;
+        centerText(entryTexts[i], UiWidth / 2.f, y);
+        if (!entries[i].enabled) {
+            entryTexts[i].setFillColor(Disabled);
+        } else {
+            entryTexts[i].setFillColor(
+                static_cast<int>(i) == selectedIndex ? Accent : sf::Color::White);
+        }
+    }
+
+    if (!entryTexts.empty()) {
+        const sf::FloatRect bounds = entryTexts[selectedIndex].getGlobalBounds();
+        selectorText.setPosition(bounds.left - 30.f,
+                                 bounds.top + bounds.height / 2.f - 8.f);
+    }
+
+    if (page == Page::Character) {
+        statusText.setString(std::string("CURRENT: ") + characterName(
+            GameSettings::getInstance().getCharacterChoice()));
+    } else if (page == Page::Settings && selectedIndex == 1) {
+        statusText.setString("LEFT / RIGHT CHANGES VOLUME");
+    } else if (page == Page::KeyBindings) {
+        statusText.setString("DISPLAY ONLY - REMAPPING WILL BE ADDED LATER");
+    } else {
+        statusText.setString("");
+    }
+    centerText(statusText, UiWidth / 2.f, 500.f);
+}
+
+void MenuState::activateSelection(sf::RenderWindow& window) {
+    if (entries.empty() || !entries[selectedIndex].enabled) return;
+
+    switch (page) {
+        case Page::GameMode:
+            if (selectedIndex == 0) setPage(Page::Solo);
+            else if (selectedIndex == 3) setPage(Page::Settings);
+            else if (selectedIndex == 4) window.close();
+            break;
+
+        case Page::Solo:
+            if (selectedIndex == 0) setPage(Page::Play);
+            else if (selectedIndex == 1) setPage(Page::Character);
+            else if (selectedIndex == 3) setPage(Page::GameMode);
+            break;
+
+        case Page::Play: {
+            if (selectedIndex == 3) {
+                setPage(Page::Solo);
+                break;
+            }
+            static const char* maps[] = {
+                "1.1/1-1.txt", "1.2/1-2.txt", "1.3/1-3.txt"
+            };
+            if (stateManager) {
+                stateManager->clearAndPushState(
+                    std::make_unique<PlayState>(maps[selectedIndex]));
+            }
+            break;
+        }
+
+        case Page::Character:
+            if (selectedIndex == 0) {
+                GameSettings::getInstance().setCharacterChoice(
+                    CharacterChoice::Mario);
+                rebuildEntries();
+                updateVisuals();
+            } else if (selectedIndex == 1) {
+                GameSettings::getInstance().setCharacterChoice(
+                    CharacterChoice::Luigi);
+                rebuildEntries();
+                updateVisuals();
+            } else {
+                setPage(Page::Solo);
+            }
+            break;
+
+        case Page::Settings:
+            if (selectedIndex == 0) setPage(Page::KeyBindings);
+            else if (selectedIndex == 1) adjustVolume(10.f);
+            else setPage(Page::GameMode);
+            break;
+
+        case Page::KeyBindings:
+            setPage(Page::Settings);
+            break;
+    }
+}
+
+void MenuState::adjustVolume(float delta) {
+    SoundManager& sound = SoundManager::getInstance();
+    sound.setMasterVolume(sound.getMasterVolume() + delta);
+    rebuildEntries();
+    selectedIndex = 1;
+    updateVisuals();
+}
+
+void MenuState::goBack() {
+    switch (page) {
+        case Page::GameMode: break;
+        case Page::Solo: setPage(Page::GameMode); break;
+        case Page::Play:
+        case Page::Character: setPage(Page::Solo); break;
+        case Page::Settings: setPage(Page::GameMode); break;
+        case Page::KeyBindings: setPage(Page::Settings); break;
+    }
+}
+
+void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
+    if (event.type != sf::Event::KeyPressed) return;
+
+    switch (event.key.code) {
+        case sf::Keyboard::Up:
+        case sf::Keyboard::W:
+            moveSelection(-1);
+            break;
+        case sf::Keyboard::Down:
+        case sf::Keyboard::S:
+            moveSelection(1);
+            break;
+        case sf::Keyboard::Left:
+        case sf::Keyboard::A:
+            if (page == Page::Settings && selectedIndex == 1) {
+                adjustVolume(-10.f);
+            }
+            break;
+        case sf::Keyboard::Right:
+        case sf::Keyboard::D:
+            if (page == Page::Settings && selectedIndex == 1) {
+                adjustVolume(10.f);
+            }
+            break;
+        case sf::Keyboard::Enter:
+        case sf::Keyboard::Space:
+            activateSelection(window);
+            break;
+        case sf::Keyboard::Escape:
+            goBack();
+            break;
+        default:
+            break;
+    }
+}
+
 void MenuState::update(float dt) {
-    // Nhap nhay selector moi 0.4 giay
     blinkTimer += dt;
     if (blinkTimer >= 0.4f) {
         showSelector = !showSelector;
@@ -244,52 +396,29 @@ void MenuState::update(float dt) {
     }
 }
 
-// ==============================================================
-// render() - Ve menu len man hinh
-// ==============================================================
 void MenuState::render(sf::RenderWindow& window) {
+    const sf::View previousView = window.getView();
+    const sf::View uiView(sf::FloatRect(0.f, 0.f, UiWidth, UiHeight));
+    window.setView(uiView);
+
     if (bgLoaded) {
         window.draw(bgSprite);
     } else {
-        // Fallback: Background xanh troi Mario classic
         window.clear(sf::Color(92, 148, 252));
         window.draw(groundBlock);
     }
+    window.draw(panel);
 
-    if (!fontLoaded) {
-        // Neu khong co font, chi hien thi background
-        return;
+    if (fontLoaded) {
+        window.draw(titleText);
+        window.draw(pageTitleText);
+        for (const auto& text : entryTexts) window.draw(text);
+
+        if (page == Page::KeyBindings) window.draw(keyBindingsText);
+        window.draw(statusText);
+        window.draw(footerText);
+        if (showSelector && !entryTexts.empty()) window.draw(selectorText);
     }
 
-    // Ve title
-    window.draw(titleText);
-
-    // Ve subtitle
-    window.draw(subtitleText);
-
-    // Ve menu items
-    window.draw(startText);
-    window.draw(play12Text);
-    window.draw(play13Text);
-    window.draw(exitText);
-
-    // Ve selector ">" (nhap nhay)
-    if (showSelector) {
-        window.draw(selectorText);
-    }
-}
-
-
-// ==============================================================
-// updateSelectorPosition() - Cap nhat vi tri ">" theo muc dang chon
-// ==============================================================
-void MenuState::updateSelectorPosition() {
-    float yPositions[] = { 310.f, 350.f, 390.f, 430.f };
-    selectorText.setPosition(280.f, yPositions[selectedIndex]);
-
-    // Highlight muc dang chon = mau vang, muc khac = trang
-    startText.setFillColor(selectedIndex == 0 ? sf::Color(228, 166, 61) : sf::Color::White);
-    play12Text.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
-    play13Text.setFillColor(selectedIndex == 2 ? sf::Color(228, 166, 61) : sf::Color::White);
-    exitText.setFillColor(selectedIndex == 3 ? sf::Color(228, 166, 61) : sf::Color::White);
+    window.setView(previousView);
 }
