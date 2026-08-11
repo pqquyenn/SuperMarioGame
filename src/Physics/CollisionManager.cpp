@@ -8,6 +8,7 @@
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/StarItem.h"
+#include "Entities/MovingPlatform.h"
 #include "Level/Level.h"
 #include "Level/Tile.h"
 #include "Level/TileMap.h"
@@ -298,18 +299,52 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 void CollisionManager::resolveMovingPlatform(Character& character,
                                               MovingPlatform& platform) {
     if (!character.isActive() || !platform.isActive()) return;
-    sf::FloatRect characterBounds = character.getBounds();
-    sf::FloatRect platBounds = platform.getBounds();
-    if (characterBounds.left + characterBounds.width > platBounds.left &&
-        characterBounds.left < platBounds.left + platBounds.width) {
-        if (character.getVelocity().y >= 0.f &&
-            characterBounds.top + characterBounds.height >= platBounds.top &&
-            characterBounds.top + characterBounds.height <= platBounds.top + 8.f) {
-            character.setPosition(character.getPosition().x,
-                                  platBounds.top - characterBounds.height);
-            character.setVelocity(sf::Vector2f(character.getVelocity().x, 0.f));
+
+    const sf::FloatRect characterBounds = character.getBounds();
+    const sf::FloatRect platformBounds = platform.getBounds();
+    if (characterBounds.left + characterBounds.width <= platformBounds.left ||
+        characterBounds.left >= platformBounds.left + platformBounds.width ||
+        characterBounds.top + characterBounds.height <= platformBounds.top ||
+        characterBounds.top >= platformBounds.top + platformBounds.height) {
+        return;
+    }
+
+    const float overlapLeft =
+        characterBounds.left + characterBounds.width - platformBounds.left;
+    const float overlapRight =
+        platformBounds.left + platformBounds.width - characterBounds.left;
+    const float overlapTop =
+        characterBounds.top + characterBounds.height - platformBounds.top;
+    const float overlapBottom =
+        platformBounds.top + platformBounds.height - characterBounds.top;
+
+    const float minOverlapX = std::min(overlapLeft, overlapRight);
+    const float minOverlapY = std::min(overlapTop, overlapBottom);
+    sf::Vector2f position = character.getPosition();
+    const sf::Vector2f velocity = character.getVelocity();
+
+    if (minOverlapY <= minOverlapX) {
+        if (overlapTop < overlapBottom) {
+            position.y = platformBounds.top - characterBounds.height;
+            const sf::Vector2f platformDelta = platform.getDelta();
+            character.setPosition(position.x + platformDelta.x,
+                                  position.y + platformDelta.y);
+            character.setVelocity(sf::Vector2f(velocity.x, 0.f));
             character.setGrounded(true);
-            character.move(platform.getVelocity() * (1.f/60.f));
+        } else {
+            position.y = platformBounds.top + platformBounds.height;
+            character.setPosition(position);
+            if (velocity.y < 0.f) {
+                character.setVelocity(sf::Vector2f(velocity.x, 0.f));
+            }
         }
+    } else {
+        if (overlapLeft < overlapRight) {
+            position.x = platformBounds.left - characterBounds.width;
+        } else {
+            position.x = platformBounds.left + platformBounds.width;
+        }
+        character.setPosition(position);
+        character.setVelocity(sf::Vector2f(0.f, velocity.y));
     }
 }

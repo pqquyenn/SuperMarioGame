@@ -98,7 +98,7 @@ void HUD::update(float dt) {
 
     {
         std::ostringstream ss;
-        ss << "WORLD\n 1-1";
+        ss << "WORLD\n " << levelName;
         worldText.setString(ss.str());
     }
 

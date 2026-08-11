@@ -325,6 +325,35 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
       }
     }
   }
+
+  if (levelId == 3) {
+    struct PlatformConfig {
+      float x, y, width;
+      float bound1, bound2;
+      float speed;
+      MovingPlatform::Mode mode;
+    };
+
+    const PlatformConfig level3Platforms[] = {
+        {976.f, 96.f, 48.f, 64.f, 160.f, 40.f,
+         MovingPlatform::Mode::OscillateVertical},
+        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+    };
+
+    for (const auto &cfg : level3Platforms) {
+      movingPlatforms.push_back(
+          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
+                                           cfg.bound2, cfg.speed, cfg.mode));
+      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
+                << cfg.y << ") width=" << cfg.width
+                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
+    }
+  }
 }
 
 void Level::warpToUnderground(Character *character) {

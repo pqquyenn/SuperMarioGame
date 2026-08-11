@@ -26,6 +26,9 @@ void PlayState::onEnter() {
     std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
               << std::endl;
   }
+  const std::string levelName =
+      std::filesystem::path(initialMapPath).stem().string();
+  hud.setLevelName(levelName.empty() ? "1-1" : levelName);
 
   const CharacterChoice choice =
       GameSettings::getInstance().getCharacterChoice();
@@ -277,8 +280,10 @@ void PlayState::update(float dt) {
       float camX = std::max(200.f, player->getPosition().x);
       level.getCamera().setCenter(camX, 400.f);
     } else if (player->getPosition().x >= 3600.f) {
-      // Appended underground area in 1-1.txt
-      level.getCamera().setCenter(3840.f, 120.f);
+      const float camX = std::clamp(player->getPosition().x, 3700.f, 3980.f);
+      const float camY =
+          std::clamp(player->getPosition().y + 8.f, 80.f, 160.f);
+      level.getCamera().setCenter(camX, camY);
     } else {
       level.getCamera().update(player->getPosition());
     }
