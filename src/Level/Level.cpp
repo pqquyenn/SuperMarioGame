@@ -1,4 +1,5 @@
 #include "Level/Level.h"
+#include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Enemies/RedKoopa.h"
 #include "Entities/Items/Coin.h"
@@ -7,7 +8,6 @@
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/OneUpMushroom.h"
 #include "Entities/Items/StarItem.h"
-#include "Entities/Character.h"
 #include "Entities/MovingPlatform.h"
 #include "Factories/EntityFactory.h"
 #include "Physics/CollisionManager.h"
@@ -101,6 +101,36 @@ void Level::spawnEntitiesFromMap() {
       std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
                 << cfg.y << ") width=" << cfg.width
                 << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
+    }
+  }
+  if (levelId == 3) {
+    struct PlatformConfig {
+      float x, y, width;
+      float bound1, bound2;
+      float speed;
+      MovingPlatform::Mode mode;
+    };
+    const PlatformConfig level3Platforms[] = {
+        // Platform 1 (Picture 1 gap: cols 55-67, x=976)
+        {1008.f, 96.f, 48.f, 96.f, 240.f, 50.f,
+         MovingPlatform::Mode::OscillateVertical},
+        // Platform 2 (Picture 2 gap left: cols 99-109, x=1584)
+        {1584.f, 112.f, 48.f, 1584.f, 1680.f, 40.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+        // Platform 3 (Picture 2 gap right: cols 110-119, x=1760)
+        {1824.f, 144.f, 48.f, 1728.f, 1824.f, 40.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+        // Platform 4 (Picture 3 gap: cols 135-149, x=2160)
+        {2432.f, 144.f, 48.f, 2432.f, 2640.f, 50.f,
+         MovingPlatform::Mode::OscillateHorizontal},
+    };
+    for (const auto &cfg : level3Platforms) {
+      movingPlatforms.push_back(
+          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
+                                           cfg.bound2, cfg.speed, cfg.mode));
+      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
+                << cfg.y << ") Axis=" << static_cast<int>(cfg.mode)
+                << std::endl;
     }
   }
 }
@@ -327,35 +357,6 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
         entity.release();
         items.push_back(std::unique_ptr<Item>(item));
       }
-    }
-  }
-
-  if (levelId == 3) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Mode mode;
-    };
-
-    const PlatformConfig level3Platforms[] = {
-        {976.f, 96.f, 48.f, 64.f, 160.f, 40.f,
-         MovingPlatform::Mode::OscillateVertical},
-        {1584.f, 96.f, 48.f, 1584.f, 1744.f, 50.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-        {1760.f, 144.f, 48.f, 1760.f, 1904.f, 50.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-        {2160.f, 112.f, 48.f, 2160.f, 2384.f, 50.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-    };
-
-    for (const auto &cfg : level3Platforms) {
-      movingPlatforms.push_back(
-          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
-      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") width=" << cfg.width
-                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
     }
   }
 }
