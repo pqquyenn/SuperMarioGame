@@ -148,27 +148,10 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           if (character && tile->isWarpPipe() && level) {
             bool downPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S);
             if (downPressed) {
-                if (!level->getIsUnderground() && level->getLevelId() == 1 && pos.x >= 880.f && pos.x <= 960.f) {
-                    level->warpToUnderground(character);
-                    return;
-                }
-                if (level->getIsUnderground() && level->getLevelId() == 2 && !level->getIsInBonusRoom() && pos.x >= 1850.f && pos.x <= 2050.f) {
+                // Pipe 2: Underground → Hidden Room (cols 116-118, x = 1856-1904)
+                if (level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
+                    && pos.x >= 1840.f && pos.x <= 1920.f) {
                     level->warpPipeB_Entry(character);
-                    return;
-                }
-            }
-          }
-          if (character && tile->isHorizontalWarpPipe() && level) {
-            bool rightPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
-            if (rightPressed && character->getBounds().left +
-                                    character->getBounds().width <=
-                                    tileBounds.left + 5.f) {
-                if (!level->getIsUnderground() && level->getLevelId() == 2) {
-                    level->warpPipeA_Entry(character);
-                    return;
-                }
-                if (level->getIsUnderground() && level->getLevelId() == 1) {
-                    level->warpToOverworldExit(character);
                     return;
                 }
             }
@@ -254,14 +237,29 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           return;
         }
 
-        // Check horizontal pipe warp (Exit from underground)
-        if (character && tile->isWarpPipe() && level && pos.x >= 3720.f) {
+        // Horizontal Warp Pipes (Right-key triggers)
+        if (character && tile->isWarpPipe() && level) {
           bool rightPressed =
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
           if (rightPressed) {
-            level->warpToOverworldExit(character);
-            return;
+            // Pipe 1 Entry: Overworld -> Underground (horizontal pipe at start)
+            if (!level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
+                && pos.x < 1000.f) {
+                level->warpPipeA_Entry(character);
+                return;
+            }
+            // Pipe 4: Hidden room exit -> back to Underground
+            if (level->getIsInBonusRoom() && level->getLevelId() == 2) {
+                level->warpPipeC1_Exit(character);
+                return;
+            }
+            // Last pipe: Underground -> Overworld (horizontal pipe at end)
+            if (level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
+                && pos.x >= 2900.f) {
+                level->warpToOverworldExit(character);
+                return;
+            }
           }
         }
 
