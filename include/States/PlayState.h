@@ -31,6 +31,7 @@ private:
     void spawnFireball(const ProjectileRequest& request);
     void refreshPlayerSpawnPoint();
     void centerCameraOnPlayerSpawn();
+    void constrainPlayerHorizontally();
 
 public:
     PlayState(const std::string& mapPath = "1.1/1-1.txt");

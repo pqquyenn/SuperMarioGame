@@ -67,7 +67,9 @@ PlayerAnimationSet makeAnimationSet(
 PlayerAnimationSet makeFireAnimationSet(const sf::IntRect& deathFrame) {
     PlayerAnimationSet set;
     set.idle = staticClip(fireFrameAt(0));
-    set.shooting = staticClip(sf::IntRect{241, 155, 16, 32});
+    // Keep the 32px frame above the sprite sheet's white separator rows,
+    // which begin at y=186. Starting at 155 included one separator row.
+    set.shooting = staticClip(sf::IntRect{241, FireRowTop, 16, 32});
     set.running = AnimationClip{
         {
             fireFrameAt(2),

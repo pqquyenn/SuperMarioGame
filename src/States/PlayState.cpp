@@ -221,6 +221,11 @@ void PlayState::update(float dt) {
         }
       }
 
+      // The camera is presentation state and can move independently during
+      // fullscreen changes, warps, or Map Viewer mode. Constrain the player
+      // against stable map-space bounds so camera changes cannot teleport it.
+      constrainPlayerHorizontally();
+
       // 7. Kiểm tra rơi xuống vực (Void Death)
       // Threshold is 900px to cover the full 1-2 vertical layout
       // (overworld+underground+bonus room)
@@ -391,4 +396,23 @@ void PlayState::centerCameraOnPlayerSpawn() {
   level.getCamera().setCenter(
       playerSpawnPoint.x + playerBounds.width * 0.5f,
       playerSpawnPoint.y + playerBounds.height * 0.5f);
+}
+
+void PlayState::constrainPlayerHorizontally() {
+  if (!player || !player->isActive() || player->isDying()) {
+    return;
+  }
+
+  constexpr float TileSize = 16.f;
+  const sf::FloatRect playerBounds = player->getBounds();
+  const float worldWidth = level.getTileMap().getMapWidth() * TileSize;
+  const float minimumX = 0.f;
+  const float maximumX = std::max(0.f, worldWidth - playerBounds.width);
+  const float currentX = player->getPosition().x;
+  const float constrainedX = std::clamp(currentX, minimumX, maximumX);
+
+  if (constrainedX != currentX) {
+    player->setPosition(constrainedX, player->getPosition().y);
+    player->setVelocity(0.f, player->getVelocity().y);
+  }
 }
