@@ -22,13 +22,17 @@ private:
     State currentState{State::WAITING_BOT}; // Bắt đầu ẩn trong ống
 
     float pipeTopY{0.f};       // Vị trí Y đỉnh ống (được set khi spawn)
-    float riseHeight{48.f};    // Chiều cao tối đa nhô lên khỏi ống
+    float riseHeight{24.f};    // Chiều cao tối đa nhô lên khỏi ống (24px)
     float riseSpeed{60.f};     // Tốc độ di chuyển lên/xuống (pixels/sec)
     float waitDuration{2.0f};  // Thời gian chờ ở đỉnh/đáy (giây)
     float waitTimer{0.f};      // Bộ đếm thời gian chờ hiện tại
     float currentRise{0.f};    // Khoảng cách đã nhô lên (0 = ẩn hoàn toàn)
 
-    sf::Vector2f plantSize{32.f, 48.f}; // Kích thước PiranhaPlant
+    float animTimer{0.f};       // Timer luân phiên frame animation
+    float animInterval{0.2f};   // Đổi frame mỗi 0.2s
+    int currentFrame{0};        // Frame 0 hoặc 1
+
+    sf::Vector2f plantSize{16.f, 24.f}; // Kích thước PiranhaPlant
 
 public:
     PiranhaPlant(float x = 0.f, float y = 0.f);

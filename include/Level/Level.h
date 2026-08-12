@@ -71,6 +71,8 @@ public:
     int  getLevelId() const { return levelId; }
     bool getIsUnderground() const { return isUnderground; }
     bool getIsInBonusRoom() const { return isInBonusRoom; }
+    void setIsUnderground(bool v) { isUnderground = v; }
+    void setIsInBonusRoom(bool v) { isInBonusRoom = v; }
     sf::Vector2f getStartPosition(
         const sf::Vector2f& characterSize
     ) const;

@@ -42,8 +42,33 @@ void Level::spawnEntitiesFromMap() {
                    {"Goomba", {2768.f, 192.f}}, {"Goomba", {2784.f, 192.f}},
                    {"Koopa", {1712.f, 176.f}}};
   } else if (levelId == 2) {
-    // No hardcoded enemies for 1-2 overworld; underground section has
-    // tile-based content
+    enemySpawns = {
+        // Underground Goombas
+        {"UndergroundGoomba", {304.f, 432.f}}, // Row 28, Col 19
+        {"UndergroundGoomba", {320.f, 432.f}}, // Row 28, Col 20
+        {"UndergroundGoomba", {656.f, 432.f}},
+        {"UndergroundGoomba", {1280.f, 432.f}},
+        {"UndergroundGoomba", {1296.f, 432.f}},
+        {"UndergroundGoomba", {1328.f, 320.f}},
+        {"UndergroundGoomba", {1408.f, 384.f}},
+        {"UndergroundGoomba", {1424.f, 384.f}},
+        {"UndergroundGoomba", {1728.f, 432.f}},
+        {"UndergroundGoomba", {1744.f, 432.f}},
+        {"UndergroundGoomba", {1760.f, 432.f}},
+        {"UndergroundGoomba", {2352.f, 368.f}},
+        {"UndergroundGoomba", {2368.f, 368.f}},
+
+        // Koopas
+        {"Koopa", {960.f, 416.f}},
+        {"Koopa", {976.f, 416.f}},
+
+        // Red Koopa
+        {"RedKoopa", {2624.f, 416.f}},
+
+        // Piranha Plants
+        {"PiranhaPlant", {1864.f, 400.f}},
+        {"PiranhaPlant", {1944.f, 384.f}},
+    };
   } else if (levelId == 3) {
     enemySpawns = {
         {"RedKoopa", {496.f, 64.f}},        {"Goomba", {800.f, 64.f}},
@@ -92,9 +117,9 @@ void Level::spawnEntitiesFromMap() {
     // Shaft 1 (Col 151, x=2416px): 2 platforms moving DOWN (LoopDown)
     // Shaft 2 (Col 166, x=2656px): 2 platforms moving UP (LoopUp)
     const PlatformConfig level2Platforms[] = {
-        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f,
+        {2432.f, 304.f, 48.f, 304.f, 496.f, 50.f,
          MovingPlatform::Mode::LoopDown},
-        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f,
+        {2432.f, 400.f, 48.f, 304.f, 496.f, 50.f,
          MovingPlatform::Mode::LoopDown},
         {2720.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
         {2720.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
@@ -190,8 +215,8 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
             levelStartHint = *startMarker;
           } else {
             levelStartHint = {0.f, 0.f};
-            std::cerr << "[Level] Map has no '@' player start marker: "
-                      << path << std::endl;
+            std::cerr << "[Level] Map has no '@' player start marker: " << path
+                      << std::endl;
           }
         }
 
@@ -226,19 +251,18 @@ bool Level::loadMap(const std::string &mapFile) {
   return loadLevel(mapFile);
 }
 
-sf::Vector2f Level::findGroundedSpawn(
-    const sf::Vector2f &requestedPosition,
-    const sf::Vector2f &characterSize) const {
+sf::Vector2f Level::findGroundedSpawn(const sf::Vector2f &requestedPosition,
+                                      const sf::Vector2f &characterSize) const {
   constexpr float TileSize = 16.f;
   const float safeWidth = std::max(1.f, characterSize.x);
   const float safeHeight = std::max(1.f, characterSize.y);
   const float worldWidth = map.getMapWidth() * TileSize;
   const float worldHeight = map.getMapHeight() * TileSize;
-  const float spawnX = std::clamp(
-      requestedPosition.x, 0.f, std::max(0.f, worldWidth - safeWidth));
+  const float spawnX = std::clamp(requestedPosition.x, 0.f,
+                                  std::max(0.f, worldWidth - safeWidth));
   const float searchTop = std::clamp(requestedPosition.y, 0.f, worldHeight);
-  const sf::FloatRect searchBounds{
-      spawnX, searchTop, safeWidth, std::max(0.f, worldHeight - searchTop)};
+  const sf::FloatRect searchBounds{spawnX, searchTop, safeWidth,
+                                   std::max(0.f, worldHeight - searchTop)};
 
   float nearestSurface = std::numeric_limits<float>::max();
   for (const TileHandle &handle : map.getTilesInBounds(searchBounds)) {
@@ -268,8 +292,7 @@ sf::Vector2f Level::findGroundedSpawn(
   return {spawnX, requestedPosition.y};
 }
 
-sf::Vector2f Level::getStartPosition(
-    const sf::Vector2f &characterSize) const {
+sf::Vector2f Level::getStartPosition(const sf::Vector2f &characterSize) const {
   return findGroundedSpawn(levelStartHint, characterSize);
 }
 
@@ -301,8 +324,7 @@ void Level::update(float dt) {
   const float spawnMargin = 80.f;
   constexpr float TileSize = 16.f;
   constexpr float EnemyVoidMargin = 64.f;
-  const float enemyVoidY =
-      map.getMapHeight() * TileSize + EnemyVoidMargin;
+  const float enemyVoidY = map.getMapHeight() * TileSize + EnemyVoidMargin;
 
   for (auto &enemy : enemies) {
     if (!enemy || !enemy->isActive())
@@ -431,9 +453,7 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
   }
 }
 
-std::string Level::getBlockItemType(
-    float x,
-    const Character *character) const {
+std::string Level::getBlockItemType(float x, const Character *character) const {
   std::string itemType = "Coin";
 
   bool starSpot = (levelId == 1 && std::abs(x - 1616.f) < 2.f);
@@ -493,8 +513,8 @@ void Level::warpPipeA_Entry(Character *character) {
   isInBonusRoom = false;
   if (character) {
     // Underground floor tile tops are at y=464 (rows 29-30).
-    // Spawn with feet safely above floor: y=432 lands him on row 27.
-    character->setPosition(256.f, 432.f);
+    // Spawn freely in air
+    character->setPosition(48.f, 256.f);
     character->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
   }
   // Underground corridor: ceiling y=304, floor y=480, midpoint=400
@@ -518,15 +538,15 @@ void Level::warpPipeB_Entry(Character *character) {
 
 // Pipe C1: Right-contact exit from bonus room → resurface in underground
 void Level::warpPipeC1_Exit(Character *character) {
-  std::cout
-      << "[Level][1-2] Pipe C1 exit — returning to underground corridor."
-      << std::endl;
+  std::cout << "[Level][1-2] Pipe C1 exit — returning to underground corridor."
+            << std::endl;
   isInBonusRoom = false;
   if (character) {
     // Return to underground corridor past Pipe 2 so player continues rightward.
     // y=400 is safely above the underground floor (y≈464).
     character->setPosition(2000.f, 400.f);
-    character->setVelocity(sf::Vector2f(30.f, -80.f)); // pop upward and drift right
+    character->setVelocity(
+        sf::Vector2f(30.f, -80.f)); // pop upward and drift right
   }
   camera.setCenter(2000.f, 400.f);
 }
@@ -542,6 +562,7 @@ void Level::warpToOverworldExit(Character *character) {
     character->setPosition(2816.f, 144.f);
     character->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
   }
-  // Lock camera to overworld band (Y=112 keeps view at y=0..225, above underground)
+  // Lock camera to overworld band (Y=112 keeps view at y=0..225, above
+  // underground)
   camera.setCenter(2816.f, 112.f);
 }
