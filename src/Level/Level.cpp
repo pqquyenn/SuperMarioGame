@@ -95,8 +95,8 @@ void Level::spawnEntitiesFromMap() {
          MovingPlatform::Mode::LoopDown},
         {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f,
          MovingPlatform::Mode::LoopDown},
-        {2656.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
-        {2656.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
+        {2720.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
+        {2720.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
     };
 
     for (const auto &cfg : level2Platforms) {
@@ -384,16 +384,15 @@ void Level::warpToUnderground1_2(Character *character) {
 
 // ── World 1-2 Warp Methods ─────────────────────────────────────────────────
 
-// Pipe A: Automatic horizontal contact → underground main corridor
+// Pipe A: Down-key on overworld Pipe 1 → underground main corridor
 void Level::warpPipeA_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe A entered — warping to underground."
             << std::endl;
   isUnderground = true;
   isInBonusRoom = false;
   if (character) {
-    // Underground floor tile tops are at y=464 (lines 30-31, row 29-30).
-    // For a 16px-tall Small Mario, spawn with feet at y=464 → top at y=448.
-    // Update per step 3: spawn at y=432.f so he safely lands on the floor.
+    // Underground floor tile tops are at y=464 (rows 29-30).
+    // Spawn with feet safely above floor: y=432 lands him on row 27.
     character->setPosition(256.f, 432.f);
     character->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
   }
@@ -401,45 +400,47 @@ void Level::warpPipeA_Entry(Character *character) {
   camera.setCenter(300.f, 400.f);
 }
 
-// Pipe B: Down key on underground pipe → bonus room (hidden vault)
+// Pipe B: Down-key on underground Pipe 2 → bonus / hidden room (rows 35-43)
 void Level::warpPipeB_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe B entered — warping to bonus room."
             << std::endl;
   isInBonusRoom = true;
   if (character) {
-    // Bonus room entry: left side, just below the ceiling pipe (rows 32-34,
-    // x=48, y=528)
-    character->setPosition(48.f, 528.f);
+    // Hidden room occupies rows 35-43 (y=544-704).
+    // Spawn Mario just inside the top-left opening (col 1-3 are empty).
+    character->setPosition(32.f, 560.f);
     character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
-  // Camera: center on bonus room (rows 31-45 span y=480-720, center ≈ 600)
-  camera.setCenter(200.f, 600.f);
+  // Camera: initial center matches Mario's Y so there is no abrupt snap
+  camera.setCenter(200.f, 560.f);
 }
 
-// Pipe C1: Automatic horizontal exit from bonus room → resurface at Pipe C2
-// in underground
+// Pipe C1: Right-contact exit from bonus room → resurface in underground
 void Level::warpPipeC1_Exit(Character *character) {
   std::cout
-      << "[Level][1-2] Pipe C1 exit — returning to underground at Pipe C2."
+      << "[Level][1-2] Pipe C1 exit — returning to underground corridor."
       << std::endl;
   isInBonusRoom = false;
   if (character) {
-    // Pipe C2 destination: back in the underground corridor, slightly to the
-    // right of Pipe B so Mario exits moving right. y=400 is above the
-    // underground floor.
-    character->setPosition(672.f, 400.f);
-    character->setVelocity(sf::Vector2f(0.f, -80.f)); // pop upward out of pipe
+    // Return to underground corridor past Pipe 2 so player continues rightward.
+    // y=400 is safely above the underground floor (y≈464).
+    character->setPosition(2000.f, 400.f);
+    character->setVelocity(sf::Vector2f(30.f, -80.f)); // pop upward and drift right
   }
-  camera.setCenter(672.f, 352.f);
+  camera.setCenter(2000.f, 400.f);
 }
 
 void Level::warpToOverworldExit(Character *character) {
-  std::cout << "[Level] Teleporting back to Overworld (5th pipe)..."
+  std::cout << "[Level] Teleporting back to Overworld — near-last pipe..."
             << std::endl;
+  isUnderground = false;
+  isInBonusRoom = false;
   if (character) {
-    character->setPosition(2608.f, 160.f);
+    // Near-last overworld pipe is at col ~176-177 (x≈2816).
+    // Pop Mario out of the pipe top (pipe top row 10, y=160 → spawn at y=144).
+    character->setPosition(2816.f, 144.f);
     character->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
   }
-
-  camera.setCenter(2608.f, 120.f);
+  // Lock camera to overworld band (Y=112 keeps view at y=0..225, above underground)
+  camera.setCenter(2816.f, 112.f);
 }

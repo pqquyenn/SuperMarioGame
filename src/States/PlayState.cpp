@@ -273,8 +273,9 @@ void PlayState::update(float dt) {
   // Camera automatically follows the selected character.
   if (player) {
     if (level.getIsInBonusRoom()) {
-      // Bonus room (rows 31-45, y=480-720): fix camera on vault
-      level.getCamera().setCenter(200.f, 600.f);
+      // Hidden room (rows 35-43, y=544-720): camera follows Mario
+      float camX = std::max(200.f, player->getPosition().x);
+      level.getCamera().setCenter(camX, player->getPosition().y);
     } else if (level.getIsUnderground() && player->getPosition().x < 3600.f) {
       // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
       float camX = std::max(200.f, player->getPosition().x);
@@ -285,7 +286,10 @@ void PlayState::update(float dt) {
           std::clamp(player->getPosition().y + 8.f, 80.f, 160.f);
       level.getCamera().setCenter(camX, camY);
     } else {
-      level.getCamera().update(player->getPosition());
+      // Overworld: follow player X but lock Y to 112 so underground
+      // tiles (y >= 256) are never visible through the 225px viewport.
+      float camX = std::max(200.f, player->getPosition().x);
+      level.getCamera().setCenter(camX, 112.f);
     }
   }
 
@@ -300,8 +304,7 @@ void PlayState::render(sf::RenderWindow &window) {
   float camX = cam.getView().getCenter().x;
   float camY = cam.getView().getCenter().y;
   bool isUndergroundArea = level.getIsUnderground() ||
-                           level.getIsInBonusRoom() || camY >= 240.f ||
-                           camX > 3600.f;
+                           level.getIsInBonusRoom() || camX > 3600.f;
   sf::Color bgColor =
       isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
 
