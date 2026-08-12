@@ -188,6 +188,10 @@ void PlayState::update(float dt) {
 
       if (!player->isActive()) {
         if (hud.getLives() > 0 && hud.getTimeRemaining() > 0.f) {
+          // Reset underground/bonus-room flags so camera follows player
+          // correctly after respawning back on the overworld.
+          level.setIsUnderground(false);
+          level.setIsInBonusRoom(false);
           player->respawn(playerSpawnPoint.x, playerSpawnPoint.y);
           centerCameraOnPlayerSpawn();
         } else if (stateManager) {

@@ -95,11 +95,18 @@ void AssetManager::loadLevelAssets() {
 
   // Load Entity Textures
   tryLoad("Goomba", "assets/maps/Mario Game Assets/Goomba_Walk1.png");
+  tryLoad("Goomba_Underground",
+          "assets/maps/Mario Game Assets/GoombaUndergroundWalk1.png");
+  tryLoad("Goomba_Underground_Walk2",
+          "assets/maps/Mario Game Assets/GoombaUndergroundWalk2.png");
+  tryLoad("Goomba_Underground_Flat",
+          "assets/maps/Mario Game Assets/GoombaUndergroundFlat.png");
   tryLoad("Koopa", "assets/maps/Mario Game Assets/Koopa_Walk1.png");
   tryLoad("Koopa_Walk2", "assets/maps/Mario Game Assets/Koopa_Walk2.png");
-  tryLoad("PiranhaPlant",
-          "assets/maps/Mario Game Assets/PipeTop.png"); // Fallback if no
-                                                        // PiranhaPlant.png
+  tryLoad("PiranhaPlant_1",
+          "assets/maps/Mario Game Assets/PirannhaPlantUnder1.png");
+  tryLoad("PiranhaPlant_2",
+          "assets/maps/Mario Game Assets/PirannhaPlantUnder2.png");
   tryLoad("Coin", "assets/maps/Mario Game Assets/Coin.png");
   tryLoad("Mushroom", "assets/maps/Mario Game Assets/MagicMushroom.png");
   tryLoad("1UpMushroom", "assets/maps/Mario Game Assets/1upMushroom.png");
