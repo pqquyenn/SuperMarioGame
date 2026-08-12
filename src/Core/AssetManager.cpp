@@ -1,6 +1,9 @@
 #include "Core/AssetManager.h"
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 
 
 // === Meyers' Singleton ===
@@ -28,7 +31,14 @@ sf::Texture &AssetManager::getTexture(const std::string &name) {
   return textures[name];
 }
 
+bool AssetManager::hasTexture(const std::string &name) const {
+  const auto found = textures.find(name);
+  return found != textures.end() && found->second.getSize().x > 0 &&
+         found->second.getSize().y > 0;
+}
+
 void AssetManager::loadLevelAssets() {
+  if (levelAssetsLoaded) return;
   auto tryLoad = [&](const std::string &name, const std::string &rel) {
     if (std::filesystem::exists(rel)) {
       loadTexture(name, rel);
@@ -47,6 +57,45 @@ void AssetManager::loadLevelAssets() {
       return;
     }
   };
+
+  const std::filesystem::path catalogCandidates[] = {
+      "assets/config/assets.catalog", "../assets/config/assets.catalog",
+      "../../assets/config/assets.catalog", "../../../assets/config/assets.catalog"};
+  for (const auto &catalogPath : catalogCandidates) {
+    if (!std::filesystem::is_regular_file(catalogPath)) continue;
+    std::ifstream catalog(catalogPath);
+    std::string line;
+    while (std::getline(catalog, line)) {
+      const auto first = line.find_first_not_of(" \t\r");
+      if (first == std::string::npos || line[first] == '#') continue;
+      std::istringstream stream(line.substr(first));
+      std::string name;
+      stream >> name;
+      std::string alternatives;
+      std::getline(stream, alternatives);
+      alternatives.erase(0, alternatives.find_first_not_of(" \t"));
+      std::istringstream paths(alternatives);
+      std::string path;
+      while (std::getline(paths, path, '|')) {
+        const auto pathFirst = path.find_first_not_of(" \t");
+        const auto pathLast = path.find_last_not_of(" \t\r");
+        if (pathFirst == std::string::npos) continue;
+        path = path.substr(pathFirst, pathLast - pathFirst + 1);
+        tryLoad(name, path);
+        if (textures.find(name) != textures.end() &&
+            textures[name].getSize().x > 0) break;
+      }
+    }
+    if (textures.find("BlackTile") == textures.end()) {
+      sf::Image blackImg;
+      blackImg.create(16, 16, sf::Color::Black);
+      textures["BlackTile"].loadFromImage(blackImg);
+    }
+    levelAssetsLoaded = true;
+    return;
+  }
+  throw std::runtime_error("assets/config/assets.catalog was not found");
+#if 0 // Removed compiled catalog retained temporarily for merge archaeology.
   // tryLoad("BlockTileSheet", "assets/sprites/blocks/BlockTileSheet.png");
   tryLoad("BlockTileSheet", "assets/sprites/blocks/BlockTileSheet.png");
   tryLoad("DecorSheet", "assets/textures/blocks/DecorSheet.png");
@@ -132,6 +181,8 @@ void AssetManager::loadLevelAssets() {
     blackImg.create(16, 16, sf::Color::Black);
     textures["BlackTile"].loadFromImage(blackImg);
   }
+  levelAssetsLoaded = true;
+#endif
 }
 
 bool AssetManager::loadFont(const std::string &name,

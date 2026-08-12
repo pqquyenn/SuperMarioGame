@@ -1,7 +1,6 @@
 #include "Level/Level.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
-#include "Entities/Enemies/RedKoopa.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Item.h"
@@ -10,8 +9,14 @@
 #include "Entities/Items/StarItem.h"
 #include "Entities/MovingPlatform.h"
 #include "Factories/EntityFactory.h"
+#include "Level/LevelDefinitionLoader.h"
+#include "Level/LevelWorldBuilder.h"
+#include "Level/BlockContentResolver.h"
+#include "Level/LevelCameraController.h"
+#include "Level/PortalSystem.h"
 #include "Physics/CollisionManager.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <limits>
 #include <vector>
@@ -19,125 +24,84 @@
 Level::Level(int id) : levelId(id) {}
 Level::~Level() = default;
 
-struct SpawnData {
-  std::string type;
-  sf::Vector2f position;
-};
-
-void Level::spawnEntitiesFromMap() {
-  auto &factory = EntityFactory::getInstance();
-
-  // Data-driven spawn positions for each level
-  std::vector<SpawnData> enemySpawns;
-  std::vector<SpawnData> itemSpawns;
-
-  if (levelId == 1) {
-    enemySpawns = {{"Goomba", {384.f, 192.f}},  {"Goomba", {656.f, 192.f}},
-                   {"Goomba", {832.f, 192.f}},  {"Goomba", {848.f, 192.f}},
-                   {"Goomba", {1312.f, 64.f}},  {"Goomba", {1344.f, 64.f}},
-                   {"Goomba", {1584.f, 192.f}}, {"Goomba", {1600.f, 192.f}},
-                   {"Goomba", {1792.f, 192.f}}, {"Goomba", {1808.f, 192.f}},
-                   {"Goomba", {2000.f, 192.f}}, {"Goomba", {2016.f, 192.f}},
-                   {"Goomba", {2048.f, 192.f}}, {"Goomba", {2064.f, 192.f}},
-                   {"Goomba", {2768.f, 192.f}}, {"Goomba", {2784.f, 192.f}},
-                   {"Koopa", {1712.f, 176.f}}};
-  } else if (levelId == 2) {
-    // No hardcoded enemies for 1-2 overworld; underground section has
-    // tile-based content
-  } else if (levelId == 3) {
-    enemySpawns = {
-        {"RedKoopa", {496.f, 64.f}},        {"Goomba", {800.f, 64.f}},
-        {"Goomba", {816.f, 64.f}},          {"RedParatroopa", {1456.f, 112.f}},
-        {"Goomba", {1552.f, 96.f}},         {"RedKoopa", {2160.f, 96.f}},
-        {"RedParatroopa", {2208.f, 128.f}}, {"RedKoopa", {2676.f, 192.f}},
-    };
+bool Level::spawnEntitiesFromMap() {
+  std::vector<std::string> errors;
+  const bool success = LevelWorldBuilder{}.build(
+      definition, map, enemies, items, movingPlatforms, errors);
+  for (const auto &error : errors) {
+    std::cerr << "[Level] " << error << std::endl;
   }
-  for (const auto &data : enemySpawns) {
-    if (auto entity = factory.create(data.type, data.position)) {
-      if (auto *enemy = dynamic_cast<Enemy *>(entity.get())) {
-        if (auto *rk = dynamic_cast<RedKoopa *>(enemy)) {
-          rk->setTileMap(&map);
-        }
-        entity.release();
-        enemies.push_back(std::unique_ptr<Enemy>(enemy));
-        std::cout << "[Level] Spawned Enemy: " << data.type << " at ("
-                  << data.position.x << ", " << data.position.y << ")"
-                  << std::endl;
-      }
-    }
-  }
-
-  for (const auto &data : itemSpawns) {
-    if (auto entity = factory.create(data.type, data.position)) {
-      if (auto *item = dynamic_cast<Item *>(entity.get())) {
-        entity.release();
-        items.push_back(std::unique_ptr<Item>(item));
-        std::cout << "[Level] Spawned Item: " << data.type << " at ("
-                  << data.position.x << ", " << data.position.y << ")"
-                  << std::endl;
-      }
-    }
-  }
-
-  // Data-driven MovingPlatform configuration for Level 2 (based on 000
-  // positions in 1-2.txt)
-  if (levelId == 2) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Mode mode;
-    };
-
-    // Shaft 1 (Col 151, x=2416px): 2 platforms moving DOWN (LoopDown)
-    // Shaft 2 (Col 166, x=2656px): 2 platforms moving UP (LoopUp)
-    const PlatformConfig level2Platforms[] = {
-        {2416.f, 304.f, 48.f, 304.f, 496.f, 50.f,
-         MovingPlatform::Mode::LoopDown},
-        {2416.f, 400.f, 48.f, 304.f, 496.f, 50.f,
-         MovingPlatform::Mode::LoopDown},
-        {2720.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
-        {2720.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
-    };
-
-    for (const auto &cfg : level2Platforms) {
-      movingPlatforms.push_back(
-          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
-      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") width=" << cfg.width
-                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
-    }
-  }
-  if (levelId == 3) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Mode mode;
-    };
-    const PlatformConfig level3Platforms[] = {
-        {1024.f, 96.f, 48.f, 96.f, 240.f, 50.f,
-         MovingPlatform::Mode::OscillateVertical},
-        {1600.f, 112.f, 48.f, 1600.f, 1696.f, 40.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-        {1840.f, 144.f, 48.f, 1744.f, 1840.f, 40.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-        {2432.f, 144.f, 48.f, 2432.f, 2656.f, 50.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-    };
-    for (const auto &cfg : level3Platforms) {
-      movingPlatforms.push_back(
-          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
-      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") Axis=" << static_cast<int>(cfg.mode)
-                << std::endl;
-    }
-  }
+  return success;
 }
 
 bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
+  if (!isUndergroundFlag) {
+    LevelDefinition loaded;
+    std::vector<std::string> errors;
+    if (!LevelDefinitionLoader{}.load(filename, loaded, errors)) {
+      std::cerr << "[Level] Invalid stage definition: " << filename
+                << std::endl;
+      for (const auto &error : errors) {
+        std::cerr << "  - " << error << std::endl;
+      }
+      return false;
+    }
+
+    enemies.clear();
+    items.clear();
+    movingPlatforms.clear();
+    activatedCheckpoints.clear();
+    removedEnemyCount = 0;
+    EntityFactory::getInstance().registerDefaultEntities();
+
+    definition = std::move(loaded);
+    hasDefinition = true;
+    currentArea = definition.initialArea;
+    isUnderground = currentArea == "underground";
+    isInBonusRoom = currentArea == "bonus";
+
+    for (const auto &block : definition.blockContents) {
+      if (!BlockContentResolver::getInstance().hasRule(block.content) &&
+          !EntityFactory::getInstance().contains(block.content)) {
+        std::cerr << "[Level] Unknown block content or rule: "
+                  << block.content << std::endl;
+        return false;
+      }
+    }
+
+    if (!map.readFromFile(definition.terrainPath)) return false;
+    if (const auto &start = map.getStartMarker()) {
+      levelStartHint = *start;
+    } else {
+      std::cerr << "[Level] Missing '@' start marker in "
+                << definition.terrainPath << std::endl;
+      return false;
+    }
+    levelEndHint = map.getEndMarker();
+    if (!levelEndHint) {
+      std::cerr << "[Level] Missing '!' end marker in "
+                << definition.terrainPath << std::endl;
+      return false;
+    }
+    if (!definition.backgroundPath.empty()) {
+      bgMap.readFromFile(definition.backgroundPath);
+    }
+
+    // Legacy numeric ID remains available only to old diagnostics.
+    if (definition.id == "world-1-1") levelId = 1;
+    else if (definition.id == "world-1-2") levelId = 2;
+    else if (definition.id == "world-1-3") levelId = 3;
+
+    return spawnEntitiesFromMap();
+  }
+
+  std::cerr << "[Level] Legacy standalone hidden maps are disabled; "
+               "define an area and portals in the stage manifest instead"
+            << std::endl;
+  return false;
+#if 0 // Removed legacy loader retained temporarily for merge archaeology.
+
+  // Compatibility path for the old debug-only hidden-map hotkey.
   isUnderground = isUndergroundFlag;
   isInBonusRoom = false;
   enemies.clear();
@@ -193,6 +157,12 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
             std::cerr << "[Level] Map has no '@' player start marker: "
                       << path << std::endl;
           }
+
+          levelEndHint = map.getEndMarker();
+          if (!levelEndHint) {
+            std::cerr << "[Level] Map has no '!' stage end marker: "
+                      << path << std::endl;
+          }
         }
 
         std::filesystem::path bgPath =
@@ -208,6 +178,7 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
   std::cerr << "[Level] Failed to find level map file: " << filename
             << std::endl;
   return false;
+#endif
 }
 
 bool Level::loadLevel(const std::string &levelFile) {
@@ -229,11 +200,11 @@ bool Level::loadMap(const std::string &mapFile) {
 sf::Vector2f Level::findGroundedSpawn(
     const sf::Vector2f &requestedPosition,
     const sf::Vector2f &characterSize) const {
-  constexpr float TileSize = 16.f;
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
   const float safeWidth = std::max(1.f, characterSize.x);
   const float safeHeight = std::max(1.f, characterSize.y);
-  const float worldWidth = map.getMapWidth() * TileSize;
-  const float worldHeight = map.getMapHeight() * TileSize;
+  const float worldWidth = map.getMapWidth() * tileSize;
+  const float worldHeight = map.getMapHeight() * tileSize;
   const float spawnX = std::clamp(
       requestedPosition.x, 0.f, std::max(0.f, worldWidth - safeWidth));
   const float searchTop = std::clamp(requestedPosition.y, 0.f, worldHeight);
@@ -273,6 +244,18 @@ sf::Vector2f Level::getStartPosition(
   return findGroundedSpawn(levelStartHint, characterSize);
 }
 
+bool Level::hasReachedEnd(const sf::FloatRect &characterBounds) const {
+  if ((hasDefinition && currentArea != definition.initialArea) ||
+      !levelEndHint) {
+    return false;
+  }
+
+  const float markerSize = hasDefinition ? definition.tileSize : 16.f;
+  const sf::FloatRect endBounds{
+      levelEndHint->x, levelEndHint->y, markerSize, markerSize};
+  return characterBounds.intersects(endBounds);
+}
+
 EnemyRuntimeStats Level::getEnemyRuntimeStats() const {
   EnemyRuntimeStats stats;
   stats.removed = removedEnemyCount;
@@ -299,10 +282,11 @@ void Level::update(float dt) {
 
   sf::FloatRect camBounds = camera.getViewBounds();
   const float spawnMargin = 80.f;
-  constexpr float TileSize = 16.f;
-  constexpr float EnemyVoidMargin = 64.f;
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
+  const float voidMarginTiles = hasDefinition
+      ? definition.rules.enemyVoidMarginTiles : 4.f;
   const float enemyVoidY =
-      map.getMapHeight() * TileSize + EnemyVoidMargin;
+      map.getMapHeight() * tileSize + voidMarginTiles * tileSize;
 
   for (auto &enemy : enemies) {
     if (!enemy || !enemy->isActive())
@@ -404,7 +388,7 @@ void Level::spawnItemFromBlock(float x, float y) {
 }
 
 void Level::spawnItemFromBlock(float x, float y, Character *character) {
-  const std::string itemType = getBlockItemType(x, character);
+  const std::string itemType = getBlockItemType(x, y, character);
 
   sf::Vector2f spawnPos =
       (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
@@ -433,34 +417,29 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
 
 std::string Level::getBlockItemType(
     float x,
+    float y,
     const Character *character) const {
+  const int tileX = static_cast<int>(std::lround(x / definition.tileSize));
+  const int tileY = static_cast<int>(std::lround(y / definition.tileSize));
   std::string itemType = "Coin";
-
-  bool starSpot = (levelId == 1 && std::abs(x - 1616.f) < 2.f);
-  bool oneUpSpot = (levelId == 1 && std::abs(x - 1024.f) < 2.f);
-  bool powerupSpot = (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f ||
-                      std::abs(x - 1744.f) < 1.f);
-  if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
-    powerupSpot = true;
-  }
-
-  if (starSpot) {
-    itemType = "StarItem";
-  } else if (oneUpSpot) {
-    itemType = "1UpMushroom";
-  } else if (powerupSpot) {
-    if (character) {
-      const std::string_view form = character->getCurrentFormName();
-      if (form == "Super" || form == "Fire") {
-        itemType = "FireFlower";
-      } else {
-        itemType = "Mushroom";
-      }
-    } else {
-      itemType = "Mushroom";
+  for (const auto &block : definition.blockContents) {
+    if (block.tilePosition.x == tileX && block.tilePosition.y == tileY) {
+      itemType = block.content;
+      break;
     }
   }
-  return itemType;
+
+  return BlockContentResolver::getInstance().resolve(itemType, character);
+}
+
+bool Level::hasBlockContent(float x, float y) const {
+  const int tileX = static_cast<int>(std::lround(x / definition.tileSize));
+  const int tileY = static_cast<int>(std::lround(y / definition.tileSize));
+  return std::any_of(
+      definition.blockContents.begin(), definition.blockContents.end(),
+      [tileX, tileY](const BlockContentDefinition &block) {
+        return block.tilePosition.x == tileX && block.tilePosition.y == tileY;
+      });
 }
 
 void Level::warpToUnderground(Character *character) {
@@ -544,4 +523,74 @@ void Level::warpToOverworldExit(Character *character) {
   }
   // Lock camera to overworld band (Y=112 keeps view at y=0..225, above underground)
   camera.setCenter(2816.f, 112.f);
+}
+
+bool Level::tryActivatePortal(
+    Character &character,
+    const sf::FloatRect &contactedTile,
+    PortalActivation activation) {
+  if (!hasDefinition || !PortalSystem{}.tryActivate(
+          definition, currentArea, character, contactedTile, activation)) {
+    return false;
+  }
+  isUnderground = currentArea == "underground";
+  isInBonusRoom = currentArea == "bonus";
+  updateCameraFor(character.getPosition());
+  return true;
+}
+
+void Level::updateCameraFor(const sf::Vector2f &playerPosition) {
+  if (!hasDefinition) camera.update(playerPosition);
+  else LevelCameraController{}.update(
+      camera, definition, currentArea, playerPosition);
+}
+
+bool Level::usesDarkBackground() const {
+  return hasDefinition
+      ? LevelCameraController{}.usesDarkBackground(definition, currentArea)
+      : isUnderground || isInBonusRoom;
+}
+
+float Level::getKillPlaneY() const {
+  if (hasDefinition && definition.rules.killPlaneTile >= 0.f) {
+    return definition.rules.killPlaneTile * definition.tileSize;
+  }
+  return (map.getMapHeight() + 4.f) * 16.f;
+}
+
+float Level::getLeftBoundaryX() const {
+  return hasDefinition
+      ? definition.rules.leftBoundaryTile * definition.tileSize
+      : 0.f;
+}
+
+float Level::getRightBoundaryX(float entityWidth) const {
+  const float mapRight = map.getMapWidth() *
+      (hasDefinition ? definition.tileSize : 16.f);
+  const float configured = hasDefinition && definition.rules.rightBoundaryTile >= 0.f
+      ? definition.rules.rightBoundaryTile * definition.tileSize
+      : mapRight;
+  return std::max(getLeftBoundaryX(), configured - entityWidth);
+}
+
+std::optional<sf::Vector2f> Level::activateCheckpoint(
+    const sf::FloatRect &characterBounds,
+    const sf::Vector2f &characterSize) {
+  if (!hasDefinition) return std::nullopt;
+  const float tileSize = definition.tileSize;
+  for (const auto &checkpoint : definition.checkpoints) {
+    if (checkpoint.area != currentArea ||
+        activatedCheckpoints.find(checkpoint.id) != activatedCheckpoints.end()) {
+      continue;
+    }
+    const sf::FloatRect trigger{
+        checkpoint.triggerTiles.left * tileSize,
+        checkpoint.triggerTiles.top * tileSize,
+        checkpoint.triggerTiles.width * tileSize,
+        checkpoint.triggerTiles.height * tileSize};
+    if (!trigger.intersects(characterBounds)) continue;
+    activatedCheckpoints.insert(checkpoint.id);
+    return findGroundedSpawn(checkpoint.spawnTile * tileSize, characterSize);
+  }
+  return std::nullopt;
 }

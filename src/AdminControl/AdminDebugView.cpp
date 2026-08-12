@@ -197,7 +197,8 @@ void AdminDebugView::renderWorldAnnotations(
         drawWorldOutline(window, bounds, color);
         annotations.push_back({
             bounds,
-            "? " + level.getBlockItemType(bounds.left, &character),
+            "? " + level.getBlockItemType(
+                bounds.left, bounds.top, &character),
             color
         });
     }

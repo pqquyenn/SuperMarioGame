@@ -25,6 +25,7 @@ public:
 
     // === Core loop: goi moi frame ===
     virtual void handleInput(sf::Event& event, sf::RenderWindow& window) = 0;  // Xu ly tung event rieng le
+    virtual void fixedUpdate(float dt) { (void)dt; }
     virtual void update(float dt) = 0;
     virtual void render(sf::RenderWindow& window) = 0;
 

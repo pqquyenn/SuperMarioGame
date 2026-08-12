@@ -72,6 +72,9 @@ public:
     const std::optional<sf::Vector2f>& getStartMarker() const {
         return m_startMarker;
     }
+    const std::optional<sf::Vector2f>& getEndMarker() const {
+        return m_endMarker;
+    }
 
 private:
     void initFlyweights();
@@ -87,4 +90,5 @@ private:
     sf::Vector2f m_tileOffset{0.f, 0.f};
     std::vector<BrickDebris> m_debris;
     std::optional<sf::Vector2f> m_startMarker;
+    std::optional<sf::Vector2f> m_endMarker;
 };

@@ -1,0 +1,53 @@
+# kind id texture=<AssetManager key> rectangle/flags
+tile X texture=GroundBlock width=16 height=16 solid=true
+tile B texture=HardBlock width=16 height=16 solid=true
+tile S texture=Brick width=16 height=16 solid=true brick=true
+tile ? texture=MysteryBlock width=16 height=16 solid=true question=true animated=true
+tile Q texture=MysteryBlock width=16 height=16 solid=true question=true animated=true
+tile E texture=EmptyBlock width=16 height=16 solid=true
+
+tile < texture=PipeTop left=0 top=0 width=16 height=16 solid=true warp=true warp_direction=1
+tile > texture=PipeTop left=16 top=0 width=16 height=16 solid=true warp=true warp_direction=1
+tile [ texture=PipeBottom left=0 top=0 width=16 height=16 solid=true warp=true warp_direction=1
+tile ] texture=PipeBottom left=16 top=0 width=16 height=16 solid=true warp=true warp_direction=1
+tile 1 texture=PipeConnection left=0 top=16 width=16 height=16 solid=true warp=true warp_direction=1
+tile 2 texture=PipeConnection left=16 top=16 width=16 height=16 solid=true warp=true warp_direction=1
+tile 3 texture=PipeConnection left=0 top=32 width=16 height=16 solid=true warp=true warp_direction=1
+tile 4 texture=PipeConnection left=16 top=32 width=16 height=16 solid=true warp=true warp_direction=1
+tile 5 texture=PipeConnection left=32 top=0 width=16 height=16 solid=true warp=true warp_direction=1
+tile 6 texture=PipeConnection left=32 top=16 width=16 height=16 solid=true warp=true warp_direction=1
+tile 7 texture=PipeConnection left=32 top=32 width=16 height=16 solid=true warp=true warp_direction=1
+tile 0 texture=PipeConnection left=48 top=0 width=16 height=16 solid=true warp=true warp_direction=1
+tile a texture=PipeTop left=0 top=0 width=16 height=16 solid=true warp=true warp_direction=2 horizontal_warp=true
+
+tile j texture=Castle width=80 height=80
+tile C texture=LargeCastle width=148 height=176
+tile P texture=FlagPole left=0 top=0 width=16 height=16
+tile | texture=FlagPole left=0 top=16 width=16 height=16
+tile F texture=Flag width=16 height=16
+
+tile u texture=UndergroundBlock width=16 height=16 solid=true
+tile r texture=UndergroundBrick width=16 height=16 solid=true brick=true
+tile c texture=Coin_Underground width=16 height=16 coin=true
+tile g texture=UndergroundHardBlock width=16 height=16 solid=true
+tile * texture=BlackTile width=16 height=16
+tile W texture=Brick width=16 height=16 solid=true
+tile uh texture=UndergroundHardBlock width=16 height=16 solid=true
+
+grid bu texture=Bush1 columns=2 rows=2 cell_width=16 cell_height=16 offset=0,-4
+grid Bu texture=Bush2 columns=3 rows=2 cell_width=16 cell_height=16 offset=0,-4
+grid bU texture=Bush3 columns=4 rows=2 cell_width=16 cell_height=16 offset=0,-4
+grid cl texture=Cloud1 columns=2 rows=2 cell_width=16 cell_height=16
+grid Cl texture=Cloud2 columns=3 rows=2 cell_width=16 cell_height=16
+grid cL texture=Cloud3 columns=4 rows=2 cell_width=16 cell_height=16
+grid h texture=Hill1 columns=3 rows=2 cell_width=16 cell_height=16 last_row_height=8 offset=0,-4
+grid H texture=Hill2 columns=5 rows=3 cell_width=16 cell_height=16 offset=0,4
+grid isl texture=SpriteIsland columns=4 rows=3 cell_width=16 cell_height=16
+
+tile D texture=Platform left=0 top=0 width=16 height=8 solid=true
+tile M texture=Platform left=16 top=0 width=16 height=8 solid=true
+tile N texture=Platform left=32 top=0 width=16 height=8 solid=true
+tile T texture=SpriteIsland left=16 top=32 width=16 height=16 solid=true
+tile 8 texture=SpriteIsland left=0 top=0 width=16 height=16 solid=true
+tile G texture=SpriteIsland left=16 top=0 width=16 height=16 solid=true
+tile 9 texture=SpriteIsland left=48 top=0 width=16 height=16 solid=true

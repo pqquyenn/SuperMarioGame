@@ -1,0 +1,51 @@
+# Texture key followed by one or more root-relative alternatives separated by |.
+BlockTileSheet assets/sprites/blocks/BlockTileSheet.png
+DecorSheet assets/textures/blocks/DecorSheet.png
+Overworld assets/maps/Mario Game Assets/Overworld.png
+Underground assets/maps/Mario Game Assets/Underground.png
+Coin_Underground assets/maps/Mario Game Assets/Coin_Underground.png
+EmptyBlock assets/maps/Mario Game Assets/EmptyBlock.png
+Castle assets/maps/Mario Game Assets/Castle.png
+LargeCastle assets/maps/Mario Game Assets/LargeCastle.png
+FlagPole assets/maps/Mario Game Assets/FlagPole.png
+Flag assets/maps/Mario Game Assets/Flag.png
+GroundBlock assets/maps/Mario Game Assets/GroundBlock.png
+HardBlock assets/maps/Mario Game Assets/HardBlock.png
+Brick assets/maps/Mario Game Assets/Brick.png
+MysteryBlock assets/maps/Mario Game Assets/MysteryBlock.png
+PipeTop assets/maps/Mario Game Assets/PipeTop.png
+PipeBottom assets/maps/Mario Game Assets/PipeBottom.png
+PipeConnection assets/maps/Mario Game Assets/PipeConnection.png
+Cloud1 assets/maps/Mario Game Assets/Cloud1.png
+Cloud2 assets/maps/Mario Game Assets/Cloud2.png
+Cloud3 assets/maps/Mario Game Assets/Cloud3.png
+Bush1 assets/maps/Mario Game Assets/Bush1.png
+Bush2 assets/maps/Mario Game Assets/Bush2.png
+Bush3 assets/maps/Mario Game Assets/Bush3.png
+Hill1 assets/maps/Mario Game Assets/Hill1.png
+Hill2 assets/maps/Mario Game Assets/Hill2.png
+UndergroundBlock assets/maps/Mario Game Assets/UndergroundBlock.png
+UndergroundBrick assets/maps/Mario Game Assets/UndergroundBrick.png
+UndergroundHardBlock assets/maps/Mario Game Assets/UndergroundHardBlock.png|assets/maps/Mario Game Assets/UndergroundHardBlock.webp
+SpriteIsland assets/maps/Mario Game Assets/SpriteIsland.png|assets/maps/Mario Game Assets/SpriteIsland.webp
+Platform assets/maps/Mario Game Assets/Platform.png
+Goomba assets/maps/Mario Game Assets/Goomba_Walk1.png
+Koopa assets/maps/Mario Game Assets/Koopa_Walk1.png
+Koopa_Walk2 assets/maps/Mario Game Assets/Koopa_Walk2.png
+PiranhaPlant assets/maps/Mario Game Assets/PipeTop.png
+Coin assets/maps/Mario Game Assets/Coin.png
+Mushroom assets/maps/Mario Game Assets/MagicMushroom.png
+1UpMushroom assets/maps/Mario Game Assets/1upMushroom.png
+FireFlower assets/maps/Mario Game Assets/Starman.png
+Starman assets/maps/Mario Game Assets/Starman.png
+Koopa_Shell assets/maps/Mario Game Assets/Koopa_Shell.png
+RedKoopa_Walk1 assets/maps/Mario Game Assets/Redkoopa_walk1.png
+RedKoopa_Walk2 assets/maps/Mario Game Assets/Redkoopa_walk2.png
+RedKoopa_Shell assets/maps/Mario Game Assets/Redkoopa_shell.png
+RedKoopa_Shell1 assets/maps/Mario Game Assets/Redkoopa_shell1.png
+RedKoopa_Shell2 assets/maps/Mario Game Assets/Redkoopa_shell2.png
+GreenParatroopa_Walk1 assets/maps/Mario Game Assets/Patrakoopa_walk1.png
+GreenParatroopa_Walk2 assets/maps/Mario Game Assets/Patrakoopa_walk2.png
+RedParatroopa_Walk1 assets/maps/Mario Game Assets/Redpatrakoopa_walk1.png
+RedParatroopa_Walk2 assets/maps/Mario Game Assets/Redpatrakoopa_walk2.png
+PlayerSpriteSheet assets/sprites/characters/PlayerSpriteSheet.png

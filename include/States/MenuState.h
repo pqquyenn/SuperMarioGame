@@ -1,6 +1,7 @@
 #pragma once
 
 #include "States/GameState.h"
+#include "Level/LevelDefinition.h"
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
@@ -40,6 +41,7 @@ private:
 
     Page page{Page::GameMode};
     std::vector<MenuEntry> entries;
+    std::vector<StageCatalogEntry> stages;
     int selectedIndex{0};
 
     float blinkTimer{0.f};

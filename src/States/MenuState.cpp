@@ -2,6 +2,7 @@
 
 #include "Core/GameSettings.h"
 #include "Core/SoundManager.h"
+#include "Level/StageCatalog.h"
 #include "States/GameStateManager.h"
 #include "States/PlayState.h"
 #include <algorithm>
@@ -32,6 +33,8 @@ const char* characterName(CharacterChoice choice) {
 
 void MenuState::onEnter() {
     std::cout << "[MenuState] Entered main menu" << std::endl;
+
+    stages = StageCatalog::discover();
 
     const std::string fontPaths[] = {
         "assets/fonts/press-start-2p.ttf",
@@ -174,12 +177,9 @@ void MenuState::rebuildEntries() {
 
         case Page::Play:
             pageTitleText.setString("SELECT WORLD");
-            entries = {
-                {"WORLD 1-1"},
-                {"WORLD 1-2"},
-                {"WORLD 1-3"},
-                {"BACK"}
-            };
+            for (const auto& stage : stages) entries.push_back({stage.name});
+            if (stages.empty()) entries.push_back({"NO VALID STAGES", false});
+            entries.push_back({"BACK"});
             break;
 
         case Page::Character: {
@@ -291,16 +291,15 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
             break;
 
         case Page::Play: {
-            if (selectedIndex == 3) {
+            if (selectedIndex == static_cast<int>(entries.size()) - 1) {
                 setPage(Page::Solo);
                 break;
             }
-            static const char* maps[] = {
-                "1.1/1-1.txt", "1.2/1-2.txt", "1.3/1-3.txt"
-            };
-            if (stateManager) {
+            if (stateManager && selectedIndex >= 0 &&
+                selectedIndex < static_cast<int>(stages.size())) {
                 stateManager->clearAndPushState(
-                    std::make_unique<PlayState>(maps[selectedIndex]));
+                    std::make_unique<PlayState>(
+                        stages[static_cast<std::size_t>(selectedIndex)].manifestPath));
             }
             break;
         }

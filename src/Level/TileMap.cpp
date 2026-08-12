@@ -2,8 +2,10 @@
 #include "Level/Tile.h"
 #include "Level/TileType.h"
 #include "Core/AssetManager.h"
+#include "Level/TileCatalogLoader.h"
 #include <cmath>
 #include <sstream>
+#include <stdexcept>
 
 TileMap::TileMap() : m_tileSize(16), m_needsRedraw(true) {
     initFlyweights();
@@ -14,6 +16,15 @@ TileMap::~TileMap() = default;
 void TileMap::initFlyweights() {
     AssetManager& assets = AssetManager::getInstance();
     assets.loadLevelAssets();
+    std::vector<std::string> catalogErrors;
+    if (TileCatalogLoader{}.load(m_tileRegistry, catalogErrors)) {
+        return;
+    }
+    for (const auto& error : catalogErrors) {
+        std::cerr << "Tile catalog: " << error << std::endl;
+    }
+    throw std::runtime_error("Tile catalog could not be loaded");
+#if 0 // Removed compiled catalog retained temporarily for merge archaeology.
     const sf::Texture& sheet = assets.getTexture("BlockTileSheet");
 
     auto add = [&](const std::string& key, const sf::Texture* tex, int left, int top, int width, int height, bool solid, bool warp = false, int dir = 0) {
@@ -138,6 +149,7 @@ void TileMap::initFlyweights() {
     add("8", &assets.getTexture("SpriteIsland"), 0, 0, 16, 16, true);  // Green Cap
     add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);
     add("9", &assets.getTexture("SpriteIsland"), 48, 0, 16, 16, true);
+#endif
 }
 
 bool TileMap::isSolidAt(float worldX, float worldY) const {
@@ -160,22 +172,28 @@ bool TileMap::readFromFile(const std::string& filepath) {
     ++m_mapRevision;
     m_grid.clear();
     m_startMarker.reset();
+    m_endMarker.reset();
     std::string line;
 
-    auto recordStartMarker = [this, &filepath](int x, int y) {
+    auto recordMarker = [this, &filepath](
+        std::optional<sf::Vector2f>& marker,
+        const char* markerName,
+        int x,
+        int y) {
         const sf::Vector2f markerPosition{
             float(x * m_tileSize) + m_tileOffset.x,
             float(y * m_tileSize) + m_tileOffset.y
         };
 
-        if (m_startMarker) {
-            std::cerr << "TileMap Warning: Duplicate '@' start marker at row "
-                      << y << ", col " << x << " in " << filepath
+        if (marker) {
+            std::cerr << "TileMap Warning: Duplicate " << markerName
+                      << " marker at row " << y << ", col " << x
+                      << " in " << filepath
                       << "; keeping the first marker" << std::endl;
             return;
         }
 
-        m_startMarker = markerPosition;
+        marker = markerPosition;
     };
 
     // Check if first line contains numeric dimensions header (e.g. "15 16")
@@ -206,22 +224,21 @@ bool TileMap::readFromFile(const std::string& filepath) {
             int x = 0;
             while (ss >> token) {
                 if (token == "@") {
-                    recordStartMarker(x, y);
+                    recordMarker(m_startMarker, "'@' start", x, y);
+                    row.push_back(nullptr);
+                } else if (token == "!") {
+                    recordMarker(m_endMarker, "'!' end", x, y);
                     row.push_back(nullptr);
                 } else if (token == "A" || token == "." || token == "-") {
                     row.push_back(nullptr);
                 } else {
                     auto it = m_tileRegistry.find(token);
                     if (it != m_tileRegistry.end()) {
-                        float yOff = m_tileOffset.y;
-                        if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
-                            yOff -= 4.f;
-                        }
-                        if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
-                        
                         row.push_back(std::make_unique<Tile>(
                             it->second.get(),
-                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
+                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x,
+                                         float(y * m_tileSize) + m_tileOffset.y) +
+                                it->second->placementOffset));
                     } else {
                         std::shared_ptr<TileType> typeToUse = nullptr;
                         if (token == "ground1") typeToUse = m_tileRegistry["u"];
@@ -245,7 +262,14 @@ bool TileMap::readFromFile(const std::string& filepath) {
             for (size_t x = 0; x < line.size(); ++x) {
                 char c = line[x];
                 if (c == '@') {
-                    recordStartMarker(static_cast<int>(x), y);
+                    recordMarker(
+                        m_startMarker, "'@' start", static_cast<int>(x), y);
+                    row.push_back(nullptr);
+                    continue;
+                }
+                if (c == '!') {
+                    recordMarker(
+                        m_endMarker, "'!' end", static_cast<int>(x), y);
                     row.push_back(nullptr);
                     continue;
                 }
@@ -257,7 +281,9 @@ bool TileMap::readFromFile(const std::string& filepath) {
                 if (it != m_tileRegistry.end()) {
                     row.push_back(std::make_unique<Tile>(
                         it->second.get(),
-                        sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
+                        sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x,
+                                     float(y * m_tileSize) + m_tileOffset.y) +
+                            it->second->placementOffset));
                 } else {
                     if (c != 'e' && c != 'E' && c != 'o') {
                         std::cerr << "TileMap Warning: Unregistered char '" << c << "' at row " << y << ", col " << x << " in " << filepath << std::endl;

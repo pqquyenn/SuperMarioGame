@@ -1,0 +1,57 @@
+# Data-driven stage manifest. Coordinates are in 16px tiles.
+[stage]
+version=1
+id=world-1-1
+name=WORLD 1-1
+terrain=1-1.txt
+background=background.txt
+next_stage=world-1-2
+initial_area=overworld
+time_limit=400
+tile_size=16
+
+[rules]
+kill_plane_tile=20
+left_boundary_tile=0
+right_boundary_tile=-1
+enemy_void_margin_tiles=4
+
+[entities]
+entity id=g01 type=Goomba tile=24,12 direction=-1
+entity id=g02 type=Goomba tile=41,12 direction=-1
+entity id=g03 type=Goomba tile=52,12 direction=-1
+entity id=g04 type=Goomba tile=53,12 direction=-1
+entity id=g05 type=Goomba tile=82,4 direction=-1
+entity id=g06 type=Goomba tile=84,4 direction=-1
+entity id=g07 type=Goomba tile=99,12 direction=-1
+entity id=g08 type=Goomba tile=100,12 direction=-1
+entity id=g09 type=Goomba tile=112,12 direction=-1
+entity id=g10 type=Goomba tile=113,12 direction=-1
+entity id=g11 type=Goomba tile=125,12 direction=-1
+entity id=g12 type=Goomba tile=126,12 direction=-1
+entity id=g13 type=Goomba tile=128,12 direction=-1
+entity id=g14 type=Goomba tile=129,12 direction=-1
+entity id=g15 type=Goomba tile=173,12 direction=-1
+entity id=g16 type=Goomba tile=174,12 direction=-1
+entity id=k01 type=Koopa tile=107,11 direction=-1
+
+[platforms]
+
+[items]
+
+[blocks]
+block tile=21,9 content=PowerupByForm
+block tile=64,8 content=1UpMushroom
+block tile=78,9 content=PowerupByForm
+block tile=101,9 content=StarItem
+block tile=109,5 content=PowerupByForm
+block tile=109,9 content=PowerupByForm
+
+[anchors]
+
+[portals]
+
+[camera_zones]
+camera id=main_camera area=overworld bounds=0,0,248,16 follow_x=true follow_y=false center_y=8.96875 dark=false
+
+[checkpoints]

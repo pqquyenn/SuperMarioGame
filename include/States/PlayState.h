@@ -34,11 +34,12 @@ private:
     void constrainPlayerHorizontally();
 
 public:
-    PlayState(const std::string& mapPath = "1.1/1-1.txt");
+    PlayState(const std::string& mapPath = "1.1/1-1.level");
 
     void onEnter() override;
     void onExit() override;
     void handleInput(sf::Event& event, sf::RenderWindow& window) override;
+    void fixedUpdate(float dt) override;
     void update(float dt) override;
     void render(sf::RenderWindow& window) override;
 

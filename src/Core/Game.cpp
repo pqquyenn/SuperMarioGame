@@ -28,6 +28,7 @@ void Game::toggleFullscreen() {
         window.create(sf::VideoMode(800, 600), "Super Mario Bros (C++ SFML 2.6.1)", sf::Style::Default);
     }
     window.setVerticalSyncEnabled(false);
+    resetFrameTiming = true;
 }
 
 void Game::initStates() {
@@ -43,6 +44,11 @@ void Game::processEvents() {
     while (window.pollEvent(event)) {
         if (event.type == sf::Event::Closed) {
             window.close();
+        }
+        else if (event.type == sf::Event::Resized) {
+            // Resizing is presentation work; its delay must never become a
+            // large physics step on the next frame.
+            resetFrameTiming = true;
         }
         else if (event.type == sf::Event::KeyPressed) {
             if (event.key.code == sf::Keyboard::F11 || 
@@ -68,8 +74,7 @@ void Game::fixedUpdate(float fixedDt) {
     // Fixed timestep update: dung cho physics, collision, movement...
     // fixedDt LUON = TIME_PER_FRAME (1/60s) -> dam bao physics
     // chay giong nhau tren moi may bat ke FPS thuc te
-    // TODO: Goi physics update cua stateManager khi co physics system
-    // Vi du: stateManager.fixedUpdate(fixedDt);
+    stateManager.fixedUpdate(fixedDt);
 }
 
 void Game::render() {
@@ -117,13 +122,31 @@ void Game::run() {
         // 4. Xu ly input/event
         processEvents();
 
+        if (resetFrameTiming) {
+            dt = 0.f;
+            accumulator = 0.f;
+            clock.restart();
+            resetFrameTiming = false;
+        }
+
         // 5. Fixed Timestep: tich luy thoi gian va chay physics deu dan
         //    VD: may chay 120 FPS -> fixedUpdate chay 1 lan moi 2 frame
         //        may chay 30 FPS  -> fixedUpdate chay 2 lan moi frame
         accumulator += dt;
-        while (accumulator >= TIME_PER_FRAME) {
+        int catchUpSteps = 0;
+        constexpr int MaxCatchUpSteps = 5;
+        while (accumulator >= TIME_PER_FRAME &&
+               catchUpSteps < MaxCatchUpSteps) {
             fixedUpdate(TIME_PER_FRAME);
             accumulator -= TIME_PER_FRAME;
+            ++catchUpSteps;
+            if (stateManager.hasPendingTransition()) {
+                accumulator = 0.f;
+                break;
+            }
+        }
+        if (catchUpSteps == MaxCatchUpSteps) {
+            accumulator = 0.f;
         }
 
         // 6. Variable update (animation, UI, camera...)

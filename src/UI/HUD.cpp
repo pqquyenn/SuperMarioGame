@@ -125,6 +125,7 @@ void HUD::render(sf::RenderWindow& window) {
     // Save current view and switch to a fixed HUD view
     sf::View oldView = window.getView();
     sf::View hudView(sf::FloatRect({0.f, 0.f}, {400.f, 225.f}));
+    hudView.setViewport(oldView.getViewport());
     window.setView(hudView);
 
     window.draw(scoreText);

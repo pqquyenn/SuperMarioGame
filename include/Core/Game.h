@@ -21,6 +21,7 @@ private:
     // Fixed timestep accumulator: tich luy thoi gian
     // de dam bao physics update chay deu tren moi may
     float accumulator;
+    bool resetFrameTiming{false};
 
     // === Window & Fullscreen ===
     bool isFullscreen = false;

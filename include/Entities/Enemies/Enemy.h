@@ -2,6 +2,8 @@
 
 #include "Entities/Entity.h"
 
+class TileMap;
+
 // ============================================================
 // Enemy – Lớp cơ sở cho tất cả kẻ địch trong game
 // Kế thừa từ Entity. Cung cấp:
@@ -37,6 +39,7 @@ public:
   virtual void onFireball();
   virtual void onFellIntoVoid();
   virtual void reverseDirection();
+  virtual void setNavigationMap(const TileMap* map) { (void)map; }
 
   int getDirection() const;
   void setDirection(int dir);

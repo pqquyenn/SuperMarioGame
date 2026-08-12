@@ -26,6 +26,7 @@ public:
     void render(sf::RenderWindow& window);
     void setPlayerName(const std::string& name) { playerName = name; }
     void setLevelName(const std::string& name) { levelName = name; }
+    void setTimeLimit(float seconds) { timeRemaining = seconds; }
 
     int getLives() const { return lives; }
     int getScore() const { return score; }

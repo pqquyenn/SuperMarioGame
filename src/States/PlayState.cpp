@@ -7,6 +7,7 @@
 #include "Physics/CollisionManager.h"
 #include "States/GameOverState.h"
 #include "States/PauseState.h"
+#include "States/VictoryState.h"
 #include "UI/HUD.h"
 #include "Core/GameSettings.h"
 #include "Entities/Luigi.h"
@@ -26,9 +27,10 @@ void PlayState::onEnter() {
     std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
               << std::endl;
   }
-  const std::string levelName =
-      std::filesystem::path(initialMapPath).stem().string();
-  hud.setLevelName(levelName.empty() ? "1-1" : levelName);
+  const std::string levelName = level.getDisplayName();
+  hud.setLevelName(levelName.rfind("WORLD ", 0) == 0
+      ? levelName.substr(6) : levelName);
+  hud.setTimeLimit(static_cast<float>(level.getTimeLimit()));
 
   const CharacterChoice choice =
       GameSettings::getInstance().getCharacterChoice();
@@ -146,7 +148,7 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   }
 }
 
-void PlayState::update(float dt) {
+void PlayState::fixedUpdate(float dt) {
   if (isFreeCameraMode) {
     float speed = freeCamSpeed;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
@@ -226,10 +228,24 @@ void PlayState::update(float dt) {
       // against stable map-space bounds so camera changes cannot teleport it.
       constrainPlayerHorizontally();
 
+      const sf::FloatRect currentBounds = player->getBounds();
+      if (const auto checkpoint = level.activateCheckpoint(
+              currentBounds, {currentBounds.width, currentBounds.height})) {
+        playerSpawnPoint = *checkpoint;
+      }
+
+      if (level.hasReachedEnd(player->getBounds())) {
+        const std::string stageName = level.getDisplayName();
+        if (stateManager) {
+          stateManager->changeState(std::make_unique<VictoryState>(
+              stageName.empty() ? "WORLD 1-1" : stageName,
+              hud.getScore(), level.getNextStage()));
+        }
+        return;
+      }
+
       // 7. Kiểm tra rơi xuống vực (Void Death)
-      // Threshold is 900px to cover the full 1-2 vertical layout
-      // (overworld+underground+bonus room)
-      if (player->getPosition().y > 900.f) {
+      if (player->getPosition().y > level.getKillPlaneY()) {
         player->die(DeathCause::Void);
       }
 
@@ -271,7 +287,7 @@ void PlayState::update(float dt) {
       const sf::FloatRect camBounds = level.getCamera().getViewBounds();
       if (fireball->getPosition().x < camBounds.left - 64.f ||
           fireball->getPosition().x > camBounds.left + camBounds.width + 64.f ||
-          fireball->getPosition().y > 400.f) {
+          fireball->getPosition().y > level.getKillPlaneY()) {
         fireball->explode();
       }
     }
@@ -285,41 +301,23 @@ void PlayState::update(float dt) {
   // Cập nhật các entity trong level
   level.update(dt);
 
-  // Camera automatically follows the selected character.
-  if (player) {
-    if (level.getIsInBonusRoom()) {
-      // Hidden room (rows 35-43, y=544-720): camera follows Mario
-      float camX = std::max(200.f, player->getPosition().x);
-      level.getCamera().setCenter(camX, player->getPosition().y);
-    } else if (level.getIsUnderground() && player->getPosition().x < 3600.f) {
-      // Underground corridor in 1-2: ceiling y=304, floor y=480, midpoint=400
-      float camX = std::max(200.f, player->getPosition().x);
-      level.getCamera().setCenter(camX, 400.f);
-    } else if (player->getPosition().x >= 3600.f) {
-      const float camX = std::clamp(player->getPosition().x, 3700.f, 3980.f);
-      const float camY =
-          std::clamp(player->getPosition().y + 8.f, 80.f, 160.f);
-      level.getCamera().setCenter(camX, camY);
-    } else {
-      // Overworld: follow player X but lock Y to 112 so underground
-      // tiles (y >= 256) are never visible through the 225px viewport.
-      float camX = std::max(200.f, player->getPosition().x);
-      level.getCamera().setCenter(camX, 112.f);
-    }
-  }
+  if (player) level.updateCameraFor(player->getPosition());
 
   // Cập nhật HUD (thời gian, điểm số...)
   hud.update(dt);
+}
+
+void PlayState::update(float dt) {
+  // Gameplay advances exclusively through fixedUpdate. Keeping presentation
+  // update separate prevents resize/fullscreen delays from entering physics.
+  (void)dt;
 }
 
 void PlayState::render(sf::RenderWindow &window) {
   Camera &cam = level.getCamera();
   cam.applyTo(window);
 
-  float camX = cam.getView().getCenter().x;
-  float camY = cam.getView().getCenter().y;
-  bool isUndergroundArea = level.getIsUnderground() ||
-                           level.getIsInBonusRoom() || camX > 3600.f;
+  bool isUndergroundArea = level.usesDarkBackground();
   sf::Color bgColor =
       isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
 
@@ -392,10 +390,7 @@ void PlayState::centerCameraOnPlayerSpawn() {
     return;
   }
 
-  const sf::FloatRect playerBounds = player->getBounds();
-  level.getCamera().setCenter(
-      playerSpawnPoint.x + playerBounds.width * 0.5f,
-      playerSpawnPoint.y + playerBounds.height * 0.5f);
+  level.updateCameraFor(playerSpawnPoint);
 }
 
 void PlayState::constrainPlayerHorizontally() {
@@ -403,11 +398,9 @@ void PlayState::constrainPlayerHorizontally() {
     return;
   }
 
-  constexpr float TileSize = 16.f;
   const sf::FloatRect playerBounds = player->getBounds();
-  const float worldWidth = level.getTileMap().getMapWidth() * TileSize;
-  const float minimumX = 0.f;
-  const float maximumX = std::max(0.f, worldWidth - playerBounds.width);
+  const float minimumX = level.getLeftBoundaryX();
+  const float maximumX = level.getRightBoundaryX(playerBounds.width);
   const float currentX = player->getPosition().x;
   const float constrainedX = std::clamp(currentX, minimumX, maximumX);
 

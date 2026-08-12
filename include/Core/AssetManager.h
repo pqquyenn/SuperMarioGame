@@ -15,6 +15,7 @@ private:
     std::map<std::string, sf::Texture> textures;
     std::map<std::string, sf::Font> fonts;
     std::map<std::string, sf::SoundBuffer> soundBuffers;
+    bool levelAssetsLoaded{false};
 
 public:
     // === Xoa copy & move de dam bao chi co 1 instance duy nhat ===
@@ -30,6 +31,7 @@ public:
     // === Texture ===
     bool loadTexture(const std::string& name, const std::string& filename);
     sf::Texture& getTexture(const std::string& name);
+    bool hasTexture(const std::string& name) const;
     void loadLevelAssets();
 
     // === Font ===

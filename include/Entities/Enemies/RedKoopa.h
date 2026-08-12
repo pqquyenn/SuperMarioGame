@@ -15,4 +15,5 @@ public:
     void onStomped() override;
 
     void setTileMap(const TileMap* map);
+    void setNavigationMap(const TileMap* map) override { setTileMap(map); }
 };

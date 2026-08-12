@@ -28,6 +28,7 @@ public:
 
     // === Core loop: delegate cho state tren cung ===
     void handleInput(sf::Event& event, sf::RenderWindow& window);
+    void fixedUpdate(float dt);
     void update(float dt);
     void render(sf::RenderWindow& window);
 

@@ -49,6 +49,7 @@ public:
      * @return unique_ptr to the new Entity (or nullptr if not found)
      */
     [[nodiscard]] std::unique_ptr<Entity> create(const std::string& typeName, const sf::Vector2f& position);
+    bool contains(const std::string& typeName) const;
 
 private:
     EntityFactory() = default;

@@ -1,0 +1,49 @@
+# World 1-2 contains overworld, underground, and bonus areas in one grid.
+[stage]
+version=1
+id=world-1-2
+name=WORLD 1-2
+terrain=1-2.txt
+background=background.txt
+next_stage=world-1-3
+initial_area=overworld
+time_limit=400
+tile_size=16
+
+[rules]
+kill_plane_tile=56.25
+left_boundary_tile=0
+right_boundary_tile=-1
+enemy_void_margin_tiles=4
+
+[entities]
+
+[platforms]
+platform id=shaft1_a tile=151,19 width=3 bounds=19,31 speed=50 motion=loop_down
+platform id=shaft1_b tile=151,25 width=3 bounds=19,31 speed=50 motion=loop_down
+platform id=shaft2_a tile=170,19 width=3 bounds=20,31 speed=50 motion=loop_up
+platform id=shaft2_b tile=170,26 width=3 bounds=20,31 speed=50 motion=loop_up
+
+[items]
+
+[blocks]
+block tile=16,25 content=PowerupByForm
+
+[anchors]
+anchor id=underground_entry area=underground tile=16,27 velocity=30,0
+anchor id=bonus_entry area=bonus tile=2,35 velocity=0,0
+anchor id=underground_return area=underground tile=125,25 velocity=30,-80
+anchor id=overworld_exit area=overworld tile=176,9 velocity=0,-100
+
+[portals]
+portal id=overworld_pipe area=overworld activation=right trigger=17,10,2,2 target=underground_entry
+portal id=bonus_pipe area=underground activation=down trigger=115,24,6,5 target=bonus_entry
+portal id=bonus_exit area=bonus activation=right trigger=0,34,45,11 target=underground_return
+portal id=underground_exit area=underground activation=right trigger=188,24,4,2 target=overworld_exit
+
+[camera_zones]
+camera id=overworld_camera area=overworld bounds=0,0,215,16 follow_x=true follow_y=false center_y=7.96875 dark=false
+camera id=underground_camera area=underground bounds=0,18,215,12 follow_x=true follow_y=false center_y=25 dark=true
+camera id=bonus_camera area=bonus bounds=0,34,45,11 follow_x=true follow_y=true center_y=35 dark=true
+
+[checkpoints]

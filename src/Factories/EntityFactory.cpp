@@ -113,3 +113,7 @@ std::unique_ptr<Entity> EntityFactory::create(const std::string& typeName, const
     // Handle gracefully if an unrecognized ID is parsed from the map.
     return nullptr;
 }
+
+bool EntityFactory::contains(const std::string& typeName) const {
+    return m_registry.find(typeName) != m_registry.end();
+}

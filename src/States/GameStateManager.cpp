@@ -94,6 +94,12 @@ void GameStateManager::update(float dt) {
     }
 }
 
+void GameStateManager::fixedUpdate(float dt) {
+    if (!states.empty()) {
+        states.back()->fixedUpdate(dt);
+    }
+}
+
 void GameStateManager::render(sf::RenderWindow& window) {
     if (!states.empty()) {
         std::size_t firstState = states.size() - 1;

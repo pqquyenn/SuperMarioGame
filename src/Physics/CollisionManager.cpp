@@ -147,11 +147,14 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           if (character && tile->isWarpPipe() && level) {
             bool downPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S);
-            if (downPressed) {
+            if (downPressed && level->tryActivatePortal(
+                    *character, tileBounds, PortalActivation::Down)) {
+              return;
+            }
+            if (downPressed && !level->isDataDriven()) {
                 // Pipe 2: Underground → Hidden Room (cols 116-118, x = 1856-1904)
                 if (level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
                     && pos.x >= 1840.f && pos.x <= 1920.f) {
-                    level->warpPipeB_Entry(character);
                     return;
                 }
             }
@@ -173,11 +176,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           // Brick block logic
           if (character && tile->isBrick()) {
             // Check if this brick contains an item (e.g. 1UP Mushroom at x=1024, Star at x=1616 in 1-1)
-            bool isItemBrick = false;
-            if (level && level->getLevelId() == 1 &&
-                (std::abs(tileBounds.left - 1616.f) < 2.f || std::abs(tileBounds.left - 1024.f) < 2.f)) {
-              isItemBrick = true;
-            }
+            bool isItemBrick = level && level->hasBlockContent(
+                tileBounds.left, tileBounds.top);
 
             if (isItemBrick) {
               tile->startBump();
@@ -242,22 +242,23 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           bool rightPressed =
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
-          if (rightPressed) {
+          if (rightPressed && level->tryActivatePortal(
+                  *character, tileBounds, PortalActivation::Right)) {
+            return;
+          }
+          if (rightPressed && !level->isDataDriven()) {
             // Pipe 1 Entry: Overworld -> Underground (horizontal pipe at start)
             if (!level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
                 && pos.x < 1000.f) {
-                level->warpPipeA_Entry(character);
                 return;
             }
             // Pipe 4: Hidden room exit -> back to Underground
             if (level->getIsInBonusRoom() && level->getLevelId() == 2) {
-                level->warpPipeC1_Exit(character);
                 return;
             }
             // Last pipe: Underground -> Overworld (horizontal pipe at end)
             if (level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
                 && pos.x >= 2900.f) {
-                level->warpToOverworldExit(character);
                 return;
             }
           }

@@ -59,7 +59,23 @@ public:
     }
 
     void applyTo(sf::RenderWindow& window) {
-        window.setView(view);
+        sf::View fitted = view;
+        const sf::Vector2u windowSize = window.getSize();
+        if (windowSize.x > 0 && windowSize.y > 0) {
+            const float viewAspect = view.getSize().x / view.getSize().y;
+            const float windowAspect = static_cast<float>(windowSize.x) /
+                                       static_cast<float>(windowSize.y);
+            sf::FloatRect viewport(0.f, 0.f, 1.f, 1.f);
+            if (windowAspect > viewAspect) {
+                viewport.width = viewAspect / windowAspect;
+                viewport.left = (1.f - viewport.width) * 0.5f;
+            } else if (windowAspect < viewAspect) {
+                viewport.height = windowAspect / viewAspect;
+                viewport.top = (1.f - viewport.height) * 0.5f;
+            }
+            fitted.setViewport(viewport);
+        }
+        window.setView(fitted);
     }
 
     const sf::View& getView() const {
