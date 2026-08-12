@@ -19,10 +19,17 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace {
-constexpr unsigned int PanelFontSize = 6;
-constexpr unsigned int AnnotationFontSize = 5;
+constexpr unsigned int PanelFontSize = 12;
+constexpr unsigned int AnnotationFontSize = 10;
+
+struct WorldAnnotation {
+    sf::FloatRect bounds;
+    std::string label;
+    sf::Color color;
+};
 
 std::string enemyTypeName(const Enemy& enemy) {
     if (dynamic_cast<const RedParatroopa*>(&enemy)) return "RedParatroopa";
@@ -47,43 +54,63 @@ bool intersects(const sf::FloatRect& first, const sf::FloatRect& second) {
     return first.intersects(second);
 }
 
-void drawAnnotation(
+void drawWorldOutline(
     sf::RenderWindow& window,
-    const sf::Font& font,
     const sf::FloatRect& bounds,
-    const std::string& label,
-    const sf::Color& color,
-    const sf::FloatRect& viewBounds) {
-    if (!intersects(bounds, viewBounds)) return;
-
+    const sf::Color& color) {
     sf::RectangleShape outline({bounds.width, bounds.height});
     outline.setPosition(bounds.left, bounds.top);
     outline.setFillColor(sf::Color::Transparent);
     outline.setOutlineColor(color);
     outline.setOutlineThickness(1.f);
     window.draw(outline);
+}
 
+void drawScreenLabel(
+    sf::RenderWindow& window,
+    const sf::Font& font,
+    const WorldAnnotation& annotation,
+    const sf::View& worldView,
+    const sf::Vector2u& windowSize) {
     sf::Text text;
     text.setFont(font);
     text.setCharacterSize(AnnotationFontSize);
-    text.setString(label);
-    text.setFillColor(color);
+    text.setString(annotation.label);
+    text.setFillColor(annotation.color);
 
-    const float labelOffset = static_cast<float>(AnnotationFontSize) + 3.f;
-    const float labelY = bounds.top - labelOffset >= viewBounds.top
-        ? bounds.top - labelOffset
-        : bounds.top + 1.f;
-    text.setPosition(std::floor(bounds.left), std::floor(labelY));
+    const sf::Vector2i anchor = window.mapCoordsToPixel(
+        {annotation.bounds.left, annotation.bounds.top}, worldView);
+    const sf::FloatRect localBounds = text.getLocalBounds();
+    float textX = static_cast<float>(anchor.x);
+    float textY = static_cast<float>(anchor.y) -
+                  std::ceil(localBounds.top + localBounds.height) - 4.f;
 
-    const sf::FloatRect textBounds = text.getGlobalBounds();
+    if (textY < 2.f) {
+        textY = static_cast<float>(anchor.y) + 2.f;
+    }
+    text.setPosition(std::round(textX), std::round(textY));
+
+    sf::FloatRect textBounds = text.getGlobalBounds();
+    if (textBounds.left + textBounds.width + 2.f > windowSize.x) {
+        text.move(
+            static_cast<float>(windowSize.x) -
+                (textBounds.left + textBounds.width + 2.f),
+            0.f);
+        textBounds = text.getGlobalBounds();
+    }
+    if (textBounds.left < 2.f) {
+        text.move(2.f - textBounds.left, 0.f);
+        textBounds = text.getGlobalBounds();
+    }
+
     sf::RectangleShape labelBackground({
-        std::ceil(textBounds.width) + 2.f,
-        std::ceil(textBounds.height) + 2.f
+        std::ceil(textBounds.width) + 4.f,
+        std::ceil(textBounds.height) + 4.f
     });
     labelBackground.setPosition(
-        std::floor(textBounds.left) - 1.f,
-        std::floor(textBounds.top) - 1.f);
-    labelBackground.setFillColor(sf::Color(0, 0, 0, 225));
+        std::floor(textBounds.left) - 2.f,
+        std::floor(textBounds.top) - 2.f);
+    labelBackground.setFillColor(sf::Color(0, 0, 0, 235));
     window.draw(labelBackground);
     window.draw(text);
 }
@@ -111,11 +138,11 @@ AdminDebugView::AdminDebugView() {
         informationText.setFont(font);
         informationText.setCharacterSize(PanelFontSize);
         informationText.setFillColor(sf::Color(210, 255, 220));
-        informationText.setPosition(7.f, 7.f);
+        informationText.setPosition(14.f, 12.f);
     }
 
-    panel.setPosition(4.f, 4.f);
-    panel.setSize({158.f, 46.f});
+    panel.setPosition(8.f, 8.f);
+    panel.setSize({290.f, 92.f});
     panel.setFillColor(sf::Color(0, 0, 0, 240));
     panel.setOutlineColor(sf::Color(255, 210, 70));
     panel.setOutlineThickness(1.f);
@@ -134,20 +161,28 @@ void AdminDebugView::renderWorldAnnotations(
     const Character& character,
     const Level& level) const {
     const sf::FloatRect viewBounds = level.getCamera().getViewBounds();
+    const sf::View worldView = window.getView();
+    std::vector<WorldAnnotation> annotations;
 
     for (const auto& enemy : level.getEnemies()) {
         if (enemy && enemy->isActive() && enemy->isActivated()) {
-            drawAnnotation(
-                window, font, enemy->getBounds(), enemyTypeName(*enemy),
-                sf::Color(255, 90, 90), viewBounds);
+            const sf::FloatRect bounds = enemy->getBounds();
+            if (intersects(bounds, viewBounds)) {
+                const sf::Color color(255, 90, 90);
+                drawWorldOutline(window, bounds, color);
+                annotations.push_back({bounds, enemyTypeName(*enemy), color});
+            }
         }
     }
 
     for (const auto& item : level.getItems()) {
         if (item && item->isActive()) {
-            drawAnnotation(
-                window, font, item->getBounds(), itemTypeName(*item),
-                sf::Color(80, 230, 255), viewBounds);
+            const sf::FloatRect bounds = item->getBounds();
+            if (intersects(bounds, viewBounds)) {
+                const sf::Color color(80, 230, 255);
+                drawWorldOutline(window, bounds, color);
+                annotations.push_back({bounds, itemTypeName(*item), color});
+            }
         }
     }
 
@@ -157,11 +192,31 @@ void AdminDebugView::renderWorldAnnotations(
         if (!tile || !tile->isQuestionBlock()) continue;
 
         const sf::FloatRect bounds = tile->getBounds();
-        drawAnnotation(
-            window, font, bounds,
+        if (!intersects(bounds, viewBounds)) continue;
+        const sf::Color color(255, 220, 60);
+        drawWorldOutline(window, bounds, color);
+        annotations.push_back({
+            bounds,
             "? " + level.getBlockItemType(bounds.left, &character),
-            sf::Color(255, 220, 60), viewBounds);
+            color
+        });
     }
+
+    const sf::Vector2u windowSize = window.getSize();
+    if (windowSize.x == 0 || windowSize.y == 0) {
+        return;
+    }
+
+    const sf::View pixelView(sf::FloatRect(
+        0.f, 0.f,
+        static_cast<float>(windowSize.x),
+        static_cast<float>(windowSize.y)));
+    window.setView(pixelView);
+    for (const auto& annotation : annotations) {
+        drawScreenLabel(
+            window, font, annotation, worldView, windowSize);
+    }
+    window.setView(worldView);
 }
 
 void AdminDebugView::render(
@@ -196,13 +251,14 @@ void AdminDebugView::render(
 
     const sf::View previousView = window.getView();
     renderWorldAnnotations(window, character, level);
-    constexpr float AdminViewWidth = 400.f;
-    const sf::Vector2f gameViewSize = previousView.getSize();
-    const float adminViewHeight = gameViewSize.x > 0.f
-        ? AdminViewWidth * gameViewSize.y / gameViewSize.x
-        : 300.f;
-    window.setView(sf::View(
-        sf::FloatRect(0.f, 0.f, AdminViewWidth, adminViewHeight)));
+    const sf::Vector2u windowSize = window.getSize();
+    if (windowSize.x == 0 || windowSize.y == 0) {
+        return;
+    }
+    window.setView(sf::View(sf::FloatRect(
+        0.f, 0.f,
+        static_cast<float>(windowSize.x),
+        static_cast<float>(windowSize.y))));
     window.draw(panel);
     window.draw(informationText);
     window.setView(previousView);
