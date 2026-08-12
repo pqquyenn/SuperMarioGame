@@ -22,6 +22,11 @@ void EntityFactory::registerDefaultEntities() {
         entity->setTexture(AssetManager::getInstance().getTexture("Goomba"));
         return entity;
     });
+    registerType("UndergroundGoomba", [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<Goomba>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("Goomba_Underground"));
+        return entity;
+    });
     registerType("Koopa", [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<Koopa>(pos.x, pos.y);
         entity->setTexture(AssetManager::getInstance().getTexture("Koopa"));
@@ -44,7 +49,7 @@ void EntityFactory::registerDefaultEntities() {
     });
     registerType("PiranhaPlant", [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<PiranhaPlant>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("PiranhaPlant"));
+        entity->setTexture(AssetManager::getInstance().getTexture("PiranhaPlant_1"));
         return entity;
     });
     registerType("Coin", [](const sf::Vector2f& pos) {

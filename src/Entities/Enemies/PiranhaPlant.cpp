@@ -1,4 +1,5 @@
 #include "Entities/Enemies/PiranhaPlant.h"
+#include "Core/AssetManager.h"
 #include <algorithm> // std::min, std::max
 
 // ============================================================
@@ -76,6 +77,20 @@ void PiranhaPlant::update(float dt) {
             break;
     }
 
+    if (currentRise > 0.f) {
+        animTimer += dt;
+        if (animTimer >= animInterval) {
+            animTimer = 0.f;
+            currentFrame = 1 - currentFrame;
+            auto& assets = AssetManager::getInstance();
+            if (currentFrame == 0) {
+                sprite.setTexture(assets.getTexture("PiranhaPlant_1"));
+            } else {
+                sprite.setTexture(assets.getTexture("PiranhaPlant_2"));
+            }
+        }
+    }
+
     sprite.setPosition(position);
 }
 
@@ -90,7 +105,16 @@ void PiranhaPlant::render(sf::RenderWindow& window) const {
     if (currentRise <= 0.f) return; // Ẩn hoàn toàn → không vẽ
 
     if (sprite.getTexture() != nullptr) {
-        window.draw(sprite);
+        sf::Sprite drawSprite = sprite;
+        sf::Vector2u texSize = sprite.getTexture()->getSize();
+        if (texSize.x > 0 && texSize.y > 0) {
+            // Scale sprite to plantSize (no stretching, full texture shown)
+            drawSprite.setScale(plantSize.x / static_cast<float>(texSize.x),
+                                plantSize.y / static_cast<float>(texSize.y));
+            // Vẽ nguyên sprite tại vị trí nhô lên, phần còn trong ống bị tile che tự nhiên
+            drawSprite.setPosition(position.x, pipeTopY - currentRise);
+        }
+        window.draw(drawSprite);
         return;
     }
 
