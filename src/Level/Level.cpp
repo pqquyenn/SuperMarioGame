@@ -1,4 +1,4 @@
-#include "Level/Level.h"
+﻿#include "Level/Level.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Enemies/RedKoopa.h"
@@ -46,10 +46,10 @@ void Level::spawnEntitiesFromMap() {
     // tile-based content
   } else if (levelId == 3) {
     enemySpawns = {
-        {"RedKoopa", {496.f, 64.f}},        {"Goomba", {800.f, 64.f}},
-        {"Goomba", {816.f, 64.f}},          {"RedParatroopa", {1456.f, 112.f}},
-        {"Goomba", {1552.f, 96.f}},         {"RedKoopa", {2160.f, 96.f}},
-        {"RedParatroopa", {2208.f, 128.f}}, {"RedKoopa", {2676.f, 192.f}},
+        {"RedKoopa", {496.f, 56.f}},        {"Goomba", {800.f, 56.f}},
+        {"Goomba", {816.f, 56.f}},          {"RedParatroopa", {1456.f, 104.f}},
+        {"Goomba", {1552.f, 88.f}},         {"RedKoopa", {2160.f, 88.f}},
+        {"RedParatroopa", {2208.f, 120.f}}, {"RedKoopa", {2676.f, 186.f}},
     };
   }
   for (const auto &data : enemySpawns) {
