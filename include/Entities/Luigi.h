@@ -10,6 +10,7 @@ private:
 
 public:
     Luigi(float x = 0.f, float y = 0.f);
+    std::string_view getCharacterType() const override;
 
     void setTexture(
         const sf::Texture& texture,

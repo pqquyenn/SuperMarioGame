@@ -159,7 +159,24 @@ bool TileMap::readFromFile(const std::string& filepath) {
     // that happens to contain a tile at the same row and column.
     ++m_mapRevision;
     m_grid.clear();
+    m_startMarker.reset();
     std::string line;
+
+    auto recordStartMarker = [this, &filepath](int x, int y) {
+        const sf::Vector2f markerPosition{
+            float(x * m_tileSize) + m_tileOffset.x,
+            float(y * m_tileSize) + m_tileOffset.y
+        };
+
+        if (m_startMarker) {
+            std::cerr << "TileMap Warning: Duplicate '@' start marker at row "
+                      << y << ", col " << x << " in " << filepath
+                      << "; keeping the first marker" << std::endl;
+            return;
+        }
+
+        m_startMarker = markerPosition;
+    };
 
     // Check if first line contains numeric dimensions header (e.g. "15 16")
     std::streampos pos = file.tellg();
@@ -188,7 +205,10 @@ bool TileMap::readFromFile(const std::string& filepath) {
             std::string token;
             int x = 0;
             while (ss >> token) {
-                if (token == "A" || token == "." || token == "-") {
+                if (token == "@") {
+                    recordStartMarker(x, y);
+                    row.push_back(nullptr);
+                } else if (token == "A" || token == "." || token == "-") {
                     row.push_back(nullptr);
                 } else {
                     auto it = m_tileRegistry.find(token);
@@ -224,6 +244,11 @@ bool TileMap::readFromFile(const std::string& filepath) {
         } else {
             for (size_t x = 0; x < line.size(); ++x) {
                 char c = line[x];
+                if (c == '@') {
+                    recordStartMarker(static_cast<int>(x), y);
+                    row.push_back(nullptr);
+                    continue;
+                }
                 if (c == '-' || c == ' ' || c == '.') {
                     row.push_back(nullptr);
                     continue;

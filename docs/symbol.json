@@ -1,6 +1,7 @@
 {
   "description": "Mapping of ASCII characters/tokens to static tile blocks in TileMap.cpp",
   "symbols": {
+    "@": "Player start marker (metadata only; not rendered or solid)",
     "X": "GroundBlock (Overworld)",
     "B": "HardBlock (Stairs, Pyramids, Flagpole base)",
     "S": "Brick (Destructible)",

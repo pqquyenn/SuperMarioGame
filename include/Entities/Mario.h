@@ -26,6 +26,7 @@ struct MarioAnimationTextures {
 class Mario : public Character {
 public:
     Mario(float x = 0.f, float y = 0.f);
+    std::string_view getCharacterType() const override;
 
     // Configures the currently available individual Small/Big Mario images.
     // Fire temporarily reuses Super visuals until Fire images are provided.

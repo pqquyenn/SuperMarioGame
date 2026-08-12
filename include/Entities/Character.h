@@ -123,6 +123,7 @@ public:
     bool isFacingRight() const;
     bool isDying() const;
     sf::FloatRect getBounds() const override;
+    virtual std::string_view getCharacterType() const;
 
     void applyForm(std::string_view formName, float heightMultiplier);
     std::string_view getCurrentFormName() const;

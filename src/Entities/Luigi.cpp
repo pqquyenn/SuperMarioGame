@@ -24,6 +24,10 @@ Luigi::Luigi(float x, float y)
           makeLuigiAnimationProfile()
       } {}
 
+std::string_view Luigi::getCharacterType() const {
+    return "Luigi";
+}
+
 void Luigi::setTexture(const sf::Texture& texture, bool resetRect) {
     constexpr unsigned LuigiBandTop = 62;
     constexpr unsigned LuigiBandBottom = 121;

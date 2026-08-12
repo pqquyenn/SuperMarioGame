@@ -13,6 +13,7 @@
 #include "Physics/CollisionManager.h"
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <vector>
 
 Level::Level(int id) : levelId(id) {}
@@ -142,6 +143,7 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
   enemies.clear();
   items.clear();
   movingPlatforms.clear();
+  removedEnemyCount = 0;
 
   EntityFactory::getInstance().registerDefaultEntities();
 
@@ -180,6 +182,19 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
           levelId = 3;
         }
 
+        // Hidden/debug maps must not replace the selected level's respawn
+        // point. Returning from them or dying in them still uses the main
+        // level's start marker.
+        if (!isUndergroundFlag) {
+          if (const auto &startMarker = map.getStartMarker()) {
+            levelStartHint = *startMarker;
+          } else {
+            levelStartHint = {0.f, 0.f};
+            std::cerr << "[Level] Map has no '@' player start marker: "
+                      << path << std::endl;
+          }
+        }
+
         std::filesystem::path bgPath =
             std::filesystem::path(path).parent_path() / "background.txt";
         if (std::filesystem::exists(bgPath)) {
@@ -211,6 +226,72 @@ bool Level::loadMap(const std::string &mapFile) {
   return loadLevel(mapFile);
 }
 
+sf::Vector2f Level::findGroundedSpawn(
+    const sf::Vector2f &requestedPosition,
+    const sf::Vector2f &characterSize) const {
+  constexpr float TileSize = 16.f;
+  const float safeWidth = std::max(1.f, characterSize.x);
+  const float safeHeight = std::max(1.f, characterSize.y);
+  const float worldWidth = map.getMapWidth() * TileSize;
+  const float worldHeight = map.getMapHeight() * TileSize;
+  const float spawnX = std::clamp(
+      requestedPosition.x, 0.f, std::max(0.f, worldWidth - safeWidth));
+  const float searchTop = std::clamp(requestedPosition.y, 0.f, worldHeight);
+  const sf::FloatRect searchBounds{
+      spawnX, searchTop, safeWidth, std::max(0.f, worldHeight - searchTop)};
+
+  float nearestSurface = std::numeric_limits<float>::max();
+  for (const TileHandle &handle : map.getTilesInBounds(searchBounds)) {
+    const Tile *tile = map.getTile(handle);
+    if (!tile || !tile->isSolid()) {
+      continue;
+    }
+
+    const sf::FloatRect tileBounds = tile->getBounds();
+    const bool overlapsHorizontally =
+        spawnX + safeWidth > tileBounds.left &&
+        spawnX < tileBounds.left + tileBounds.width;
+    const bool isBelowMarker =
+        tileBounds.top >= requestedPosition.y + safeHeight;
+    if (overlapsHorizontally && isBelowMarker &&
+        tileBounds.top < nearestSurface) {
+      nearestSurface = tileBounds.top;
+    }
+  }
+
+  if (nearestSurface != std::numeric_limits<float>::max()) {
+    return {spawnX, nearestSurface - safeHeight};
+  }
+
+  // A malformed or intentionally airborne map remains loadable. The marker
+  // position is safer than inventing another level-specific hardcoded point.
+  return {spawnX, requestedPosition.y};
+}
+
+sf::Vector2f Level::getStartPosition(
+    const sf::Vector2f &characterSize) const {
+  return findGroundedSpawn(levelStartHint, characterSize);
+}
+
+EnemyRuntimeStats Level::getEnemyRuntimeStats() const {
+  EnemyRuntimeStats stats;
+  stats.removed = removedEnemyCount;
+
+  for (const auto &enemy : enemies) {
+    if (!enemy || !enemy->isActive()) {
+      continue;
+    }
+
+    if (enemy->isActivated()) {
+      ++stats.active;
+    } else {
+      ++stats.inactive;
+    }
+  }
+
+  return stats;
+}
+
 void Level::update(float dt) {
   // Update tile animations (question block shimmer, bump effects)
   map.update(dt);
@@ -218,6 +299,10 @@ void Level::update(float dt) {
 
   sf::FloatRect camBounds = camera.getViewBounds();
   const float spawnMargin = 80.f;
+  constexpr float TileSize = 16.f;
+  constexpr float EnemyVoidMargin = 64.f;
+  const float enemyVoidY =
+      map.getMapHeight() * TileSize + EnemyVoidMargin;
 
   for (auto &enemy : enemies) {
     if (!enemy || !enemy->isActive())
@@ -233,6 +318,13 @@ void Level::update(float dt) {
     if (enemy->isActivated()) {
       enemy->update(dt);
       CollisionManager::resolveTileCollisions(*enemy, map);
+
+      // The camera is not a gameplay boundary. Remove an enemy only after its
+      // logical position is safely below the complete map, so temporary jumps
+      // and normal movement near the bottom row cannot trigger false deaths.
+      if (enemy->getPosition().y > enemyVoidY) {
+        enemy->onFellIntoVoid();
+      }
     }
   }
 
@@ -266,10 +358,12 @@ void Level::update(float dt) {
       platform->update(dt);
   }
 
+  const std::size_t enemyCountBeforeCleanup = enemies.size();
   enemies.erase(
       std::remove_if(enemies.begin(), enemies.end(),
                      [](const auto &e) { return !e || !e->isActive(); }),
       enemies.end());
+  removedEnemyCount += enemyCountBeforeCleanup - enemies.size();
 
   items.erase(
       std::remove_if(items.begin(), items.end(),
@@ -310,6 +404,36 @@ void Level::spawnItemFromBlock(float x, float y) {
 }
 
 void Level::spawnItemFromBlock(float x, float y, Character *character) {
+  const std::string itemType = getBlockItemType(x, character);
+
+  sf::Vector2f spawnPos =
+      (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
+  if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
+    if (itemType == "Coin") {
+      if (auto *coin = dynamic_cast<Coin *>(entity.get())) {
+        entity.release();
+        coin->startPop();
+        items.push_back(std::unique_ptr<Item>(coin));
+      }
+    } else {
+      if (auto *item = dynamic_cast<Item *>(entity.get())) {
+        if (auto *shroom = dynamic_cast<Mushroom *>(item)) {
+          shroom->startEmerge();
+        } else if (auto *flower = dynamic_cast<FireFlower *>(item)) {
+          flower->startEmerge();
+        } else if (auto *star = dynamic_cast<StarItem *>(item)) {
+          star->startEmerge();
+        }
+        entity.release();
+        items.push_back(std::unique_ptr<Item>(item));
+      }
+    }
+  }
+}
+
+std::string Level::getBlockItemType(
+    float x,
+    const Character *character) const {
   std::string itemType = "Coin";
 
   bool starSpot = (levelId == 1 && std::abs(x - 1616.f) < 2.f);
@@ -336,30 +460,7 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
       itemType = "Mushroom";
     }
   }
-
-  sf::Vector2f spawnPos =
-      (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
-  if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
-    if (itemType == "Coin") {
-      if (auto *coin = dynamic_cast<Coin *>(entity.get())) {
-        entity.release();
-        coin->startPop();
-        items.push_back(std::unique_ptr<Item>(coin));
-      }
-    } else {
-      if (auto *item = dynamic_cast<Item *>(entity.get())) {
-        if (auto *shroom = dynamic_cast<Mushroom *>(item)) {
-          shroom->startEmerge();
-        } else if (auto *flower = dynamic_cast<FireFlower *>(item)) {
-          flower->startEmerge();
-        } else if (auto *star = dynamic_cast<StarItem *>(item)) {
-          star->startEmerge();
-        }
-        entity.release();
-        items.push_back(std::unique_ptr<Item>(item));
-      }
-    }
-  }
+  return itemType;
 }
 
 void Level::warpToUnderground(Character *character) {
