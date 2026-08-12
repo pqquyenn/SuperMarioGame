@@ -551,6 +551,10 @@ bool Character::isFacingRight() const {
     return facingRight;
 }
 
+std::string_view Character::getCharacterType() const {
+    return "Character";
+}
+
 sf::FloatRect Character::getBounds() const {
     return sf::FloatRect{
         position.x,

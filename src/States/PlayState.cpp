@@ -33,10 +33,10 @@ void PlayState::onEnter() {
   const CharacterChoice choice =
       GameSettings::getInstance().getCharacterChoice();
   if (choice == CharacterChoice::Luigi) {
-    player = std::make_unique<Luigi>(40.f, 160.f);
+    player = std::make_unique<Luigi>(0.f, 0.f);
     hud.setPlayerName("LUIGI");
   } else {
-    player = std::make_unique<Mario>(40.f, 160.f);
+    player = std::make_unique<Mario>(0.f, 0.f);
     hud.setPlayerName("MARIO");
   }
   player->setTexture(
@@ -44,6 +44,8 @@ void PlayState::onEnter() {
   player->setProjectileRequestHandler(
       [this](const ProjectileRequest &request) { spawnFireball(request); });
   player->update(0.f);
+  refreshPlayerSpawnPoint();
+  player->setPosition(playerSpawnPoint);
 
   player->addObserver(&hud);
 
@@ -53,7 +55,7 @@ void PlayState::onEnter() {
   const float levelPixelW = level.getTileMap().getMapWidth() * 16.f;
   const float levelPixelH = level.getTileMap().getMapHeight() * 16.f;
   cam.setLevelBounds(levelPixelW, levelPixelH);
-  cam.setCenter(200.f, 112.f);
+  centerCameraOnPlayerSpawn();
 
   // Khởi tạo font & text cho chế độ Map Viewer
   if (!freeCamFontLoaded) {
@@ -86,7 +88,12 @@ void PlayState::onExit() {
 
 void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   if (event.type == sf::Event::KeyPressed) {
-    if (event.key.code == sf::Keyboard::Escape) {
+    if (event.key.code == sf::Keyboard::T) {
+      adminDebugView.toggle();
+      std::cout << "[AdminDebugView] "
+                << (adminDebugView.isVisible() ? "ENABLED" : "DISABLED")
+                << std::endl;
+    } else if (event.key.code == sf::Keyboard::Escape) {
       // Nhan Escape -> push PauseState (PlayState van con trong stack)
       if (stateManager) {
         stateManager->pushState(std::make_unique<PauseState>());
@@ -107,9 +114,11 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
                 << initialMapPath << ")..." << std::endl;
       if (level.loadLevel(initialMapPath)) {
         if (player) {
-          player->setPosition(40.f, 160.f);
+          refreshPlayerSpawnPoint();
+          player->setPosition(playerSpawnPoint);
+          player->setVelocity(0.f, 0.f);
         }
-        level.getCamera().setCenter(200.f, 112.f);
+        centerCameraOnPlayerSpawn();
         level.getTileMap().setNeedsRedraw(true);
       }
     } else if (event.key.code == sf::Keyboard::P) {
@@ -179,7 +188,8 @@ void PlayState::update(float dt) {
 
       if (!player->isActive()) {
         if (hud.getLives() > 0 && hud.getTimeRemaining() > 0.f) {
-          player->respawn(40.f, 160.f);
+          player->respawn(playerSpawnPoint.x, playerSpawnPoint.y);
+          centerCameraOnPlayerSpawn();
         } else if (stateManager) {
           stateManager->changeState(
               std::make_unique<GameOverState>(hud.getScore()));
@@ -324,6 +334,10 @@ void PlayState::render(sf::RenderWindow &window) {
   // Vẽ HUD (score, coins, world, time) cố định trên màn hình
   hud.render(window);
 
+  if (player) {
+    adminDebugView.render(window, *player, level);
+  }
+
   // Hiển thị Overlay khi đang ở chế độ Map Viewer
   if (isFreeCameraMode && freeCamFontLoaded) {
     sf::Vector2f camCenter = cam.getView().getCenter();
@@ -355,4 +369,26 @@ void PlayState::spawnFireball(const ProjectileRequest &request) {
       std::make_unique<Fireball>(request.position.x, request.position.y - 4.f,
                                  request.facingRight, sheet, 8.f);
   fireballs.push_back(std::move(fireball));
+}
+
+void PlayState::refreshPlayerSpawnPoint() {
+  if (!player) {
+    return;
+  }
+
+  const sf::FloatRect playerBounds = player->getBounds();
+  playerSpawnPoint = level.getStartPosition({
+      std::max(1.f, playerBounds.width),
+      std::max(1.f, playerBounds.height)});
+}
+
+void PlayState::centerCameraOnPlayerSpawn() {
+  if (!player) {
+    return;
+  }
+
+  const sf::FloatRect playerBounds = player->getBounds();
+  level.getCamera().setCenter(
+      playerSpawnPoint.x + playerBounds.width * 0.5f,
+      playerSpawnPoint.y + playerBounds.height * 0.5f);
 }
