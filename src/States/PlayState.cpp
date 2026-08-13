@@ -88,7 +88,11 @@ void PlayState::onExit() {
 
 void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   if (event.type == sf::Event::KeyPressed) {
-    if (event.key.code == sf::Keyboard::T) {
+    if ((event.key.code == sf::Keyboard::Down ||
+         event.key.code == sf::Keyboard::S) &&
+        player && CollisionManager::tryEnterDownWarp(*player, level)) {
+      return;
+    } else if (event.key.code == sf::Keyboard::T) {
       adminDebugView.toggle();
       std::cout << "[AdminDebugView] "
                 << (adminDebugView.isVisible() ? "ENABLED" : "DISABLED")

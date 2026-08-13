@@ -315,6 +315,26 @@ EnemyRuntimeStats Level::getEnemyRuntimeStats() const {
   return stats;
 }
 
+std::vector<WarpZoneInfo> Level::getWarpZones() const {
+  if (levelId == 1) {
+    return {
+        {{912.f, 144.f, 32.f, 16.f}, "TUNNEL DOWN -> BONUS"},
+        {{3920.f, 176.f, 48.f, 32.f}, "TUNNEL RIGHT -> OVERWORLD"},
+    };
+  }
+
+  if (levelId == 2) {
+    return {
+        {{240.f, 160.f, 64.f, 48.f}, "WARP A RIGHT -> UNDERGROUND"},
+        {{1856.f, 400.f, 32.f, 16.f}, "WARP B DOWN -> BONUS"},
+        {{608.f, 656.f, 48.f, 32.f}, "WARP C1 RIGHT -> UNDERGROUND"},
+        {{3008.f, 288.f, 64.f, 128.f}, "WARP EXIT RIGHT -> OVERWORLD"},
+    };
+  }
+
+  return {};
+}
+
 void Level::update(float dt) {
   // Update tile animations (question block shimmer, bump effects)
   map.update(dt);
@@ -454,21 +474,20 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
 }
 
 std::string Level::getBlockItemType(float x, const Character *character) const {
+  const std::string brickItemType = getBrickItemType(x);
+  if (!brickItemType.empty()) {
+    return brickItemType;
+  }
+
   std::string itemType = "Coin";
 
-  bool starSpot = (levelId == 1 && std::abs(x - 1616.f) < 2.f);
-  bool oneUpSpot = (levelId == 1 && std::abs(x - 1024.f) < 2.f);
   bool powerupSpot = (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f ||
                       std::abs(x - 1744.f) < 1.f);
   if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
     powerupSpot = true;
   }
 
-  if (starSpot) {
-    itemType = "StarItem";
-  } else if (oneUpSpot) {
-    itemType = "1UpMushroom";
-  } else if (powerupSpot) {
+  if (powerupSpot) {
     if (character) {
       const std::string_view form = character->getCurrentFormName();
       if (form == "Super" || form == "Fire") {
@@ -483,9 +502,25 @@ std::string Level::getBlockItemType(float x, const Character *character) const {
   return itemType;
 }
 
+std::string Level::getBrickItemType(float x) const {
+  if (levelId != 1) {
+    return {};
+  }
+
+  if (std::abs(x - 1616.f) < 2.f) {
+    return "StarItem";
+  }
+  if (std::abs(x - 1024.f) < 2.f) {
+    return "1UpMushroom";
+  }
+  return {};
+}
+
 void Level::warpToUnderground(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground map area..."
             << std::endl;
+  isUnderground = true;
+  isInBonusRoom = false;
   if (character) {
     character->setPosition(3736.f, 32.f);
     character->setVelocity(sf::Vector2f(0.f, 0.f));

@@ -5,6 +5,7 @@
 class Entity;
 class TileMap;
 class Level;
+class Character;
 
 /**
  * @brief Handles AABB collision detection and polymorphic resolution.
@@ -37,8 +38,14 @@ public:
     static void resolveEntityCollisions(Entity& a, Entity& b);
 
     /**
+     * @brief Attempts to enter a downward warp whose top surface supports the
+     * character. Returns true when a teleport occurs.
+     */
+    static bool tryEnterDownWarp(Character& character, Level& level);
+
+    /**
      * @brief Checks if a character is standing on a MovingPlatform and carries it.
      * Call once per platform per frame after tile collisions are resolved.
      */
-    static void resolveMovingPlatform(class Character& character, class MovingPlatform& platform);
+    static void resolveMovingPlatform(Character& character, class MovingPlatform& platform);
 };
