@@ -86,8 +86,9 @@ void HUD::onNotify(const GameEvent& event) {
 }
 
 void HUD::update(float dt) {
-    if (timeRemaining > 0) {
+    if (!timeFrozen && timeRemaining > 0) {
         timeRemaining -= dt;
+        if (timeRemaining < 0.f) timeRemaining = 0.f;
     }
 
     // Update text strings

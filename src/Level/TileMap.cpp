@@ -81,9 +81,13 @@ void TileMap::initFlyweights() {
     const sf::Texture* flagPoleTex = &assets.getTexture("FlagPole");
     const sf::Texture* flagTex = &assets.getTexture("Flag");
     add("j", castleTex, 0, 0, 80, 80, false);
+    m_tileRegistry["j"]->isCastle = true;
     add("C", largeCastleTex, 0, 0, 148, 176, false);
+    m_tileRegistry["C"]->isCastle = true;
     add("P", flagPoleTex, 0, 0, 16, 16, false);
+    m_tileRegistry["P"]->isFlagpole = true;
     add("|", flagPoleTex, 0, 16, 16, 16, false);
+    m_tileRegistry["|"]->isFlagpole = true;
     add("F", flagTex, 0, 0, 16, 16, false);
 
     // 6. Underground Specific Tiles (UndergroundBlock, UndergroundBrick, Coin_Underground)
@@ -459,4 +463,79 @@ void TileMap::renderDebris(sf::RenderTarget& target) const {
         sprite.setRotation(d.rotation);
         target.draw(sprite);
     }
+}
+
+std::optional<sf::FloatRect> TileMap::findFlagpoleBounds() const {
+    float minX = 1e9f, maxX = -1e9f;
+    float minY = 1e9f, maxY = -1e9f;
+    bool found = false;
+
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->isFlagpole()) {
+                sf::FloatRect b = m_grid[r][c]->getBounds();
+                minX = std::min(minX, b.left);
+                maxX = std::max(maxX, b.left + b.width);
+                minY = std::min(minY, b.top);
+                maxY = std::max(maxY, b.top + b.height);
+                found = true;
+            }
+        }
+    }
+
+    if (found) {
+        return sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
+    }
+    return std::nullopt;
+}
+
+std::optional<sf::Vector2f> TileMap::findCastleDoor() const {
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->isCastle()) {
+                sf::FloatRect b = m_grid[r][c]->getBounds();
+                // Castle entrance door is horizontally around center:
+                // For small castle (80x80), door is around left + 40
+                // For large castle (148x176), door is around left + 74
+                float doorX = b.left + (b.width > 100.f ? 74.f : 40.f);
+                float groundY = b.top + b.height;
+                return sf::Vector2f(doorX, groundY);
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<sf::Vector2f> TileMap::findFlagPosition() const {
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->getType() && m_grid[r][c]->getType()->texture) {
+                // Check if this tile is the flag tile 'F'
+                sf::FloatRect b = m_grid[r][c]->getBounds();
+                // Flag is adjacent to flagpole top
+                if (m_grid[r][c]->getType() == m_tileRegistry.at("F").get()) {
+                    return sf::Vector2f(b.left, b.top);
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<sf::Vector2f> TileMap::takeFlagPosition() {
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->getType() && m_grid[r][c]->getType()->texture) {
+                if (m_grid[r][c]->getType() == m_tileRegistry.at("F").get()) {
+                    sf::FloatRect b = m_grid[r][c]->getBounds();
+                    sf::Vector2f pos(b.left, b.top);
+                    // Remove static flag tile from map grid so it is no longer rendered at the top
+                    m_grid[r][c].reset();
+                    m_needsRedraw = true;
+                    return pos;
+                }
+            }
+        }
+    }
+    return std::nullopt;
 }

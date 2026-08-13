@@ -28,6 +28,7 @@ private:
     sf::Text freeCamText;
     sf::Font freeCamFont;
     bool freeCamFontLoaded = false;
+    bool levelWon = false;
 
     void spawnFireball(const ProjectileRequest& request);
     void refreshPlayerSpawnPoint();
@@ -45,5 +46,11 @@ public:
 
     Character* getPlayer() { return player.get(); }
     const Character* getPlayer() const { return player.get(); }
+    Level& getLevel() { return level; }
+    const Level& getLevel() const { return level; }
+    HUD& getHUD() { return hud; }
+    const HUD& getHUD() const { return hud; }
+    const std::string& getInitialMapPath() const { return initialMapPath; }
+    bool isLevelWon() const { return levelWon; }
 };
 

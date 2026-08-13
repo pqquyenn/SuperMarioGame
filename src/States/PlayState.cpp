@@ -7,6 +7,7 @@
 #include "Physics/CollisionManager.h"
 #include "States/GameOverState.h"
 #include "States/PauseState.h"
+#include "States/WinState.h"
 #include "UI/HUD.h"
 #include "Core/GameSettings.h"
 #include "Entities/Luigi.h"
@@ -27,7 +28,8 @@ void PlayState::onEnter() {
   // Disconnect before replacing the player so the old Subject never retains
   // the HUD observer or an RAII connection to the old player.
   hudObserverConnection.disconnect();
-
+  levelWon = false;
+  hud.setTimeFrozen(false);
   if (!level.loadLevel(initialMapPath)) {
     std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
               << std::endl;
@@ -186,6 +188,10 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
 }
 
 void PlayState::update(float dt) {
+  if (levelWon) {
+    return;
+  }
+
   if (isFreeCameraMode) {
     float speed = freeCamSpeed;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
@@ -261,6 +267,22 @@ void PlayState::update(float dt) {
       for (auto &platform : level.getMovingPlatforms()) {
         if (platform && platform->isActive()) {
           CollisionManager::resolveMovingPlatform(*player, *platform);
+        }
+      }
+
+      // 6.5. Kiểm tra chạm Cột Cờ (Win State)
+      if (!levelWon && player->isActive() && !player->isDying()) {
+        const sf::FloatRect pBounds = player->getBounds();
+        for (const TileHandle &h : level.getTileMap().getTilesInBounds(pBounds)) {
+          const Tile *tile = level.getTileMap().getTile(h);
+          if (tile && tile->isFlagpole()) {
+            levelWon = true;
+            if (stateManager) {
+              stateManager->pushState(std::make_unique<WinState>(
+                  this, level.getLevelId(), initialMapPath));
+            }
+            return;
+          }
         }
       }
 

@@ -16,6 +16,8 @@ public:
     void update(float dt);
     bool isBrick() const;
     bool isAnimated() const;
+    bool isFlagpole() const;
+    bool isCastle() const;
     void startBump();
     void setType(const TileType* type) { m_type = type; }
     const TileType* getType() const { return m_type; }
