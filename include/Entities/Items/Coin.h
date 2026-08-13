@@ -10,6 +10,8 @@
 // ============================================================
 class Coin : public Item {
 private:
+    static constexpr int DefaultScoreValue = 200;
+
     // Animation xoay (scale oscillation giả lập xoay 3D)
     float spinTimer{0.f};
     float spinSpeed{4.0f};      // Tốc độ xoay (Hz)
@@ -22,7 +24,7 @@ private:
     float popStartY{0.f};       // Vị trí Y bắt đầu pop
     float popMaxHeight{80.f};   // Chiều cao tối đa bay lên
 
-    int scoreValue{200};         // Điểm khi thu thập
+    int scoreValue{DefaultScoreValue}; // Điểm khi thu thập
 
 public:
     Coin(float x = 0.f, float y = 0.f);
@@ -38,4 +40,9 @@ public:
     bool isPopping() const;
 
     int getScoreValue() const;
+    void setScoreValue(int score);
+
+    static constexpr int defaultScoreValue() {
+        return DefaultScoreValue;
+    }
 };

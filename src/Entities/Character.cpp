@@ -363,7 +363,7 @@ bool Character::receivePowerUp(std::unique_ptr<PlayerState> newState) {
         changeState(std::move(newState));
     }
 
-    notify(GameEvent{GameEventType::POWERUP_COLLECTED});
+    notify(GameEvent::powerupCollected());
     return true;
 }
 
@@ -392,7 +392,7 @@ void Character::applyDamage(bool ignoreProtection) {
         }
     }
 
-    notify(GameEvent{GameEventType::PLAYER_HIT});
+    notify(GameEvent::playerHit());
 
     std::unique_ptr<PlayerState> nextState = currentState->takeDamage();
     if (!nextState) {
@@ -430,10 +430,7 @@ void Character::die(DeathCause cause) {
     jumpHeldThisFrame = false;
     setActive(true);
 
-    notify(GameEvent{
-        GameEventType::PLAYER_DIED,
-        static_cast<int>(cause)
-    });
+    notify(GameEvent::playerDied(static_cast<int>(cause)));
 }
 
 void Character::respawn(float x, float y) {
