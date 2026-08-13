@@ -18,6 +18,11 @@ struct EnemyRuntimeStats {
     std::size_t removed{0};
 };
 
+struct WarpZoneInfo {
+    sf::FloatRect bounds;
+    std::string label;
+};
+
 class Level {
 private:
     int levelId = 1;
@@ -54,6 +59,8 @@ public:
         float x,
         const Character* character = nullptr
     ) const;
+    // Returns an empty string for ordinary bricks without hidden contents.
+    std::string getBrickItemType(float x) const;
     void warpToUnderground(Character* character = nullptr);
     void warpToUnderground1_2(Character* character = nullptr);
     void warpToOverworldExit(Character* character = nullptr);
@@ -77,6 +84,7 @@ public:
         const sf::Vector2f& characterSize
     ) const;
     EnemyRuntimeStats getEnemyRuntimeStats() const;
+    std::vector<WarpZoneInfo> getWarpZones() const;
 
     std::vector<std::unique_ptr<Enemy>>& getEnemies() { return enemies; }
     const std::vector<std::unique_ptr<Enemy>>& getEnemies() const { return enemies; }
