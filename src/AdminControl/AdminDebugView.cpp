@@ -252,7 +252,7 @@ void AdminDebugView::render(
 
     std::ostringstream information;
     information << std::fixed << std::setprecision(1)
-                << "ADMIN [T]\n"
+                << "ADMIN [T]  I:STAR  K:UP  L:HIT\n"
                 << "CHAR " << character.getCharacterType() << " | "
                 << (character.isDying()
                         ? std::string_view{"Dying"}

@@ -11,6 +11,8 @@
 #include "Core/GameSettings.h"
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
+#include "PlayerEffects/StarEffect.h"
+#include "PlayerStates/FireState.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -96,6 +98,34 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
       adminDebugView.toggle();
       std::cout << "[AdminDebugView] "
                 << (adminDebugView.isVisible() ? "ENABLED" : "DISABLED")
+                << std::endl;
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::I) {
+      // Apply the same timed invincibility, contact defeat, movement boost,
+      // and visual treatment as collecting a Star. Void and timeout deaths
+      // still call Character::die directly and remain lethal.
+      player->addEffect(std::make_unique<StarEffect>());
+      std::cout << "[AdminDebugView] Star invincibility granted"
+                << std::endl;
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::K) {
+      const std::string_view form = player->getCurrentFormName();
+      if (form == "Small" || form == "Super") {
+        // Character::receivePowerUp intentionally converts Small + powered
+        // state to Super first; the next press advances Super to Fire.
+        player->receivePowerUp(std::make_unique<FireState>());
+        std::cout << "[AdminDebugView] Player form increased to "
+                  << player->getCurrentFormName() << std::endl;
+      }
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::L) {
+      // Force exactly one normal damage transition even if I was used. The
+      // regular damage path still grants the configured post-hit immunity.
+      player->takeDamageIgnoringProtection();
+      std::cout << "[AdminDebugView] Player form decreased to "
+                << (player->isDying()
+                        ? std::string_view{"Dying"}
+                        : player->getCurrentFormName())
                 << std::endl;
     } else if (event.key.code == sf::Keyboard::Escape) {
       // Nhan Escape -> push PauseState (PlayState van con trong stack)
