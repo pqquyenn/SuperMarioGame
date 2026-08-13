@@ -594,7 +594,7 @@ void Level::warpToOverworldExit(Character *character) {
   if (character) {
     // Near-last overworld pipe is at col ~176-177 (x≈2816).
     // Pop Mario out of the pipe top (pipe top row 10, y=160 → spawn at y=144).
-    character->setPosition(2816.f, 144.f);
+    character->setPosition(2872.f, 144.f);
     character->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
   }
   // Lock camera to overworld band (Y=112 keeps view at y=0..225, above

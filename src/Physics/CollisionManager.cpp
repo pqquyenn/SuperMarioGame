@@ -2,6 +2,7 @@
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Enemies/GreenParatroopa.h"
+#include "Entities/Enemies/PiranhaPlant.h"
 #include "Entities/Entity.h"
 #include "Entities/Fireball.h"
 #include "Entities/Items/Coin.h"
@@ -85,8 +86,14 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
 
     // Star invincibility: Mario defeats any enemy on contact (not just stomp)
     if (character->defeatsEnemiesOnContact()) {
-      enemy->onStomped();
+      enemy->onFireball();
       character->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+      return;
+    }
+
+    // PiranhaPlant is immune to stomping: touching it without Star invincibility damages Mario
+    if (dynamic_cast<PiranhaPlant *>(enemy)) {
+      character->takeDamage();
       return;
     }
 
