@@ -49,6 +49,35 @@ else()
     target_link_libraries(mario PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
 endif()
 
+enable_testing()
+
+add_executable(solid03_tests
+    tests/level_definition_tests.cpp
+    src/Level/EntitySymbolCatalog.cpp
+    src/Level/LevelDefinitionLoader.cpp
+)
+
+target_include_directories(solid03_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::System)
+    target_link_libraries(solid03_tests PRIVATE SFML::System)
+elseif(TARGET sfml-system)
+    target_link_libraries(solid03_tests PRIVATE sfml-system)
+endif()
+
+add_test(
+    NAME solid03_level_definition_tests
+    COMMAND solid03_tests
+)
+set_tests_properties(
+    solid03_level_definition_tests
+    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 # Copy assets to executable folder post-build
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
     add_custom_command(TARGET mario POST_BUILD

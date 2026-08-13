@@ -24,6 +24,7 @@ private:
     // === Data ===
     int levelId = 1;
     std::string completedMapPath;
+    std::string nextStagePath;
     int finalScore = 0;
     int coinsCollected = 0;
     int timeBonus = 0;
@@ -39,10 +40,16 @@ private:
 
     // === Helpers ===
     void updateSelectorPosition();
-    std::string getNextLevelMapPath() const;
+    std::string getNextLevelPath() const;
 
 public:
-    LevelCompleteState(int levelId, const std::string& mapPath, int score, int coins, int timeBonus);
+    LevelCompleteState(
+        int levelId,
+        const std::string& mapPath,
+        const std::string& nextStage,
+        int score,
+        int coins,
+        int timeBonus);
 
     void onEnter() override;
     void onExit() override;

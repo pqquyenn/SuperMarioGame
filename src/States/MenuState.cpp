@@ -296,7 +296,7 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
                 break;
             }
             static const char* maps[] = {
-                "1.1/1-1.txt", "1.2/1-2.txt", "1.3/1-3.txt"
+                "1.1/1-1.level", "1.2/1-2.level", "1.3/1-3.level"
             };
             if (stateManager) {
                 stateManager->clearAndPushState(

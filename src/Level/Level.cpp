@@ -1,7 +1,6 @@
 ﻿#include "Level/Level.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
-#include "Entities/Enemies/RedKoopa.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Item.h"
@@ -10,170 +9,116 @@
 #include "Entities/Items/StarItem.h"
 #include "Entities/MovingPlatform.h"
 #include "Factories/EntityFactory.h"
+#include "Level/LevelDefinitionLoader.h"
+#include "Level/LevelWorldBuilder.h"
 #include "Physics/CollisionManager.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <limits>
+#include <utility>
 #include <vector>
 
 Level::Level(int id) : levelId(id) {}
 Level::~Level() = default;
 
-struct SpawnData {
-  std::string type;
-  sf::Vector2f position;
-};
-
-void Level::spawnEntitiesFromMap() {
-  auto &factory = EntityFactory::getInstance();
-
-  // Data-driven spawn positions for each level
-  std::vector<SpawnData> enemySpawns;
-  std::vector<SpawnData> itemSpawns;
-
-  if (levelId == 1) {
-    enemySpawns = {{"Goomba", {384.f, 192.f}},  {"Goomba", {656.f, 192.f}},
-                   {"Goomba", {832.f, 192.f}},  {"Goomba", {848.f, 192.f}},
-                   {"Goomba", {1312.f, 64.f}},  {"Goomba", {1344.f, 64.f}},
-                   {"Goomba", {1584.f, 192.f}}, {"Goomba", {1600.f, 192.f}},
-                   {"Goomba", {1792.f, 192.f}}, {"Goomba", {1808.f, 192.f}},
-                   {"Goomba", {2000.f, 192.f}}, {"Goomba", {2016.f, 192.f}},
-                   {"Goomba", {2048.f, 192.f}}, {"Goomba", {2064.f, 192.f}},
-                   {"Goomba", {2768.f, 192.f}}, {"Goomba", {2784.f, 192.f}},
-                   {"Koopa", {1712.f, 176.f}}};
-  } else if (levelId == 2) {
-    enemySpawns = {
-        // Underground Goombas
-        {"UndergroundGoomba", {304.f, 432.f}}, // Row 28, Col 19
-        {"UndergroundGoomba", {320.f, 432.f}}, // Row 28, Col 20
-        {"UndergroundGoomba", {656.f, 432.f}},
-        {"UndergroundGoomba", {1280.f, 432.f}},
-        {"UndergroundGoomba", {1296.f, 432.f}},
-        {"UndergroundGoomba", {1328.f, 320.f}},
-        {"UndergroundGoomba", {1408.f, 384.f}},
-        {"UndergroundGoomba", {1424.f, 384.f}},
-        {"UndergroundGoomba", {1728.f, 432.f}},
-        {"UndergroundGoomba", {1744.f, 432.f}},
-        {"UndergroundGoomba", {1760.f, 432.f}},
-        {"UndergroundGoomba", {2352.f, 368.f}},
-        {"UndergroundGoomba", {2368.f, 368.f}},
-
-        // Koopas
-        {"Koopa", {960.f, 416.f}},
-        {"Koopa", {976.f, 416.f}},
-
-        // Red Koopa
-        {"RedKoopa", {2624.f, 416.f}},
-
-        // Piranha Plants
-        {"PiranhaPlant", {1864.f, 400.f}},
-        {"PiranhaPlant", {1944.f, 384.f}},
-    };
-  } else if (levelId == 3) {
-    enemySpawns = {
-        {"RedKoopa", {496.f, 56.f}},        {"Goomba", {800.f, 56.f}},
-        {"Goomba", {816.f, 56.f}},          {"RedParatroopa", {1456.f, 104.f}},
-        {"Goomba", {1552.f, 88.f}},         {"RedKoopa", {2160.f, 88.f}},
-        {"RedParatroopa", {2208.f, 120.f}}, {"RedKoopa", {2676.f, 186.f}},
-    };
+bool Level::spawnEntitiesFromMap() {
+  std::vector<std::string> errors;
+  const bool success = LevelWorldBuilder{}.build(
+      definition, map, enemies, items, movingPlatforms, errors);
+  for (const auto& error : errors) {
+    std::cerr << "[Level] " << error << std::endl;
   }
-  for (const auto &data : enemySpawns) {
-    if (auto entity = factory.create(data.type, data.position)) {
-      if (auto *enemy = dynamic_cast<Enemy *>(entity.get())) {
-        if (auto *rk = dynamic_cast<RedKoopa *>(enemy)) {
-          rk->setTileMap(&map);
-        }
-        entity.release();
-        enemies.push_back(std::unique_ptr<Enemy>(enemy));
-        std::cout << "[Level] Spawned Enemy: " << data.type << " at ("
-                  << data.position.x << ", " << data.position.y << ")"
-                  << std::endl;
-      }
-    }
-  }
+  return success;
+}
 
-  for (const auto &data : itemSpawns) {
-    if (auto entity = factory.create(data.type, data.position)) {
-      if (auto *item = dynamic_cast<Item *>(entity.get())) {
-        entity.release();
-        items.push_back(std::unique_ptr<Item>(item));
-        std::cout << "[Level] Spawned Item: " << data.type << " at ("
-                  << data.position.x << ", " << data.position.y << ")"
-                  << std::endl;
-      }
-    }
-  }
-
-  // Data-driven MovingPlatform configuration for Level 2 (based on 000
-  // positions in 1-2.txt)
-  if (levelId == 2) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Mode mode;
-    };
-
-    // Shaft 1 (Col 151, x=2416px): 2 platforms moving DOWN (LoopDown)
-    // Shaft 2 (Col 166, x=2656px): 2 platforms moving UP (LoopUp)
-    const PlatformConfig level2Platforms[] = {
-        {2432.f, 304.f, 48.f, 304.f, 496.f, 50.f,
-         MovingPlatform::Mode::LoopDown},
-        {2432.f, 400.f, 48.f, 304.f, 496.f, 50.f,
-         MovingPlatform::Mode::LoopDown},
-        {2720.f, 304.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
-        {2720.f, 416.f, 48.f, 320.f, 496.f, 50.f, MovingPlatform::Mode::LoopUp},
-    };
-
-    for (const auto &cfg : level2Platforms) {
-      movingPlatforms.push_back(
-          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
-      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") width=" << cfg.width
-                << " Mode=" << static_cast<int>(cfg.mode) << std::endl;
-    }
-  }
-  if (levelId == 3) {
-    struct PlatformConfig {
-      float x, y, width;
-      float bound1, bound2;
-      float speed;
-      MovingPlatform::Mode mode;
-    };
-    const PlatformConfig level3Platforms[] = {
-        {1024.f, 96.f, 48.f, 96.f, 240.f, 50.f,
-         MovingPlatform::Mode::OscillateVertical},
-        {1600.f, 112.f, 48.f, 1600.f, 1696.f, 40.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-        {1840.f, 144.f, 48.f, 1744.f, 1840.f, 40.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-        {2432.f, 144.f, 48.f, 2432.f, 2656.f, 50.f,
-         MovingPlatform::Mode::OscillateHorizontal},
-    };
-    for (const auto &cfg : level3Platforms) {
-      movingPlatforms.push_back(
-          std::make_unique<MovingPlatform>(cfg.x, cfg.y, cfg.width, cfg.bound1,
-                                           cfg.bound2, cfg.speed, cfg.mode));
-      std::cout << "[Level] Spawned MovingPlatform at (" << cfg.x << ","
-                << cfg.y << ") Axis=" << static_cast<int>(cfg.mode)
-                << std::endl;
-    }
-  }
+void Level::setCurrentArea(const std::string& area) {
+  currentArea = area.empty() ? "overworld" : area;
+  isInBonusRoom = currentArea == "bonus";
+  isUnderground = isInBonusRoom || currentArea == "underground";
 }
 
 bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
-  isUnderground = isUndergroundFlag;
-  isInBonusRoom = false;
   enemies.clear();
   items.clear();
   movingPlatforms.clear();
   removedEnemyCount = 0;
+  hasDefinition = false;
+  definition = {};
+  currentArea = "overworld";
+  isUnderground = false;
+  isInBonusRoom = false;
 
   EntityFactory::getInstance().registerDefaultEntities();
 
-  std::filesystem::path p(filename);
-  std::string rawFilename = p.filename().string();
+  if (isUndergroundFlag) {
+    return loadLegacyMap(filename, true);
+  }
+
+  LevelDefinition loaded;
+  std::vector<std::string> errors;
+  if (!LevelDefinitionLoader{}.load(filename, loaded, errors)) {
+    const std::filesystem::path requested(filename);
+    if (requested.extension() == ".txt" &&
+        LevelDefinitionLoader::findManifest(filename).empty()) {
+      std::cerr << "[Level] No manifest found for " << filename
+                << "; using legacy terrain loader." << std::endl;
+      return loadLegacyMap(filename, false);
+    }
+    std::cerr << "[Level] Invalid stage definition: " << filename << std::endl;
+    for (const auto& error : errors) {
+      std::cerr << "  - " << error << std::endl;
+    }
+    return false;
+  }
+
+  definition = std::move(loaded);
+  hasDefinition = true;
+  setCurrentArea(definition.initialArea);
+
+  if (!map.readFromFile(definition.terrainPath)) {
+    std::cerr << "[Level] Failed to load terrain: "
+              << definition.terrainPath << std::endl;
+    return false;
+  }
+
+  if (const auto& startMarker = map.getStartMarker()) {
+    levelStartHint = *startMarker;
+  } else {
+    std::cerr << "[Level] Terrain has no '@' player start marker: "
+              << definition.terrainPath << std::endl;
+    return false;
+  }
+
+  if (!definition.backgroundPath.empty() &&
+      !bgMap.readFromFile(definition.backgroundPath)) {
+    std::cerr << "[Level] Failed to load background: "
+              << definition.backgroundPath << std::endl;
+  }
+
+  // Keep the legacy numeric ID only for existing UI/debug consumers. The
+  // level definition, rather than this ID, owns all gameplay content.
+  if (definition.id == "world-1-1") {
+    levelId = 1;
+  } else if (definition.id == "world-1-2") {
+    levelId = 2;
+  } else if (definition.id == "world-1-3") {
+    levelId = 3;
+  }
+
+  return spawnEntitiesFromMap();
+}
+
+bool Level::loadLegacyMap(
+    const std::string& filename,
+    bool isUndergroundFlag) {
+  hasDefinition = false;
+  definition = {};
+  currentArea = "overworld";
+  setCurrentArea(isUndergroundFlag ? "underground" : "overworld");
+
+  const std::filesystem::path requested(filename);
+  const std::string rawFilename = requested.filename().string();
 
   const std::string candidates[] = {filename,
                                     "assets/maps/" + filename,
@@ -194,29 +139,12 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
   for (const auto &path : candidates) {
     if (std::filesystem::exists(path)) {
       if (map.readFromFile(path)) {
-        // Tự động phát hiện và cập nhật levelId dựa trên tên đường dẫn file
-        // map
-        if (path.find("1-1") != std::string::npos ||
-            path.find("1.1") != std::string::npos) {
-          levelId = 1;
-        } else if (path.find("1-2") != std::string::npos ||
-                   path.find("1.2") != std::string::npos) {
-          levelId = 2;
-        } else if (path.find("1-3") != std::string::npos ||
-                   path.find("1.3") != std::string::npos) {
-          levelId = 3;
-        }
-
-        // Hidden/debug maps must not replace the selected level's respawn
-        // point. Returning from them or dying in them still uses the main
-        // level's start marker.
         if (!isUndergroundFlag) {
-          if (const auto &startMarker = map.getStartMarker()) {
+          if (const auto& startMarker = map.getStartMarker()) {
             levelStartHint = *startMarker;
           } else {
-            levelStartHint = {0.f, 0.f};
-            std::cerr << "[Level] Map has no '@' player start marker: " << path
-                      << std::endl;
+          std::cerr << "[Level] Map has no '@' player start marker: "
+                    << path << std::endl;
           }
         }
 
@@ -225,7 +153,6 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
         if (std::filesystem::exists(bgPath)) {
           bgMap.readFromFile(bgPath.string());
         }
-        spawnEntitiesFromMap();
         return true;
       }
     }
@@ -253,11 +180,11 @@ bool Level::loadMap(const std::string &mapFile) {
 
 sf::Vector2f Level::findGroundedSpawn(const sf::Vector2f &requestedPosition,
                                       const sf::Vector2f &characterSize) const {
-  constexpr float TileSize = 16.f;
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
   const float safeWidth = std::max(1.f, characterSize.x);
   const float safeHeight = std::max(1.f, characterSize.y);
-  const float worldWidth = map.getMapWidth() * TileSize;
-  const float worldHeight = map.getMapHeight() * TileSize;
+  const float worldWidth = map.getMapWidth() * tileSize;
+  const float worldHeight = map.getMapHeight() * tileSize;
   const float spawnX = std::clamp(requestedPosition.x, 0.f,
                                   std::max(0.f, worldWidth - safeWidth));
   const float searchTop = std::clamp(requestedPosition.y, 0.f, worldHeight);
@@ -316,23 +243,201 @@ EnemyRuntimeStats Level::getEnemyRuntimeStats() const {
 }
 
 std::vector<WarpZoneInfo> Level::getWarpZones() const {
-  if (levelId == 1) {
-    return {
-        {{912.f, 144.f, 32.f, 16.f}, "TUNNEL DOWN -> BONUS"},
-        {{3920.f, 176.f, 48.f, 32.f}, "TUNNEL RIGHT -> OVERWORLD"},
-    };
+  std::vector<WarpZoneInfo> zones;
+  if (!hasDefinition) {
+    return zones;
   }
 
-  if (levelId == 2) {
-    return {
-        {{240.f, 160.f, 64.f, 48.f}, "WARP A RIGHT -> UNDERGROUND"},
-        {{1856.f, 400.f, 32.f, 16.f}, "WARP B DOWN -> BONUS"},
-        {{608.f, 656.f, 48.f, 32.f}, "WARP C1 RIGHT -> UNDERGROUND"},
-        {{3008.f, 288.f, 64.f, 128.f}, "WARP EXIT RIGHT -> OVERWORLD"},
-    };
+  const float tileSize = definition.tileSize;
+  for (const auto& portal : definition.portals) {
+    const std::string activation =
+        portal.activation == PortalActivation::Down ? "DOWN" : "RIGHT";
+    zones.push_back({
+        {portal.triggerTiles.left * tileSize,
+         portal.triggerTiles.top * tileSize,
+         portal.triggerTiles.width * tileSize,
+         portal.triggerTiles.height * tileSize},
+        portal.id + " " + activation + " -> " + portal.targetAnchor});
+  }
+  return zones;
+}
+
+bool Level::tryActivatePortal(
+    Character& character,
+    const sf::FloatRect& contact,
+    PortalActivation activation) {
+  if (!hasDefinition || !character.isActive() || character.isDying()) {
+    return false;
   }
 
-  return {};
+  const float tileSize = definition.tileSize;
+  const sf::FloatRect contactTiles{
+      contact.left / tileSize,
+      contact.top / tileSize,
+      contact.width / tileSize,
+      contact.height / tileSize};
+
+  for (const auto& portal : definition.portals) {
+    if (portal.sourceArea != currentArea ||
+        portal.activation != activation ||
+        !portal.triggerTiles.intersects(contactTiles)) {
+      continue;
+    }
+
+    const auto anchor = std::find_if(
+        definition.anchors.begin(),
+        definition.anchors.end(),
+        [&portal](const AnchorDefinition& candidate) {
+          return candidate.id == portal.targetAnchor;
+        });
+    if (anchor == definition.anchors.end()) {
+      std::cerr << "[Level] Portal target anchor not found: "
+                << portal.targetAnchor << std::endl;
+      return false;
+    }
+
+    setCurrentArea(anchor->area);
+    character.setPosition(
+        anchor->tilePosition.x * tileSize,
+        anchor->tilePosition.y * tileSize);
+    character.setVelocity(anchor->exitVelocity);
+    updateCameraFor(character.getPosition());
+    std::cout << "[Level] Activated portal " << portal.id << " -> "
+              << anchor->id << std::endl;
+    return true;
+  }
+
+  return false;
+}
+
+void Level::updateCameraFor(const sf::Vector2f& playerPosition) {
+  if (!hasDefinition || definition.cameraZones.empty()) {
+    camera.update(playerPosition);
+    return;
+  }
+
+  const float tileSize = definition.tileSize;
+  const sf::Vector2f playerTile{
+      playerPosition.x / tileSize, playerPosition.y / tileSize};
+  const CameraZoneDefinition* selected = nullptr;
+
+  for (const auto& zone : definition.cameraZones) {
+    if (zone.area != currentArea) {
+      continue;
+    }
+    if (zone.boundsTiles.contains(playerTile)) {
+      selected = &zone;
+      break;
+    }
+    if (!selected) {
+      selected = &zone;
+    }
+  }
+
+  if (!selected) {
+    camera.update(playerPosition);
+    return;
+  }
+
+  const sf::Vector2f viewSize = camera.getView().getSize();
+  const float halfWidth = viewSize.x * 0.5f;
+  const float halfHeight = viewSize.y * 0.5f;
+  const sf::FloatRect bounds{
+      selected->boundsTiles.left * tileSize,
+      selected->boundsTiles.top * tileSize,
+      selected->boundsTiles.width * tileSize,
+      selected->boundsTiles.height * tileSize};
+
+  float targetX = camera.getView().getCenter().x;
+  if (selected->followX) {
+    targetX = playerPosition.x;
+  }
+  const float minX = bounds.left + halfWidth;
+  const float maxX = bounds.left + bounds.width - halfWidth;
+  if (maxX >= minX) {
+    targetX = std::clamp(targetX, minX, maxX);
+  } else if (!selected->followX) {
+    targetX = bounds.left + bounds.width * 0.5f;
+  }
+
+  float targetY = selected->followY
+      ? playerPosition.y
+      : selected->centerYTiles * tileSize;
+  const float minY = bounds.top + halfHeight;
+  const float maxY = bounds.top + bounds.height - halfHeight;
+  if (maxY >= minY) {
+    targetY = std::clamp(targetY, minY, maxY);
+  } else if (!selected->followY) {
+    targetY = bounds.top + bounds.height * 0.5f;
+  }
+
+  camera.setCenter(targetX, targetY);
+}
+
+bool Level::usesDarkBackground() const {
+  if (!hasDefinition) {
+    return isUnderground || isInBonusRoom;
+  }
+
+  const sf::Vector2f center = camera.getView().getCenter();
+  const float tileSize = definition.tileSize;
+  for (const auto& zone : definition.cameraZones) {
+    if (zone.area != currentArea) {
+      continue;
+    }
+    if (zone.boundsTiles.contains({center.x / tileSize, center.y / tileSize})) {
+      return zone.darkBackground;
+    }
+  }
+  return isUnderground || isInBonusRoom;
+}
+
+float Level::getKillPlaneY() const {
+  if (hasDefinition && definition.rules.killPlaneTile >= 0.f) {
+    return definition.rules.killPlaneTile * definition.tileSize;
+  }
+
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
+  const float margin = hasDefinition
+      ? definition.rules.enemyVoidMarginTiles * tileSize
+      : 64.f;
+  return map.getMapHeight() * tileSize + margin;
+}
+
+float Level::getLeftBoundaryX() const {
+  if (hasDefinition) {
+    return definition.rules.leftBoundaryTile * definition.tileSize;
+  }
+  return 0.f;
+}
+
+float Level::getRightBoundaryX(float entityWidth) const {
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
+  const float rightTile = hasDefinition &&
+                                  definition.rules.rightBoundaryTile >= 0.f
+      ? definition.rules.rightBoundaryTile
+      : static_cast<float>(map.getMapWidth());
+  return std::max(getLeftBoundaryX(), rightTile * tileSize - entityWidth);
+}
+
+void Level::setIsUnderground(bool value) {
+  if (value) {
+    setCurrentArea("underground");
+  } else {
+    isUnderground = false;
+    if (!isInBonusRoom) {
+      currentArea = "overworld";
+    }
+  }
+}
+
+void Level::setIsInBonusRoom(bool value) {
+  if (value) {
+    setCurrentArea("bonus");
+  } else {
+    isInBonusRoom = false;
+    currentArea = isUnderground ? "underground" : "overworld";
+  }
 }
 
 void Level::update(float dt) {
@@ -342,9 +447,11 @@ void Level::update(float dt) {
 
   sf::FloatRect camBounds = camera.getViewBounds();
   const float spawnMargin = 80.f;
-  constexpr float TileSize = 16.f;
-  constexpr float EnemyVoidMargin = 64.f;
-  const float enemyVoidY = map.getMapHeight() * TileSize + EnemyVoidMargin;
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
+  const float enemyVoidY = hasDefinition
+      ? map.getMapHeight() * tileSize +
+            definition.rules.enemyVoidMarginTiles * tileSize
+      : getKillPlaneY();
 
   for (auto &enemy : enemies) {
     if (!enemy || !enemy->isActive())
@@ -446,10 +553,12 @@ void Level::spawnItemFromBlock(float x, float y) {
 }
 
 void Level::spawnItemFromBlock(float x, float y, Character *character) {
-  const std::string itemType = getBlockItemType(x, character);
+  const std::string itemType = getBlockItemType(x, y, character);
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
 
   sf::Vector2f spawnPos =
-      (itemType == "Coin") ? sf::Vector2f{x, y - 16.f} : sf::Vector2f{x, y};
+      (itemType == "Coin") ? sf::Vector2f{x, y - tileSize}
+                            : sf::Vector2f{x, y};
   if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
     if (itemType == "Coin") {
       if (auto *coin = dynamic_cast<Coin *>(entity.get())) {
@@ -473,45 +582,54 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
   }
 }
 
-std::string Level::getBlockItemType(float x, const Character *character) const {
-  const std::string brickItemType = getBrickItemType(x);
-  if (!brickItemType.empty()) {
-    return brickItemType;
-  }
-
+std::string Level::getBlockItemType(
+    float x,
+    float y,
+    const Character *character) const {
   std::string itemType = "Coin";
 
-  bool powerupSpot = (std::abs(x - 336.f) < 1.f || std::abs(x - 1248.f) < 1.f ||
-                      std::abs(x - 1744.f) < 1.f);
-  if (levelId == 2 && isUnderground && std::abs(x - 256.f) < 1.f) {
-    powerupSpot = true;
+  if (hasDefinition) {
+    const float tileSize = definition.tileSize;
+    for (const auto& block : definition.blockContents) {
+      if (block.area == currentArea &&
+          std::abs(static_cast<float>(block.tilePosition.x) - x / tileSize) <
+              0.01f &&
+          std::abs(static_cast<float>(block.tilePosition.y) - y / tileSize) <
+              0.01f) {
+        itemType = block.content;
+        break;
+      }
+    }
   }
 
-  if (powerupSpot) {
+  if (itemType == "PowerupByForm") {
     if (character) {
       const std::string_view form = character->getCurrentFormName();
-      if (form == "Super" || form == "Fire") {
-        itemType = "FireFlower";
-      } else {
-        itemType = "Mushroom";
-      }
+      itemType = (form == "Super" || form == "Fire")
+          ? "FireFlower"
+          : "Mushroom";
     } else {
       itemType = "Mushroom";
     }
   }
+
   return itemType;
 }
 
-std::string Level::getBrickItemType(float x) const {
-  if (levelId != 1) {
+std::string Level::getBrickItemType(float x, float y) const {
+  if (!hasDefinition) {
     return {};
   }
 
-  if (std::abs(x - 1616.f) < 2.f) {
-    return "StarItem";
-  }
-  if (std::abs(x - 1024.f) < 2.f) {
-    return "1UpMushroom";
+  const float tileSize = definition.tileSize;
+  for (const auto& block : definition.blockContents) {
+    if (block.area == currentArea &&
+        std::abs(static_cast<float>(block.tilePosition.x) - x / tileSize) <
+            0.01f &&
+        std::abs(static_cast<float>(block.tilePosition.y) - y / tileSize) <
+            0.01f) {
+      return block.content;
+    }
   }
   return {};
 }
@@ -519,8 +637,7 @@ std::string Level::getBrickItemType(float x) const {
 void Level::warpToUnderground(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground map area..."
             << std::endl;
-  isUnderground = true;
-  isInBonusRoom = false;
+  setCurrentArea("bonus");
   if (character) {
     character->setPosition(3736.f, 32.f);
     character->setVelocity(sf::Vector2f(0.f, 0.f));
@@ -531,6 +648,7 @@ void Level::warpToUnderground(Character *character) {
 void Level::warpToUnderground1_2(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground coin room in 1-2..."
             << std::endl;
+  setCurrentArea("bonus");
   if (character) {
     character->setPosition(48.f, 528.f);
     character->setVelocity(sf::Vector2f(0.f, 0.f));
@@ -544,8 +662,7 @@ void Level::warpToUnderground1_2(Character *character) {
 void Level::warpPipeA_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe A entered — warping to underground."
             << std::endl;
-  isUnderground = true;
-  isInBonusRoom = false;
+  setCurrentArea("underground");
   if (character) {
     // Underground floor tile tops are at y=464 (rows 29-30).
     // Spawn freely in air
@@ -560,7 +677,7 @@ void Level::warpPipeA_Entry(Character *character) {
 void Level::warpPipeB_Entry(Character *character) {
   std::cout << "[Level][1-2] Pipe B entered — warping to bonus room."
             << std::endl;
-  isInBonusRoom = true;
+  setCurrentArea("bonus");
   if (character) {
     // Hidden room occupies rows 35-43 (y=544-704).
     // Spawn Mario just inside the top-left opening (col 1-3 are empty).
@@ -575,7 +692,7 @@ void Level::warpPipeB_Entry(Character *character) {
 void Level::warpPipeC1_Exit(Character *character) {
   std::cout << "[Level][1-2] Pipe C1 exit — returning to underground corridor."
             << std::endl;
-  isInBonusRoom = false;
+  setCurrentArea("underground");
   if (character) {
     // Return to underground corridor past Pipe 2 so player continues rightward.
     // y=400 is safely above the underground floor (y≈464).
@@ -589,8 +706,7 @@ void Level::warpPipeC1_Exit(Character *character) {
 void Level::warpToOverworldExit(Character *character) {
   std::cout << "[Level] Teleporting back to Overworld — near-last pipe..."
             << std::endl;
-  isUnderground = false;
-  isInBonusRoom = false;
+  setCurrentArea("overworld");
   if (character) {
     // Near-last overworld pipe is at col ~176-177 (x≈2816).
     // Pop Mario out of the pipe top (pipe top row 10, y=160 → spawn at y=144).

@@ -197,10 +197,12 @@ void AdminDebugView::renderWorldAnnotations(
         std::string label;
         sf::Color color;
         if (tile->isQuestionBlock()) {
-            label = "? " + level.getBlockItemType(bounds.left, &character);
+            label = "? " + level.getBlockItemType(
+                bounds.left, bounds.top, &character);
             color = sf::Color(255, 220, 60);
         } else if (tile->isBrick()) {
-            const std::string itemType = level.getBrickItemType(bounds.left);
+            const std::string itemType = level.getBrickItemType(
+                bounds.left, bounds.top);
             if (itemType.empty()) continue;
             label = "BRICK " + itemType;
             color = sf::Color(255, 140, 220);

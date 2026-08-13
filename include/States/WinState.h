@@ -22,6 +22,7 @@ private:
     PlayState* playState = nullptr;
     int levelId = 1;
     std::string mapPath;
+    std::string nextStage;
 
     Phase currentPhase = Phase::FlagSlide;
     float phaseTimer = 0.f;
@@ -43,7 +44,11 @@ private:
     void updateScoreTally(float dt);
 
 public:
-    WinState(PlayState* play, int id, const std::string& path);
+    WinState(
+        PlayState* play,
+        int id,
+        const std::string& path,
+        const std::string& nextStage = {});
 
     void onEnter() override;
     void onExit() override;

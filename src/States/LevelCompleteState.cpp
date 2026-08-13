@@ -5,22 +5,24 @@
 #include <memory>
 #include <filesystem>
 
-LevelCompleteState::LevelCompleteState(int id, const std::string& mapPath, int score, int coins, int bonus)
-    : levelId(id), completedMapPath(mapPath), finalScore(score), coinsCollected(coins), timeBonus(bonus) {
-    // If levelId == 3 or path contains 1-3 / 1.3, it's the last level
-    if (levelId >= 3 || completedMapPath.find("1-3") != std::string::npos || completedMapPath.find("1.3") != std::string::npos) {
-        isLastLevel = true;
-    }
+LevelCompleteState::LevelCompleteState(
+    int id,
+    const std::string& mapPath,
+    const std::string& nextStage,
+    int score,
+    int coins,
+    int bonus)
+    : levelId(id),
+      completedMapPath(mapPath),
+      nextStagePath(nextStage),
+      finalScore(score),
+      coinsCollected(coins),
+      timeBonus(bonus),
+      isLastLevel(nextStage.empty()) {
 }
 
-std::string LevelCompleteState::getNextLevelMapPath() const {
-    if (levelId == 1 || completedMapPath.find("1-1") != std::string::npos || completedMapPath.find("1.1") != std::string::npos) {
-        return "1.2/1-2.txt";
-    }
-    if (levelId == 2 || completedMapPath.find("1-2") != std::string::npos || completedMapPath.find("1.2") != std::string::npos) {
-        return "1.3/1-3.txt";
-    }
-    return "1.1/1-1.txt";
+std::string LevelCompleteState::getNextLevelPath() const {
+    return nextStagePath.empty() ? completedMapPath : nextStagePath;
 }
 
 void LevelCompleteState::onEnter() {
@@ -178,7 +180,7 @@ void LevelCompleteState::handleInput(sf::Event& event, sf::RenderWindow& window)
                 if (selectedIndex == 0) {
                     // NEXT LEVEL (or PLAY AGAIN from 1-1)
                     if (stateManager) {
-                        std::string nextMap = getNextLevelMapPath();
+                        std::string nextMap = getNextLevelPath();
                         std::cout << "[LevelCompleteState] Starting next level: " << nextMap << std::endl;
                         stateManager->changeState(std::make_unique<PlayState>(nextMap));
                     }

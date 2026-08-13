@@ -30,6 +30,34 @@ bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
     return false;
   }
 
+  if (level.isDataDriven()) {
+    const sf::FloatRect bounds = character.getBounds();
+    const float centerX = bounds.left + bounds.width * 0.5f;
+    const float feetY = bounds.top + bounds.height;
+    constexpr float contactTolerance = 3.f;
+    for (const auto& portal : level.getDefinition().portals) {
+      if (portal.activation != PortalActivation::Down ||
+          portal.sourceArea != level.getCurrentArea()) {
+        continue;
+      }
+      const float tileSize = level.getDefinition().tileSize;
+      const sf::FloatRect trigger{
+          portal.triggerTiles.left * tileSize,
+          portal.triggerTiles.top * tileSize,
+          portal.triggerTiles.width * tileSize,
+          portal.triggerTiles.height * tileSize};
+      const bool centered = centerX >= trigger.left &&
+                            centerX <= trigger.left + trigger.width;
+      const bool touchingTop = std::abs(feetY - trigger.top) <=
+                               contactTolerance;
+      if (centered && touchingTop) {
+        return level.tryActivatePortal(
+            character, trigger, PortalActivation::Down);
+      }
+    }
+    return false;
+  }
+
   constexpr float ContactTolerance = 3.f;
   const sf::FloatRect bounds = character.getBounds();
   const float centerX = bounds.left + bounds.width * 0.5f;
@@ -169,7 +197,7 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   // Entering a downward pipe is a contact interaction, not penetration
   // resolution. Check it independently from the collision passes so a
   // stationary character resting exactly on the pipe can enter.
-  if (character && level &&
+  if (character && level && !level->isDataDriven() &&
       (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) ||
        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))) {
     if (tryEnterDownWarp(*character, *level)) {
@@ -219,9 +247,10 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           // Brick block logic
           if (character && tile->isBrick()) {
-            // Check if this brick contains an item (e.g. 1UP Mushroom at x=1024, Star at x=1616 in 1-1)
+            // Block contents come from the current .level definition.
             const bool isItemBrick =
-                level && !level->getBrickItemType(tileBounds.left).empty();
+                level && !level->getBrickItemType(
+                             tileBounds.left, tileBounds.top).empty();
 
             if (isItemBrick) {
               tile->startBump();
@@ -286,7 +315,12 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           bool rightPressed =
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
-          if (rightPressed) {
+          if (rightPressed && level->isDataDriven()) {
+            if (level->tryActivatePortal(
+                    *character, tileBounds, PortalActivation::Right)) {
+              return;
+            }
+          } else if (rightPressed) {
             // World 1-1: hidden bonus tunnel -> overworld exit pipe.
             if (level->getLevelId() == 1 &&
                 level->getIsUnderground() &&

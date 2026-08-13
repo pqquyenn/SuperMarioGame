@@ -1,0 +1,16 @@
+[stage]
+version=1
+id=missing-files
+name=MISSING FILES
+terrain=missing-terrain.txt
+background=missing-background.txt
+next_stage=
+initial_area=overworld
+time_limit=400
+tile_size=16
+
+[rules]
+kill_plane_tile=20
+left_boundary_tile=0
+right_boundary_tile=-1
+enemy_void_margin_tiles=4
