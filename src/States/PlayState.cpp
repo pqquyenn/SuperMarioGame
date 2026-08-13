@@ -7,10 +7,13 @@
 #include "Physics/CollisionManager.h"
 #include "States/GameOverState.h"
 #include "States/PauseState.h"
+#include "States/WinState.h"
 #include "UI/HUD.h"
 #include "Core/GameSettings.h"
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
+#include "PlayerEffects/StarEffect.h"
+#include "PlayerStates/FireState.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -22,6 +25,8 @@ PlayState::PlayState(const std::string &mapPath) : initialMapPath(mapPath) {}
 void PlayState::onEnter() {
   std::cout << "[PlayState] onEnter - Bat dau map " << initialMapPath
             << std::endl;
+  levelWon = false;
+  hud.setTimeFrozen(false);
   if (!level.loadLevel(initialMapPath)) {
     std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
               << std::endl;
@@ -88,10 +93,42 @@ void PlayState::onExit() {
 
 void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   if (event.type == sf::Event::KeyPressed) {
-    if (event.key.code == sf::Keyboard::T) {
+    if ((event.key.code == sf::Keyboard::Down ||
+         event.key.code == sf::Keyboard::S) &&
+        player && CollisionManager::tryEnterDownWarp(*player, level)) {
+      return;
+    } else if (event.key.code == sf::Keyboard::T) {
       adminDebugView.toggle();
       std::cout << "[AdminDebugView] "
                 << (adminDebugView.isVisible() ? "ENABLED" : "DISABLED")
+                << std::endl;
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::I) {
+      // Apply the same timed invincibility, contact defeat, movement boost,
+      // and visual treatment as collecting a Star. Void and timeout deaths
+      // still call Character::die directly and remain lethal.
+      player->addEffect(std::make_unique<StarEffect>());
+      std::cout << "[AdminDebugView] Star invincibility granted"
+                << std::endl;
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::K) {
+      const std::string_view form = player->getCurrentFormName();
+      if (form == "Small" || form == "Super") {
+        // Character::receivePowerUp intentionally converts Small + powered
+        // state to Super first; the next press advances Super to Fire.
+        player->receivePowerUp(std::make_unique<FireState>());
+        std::cout << "[AdminDebugView] Player form increased to "
+                  << player->getCurrentFormName() << std::endl;
+      }
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::L) {
+      // Force exactly one normal damage transition even if I was used. The
+      // regular damage path still grants the configured post-hit immunity.
+      player->takeDamageIgnoringProtection();
+      std::cout << "[AdminDebugView] Player form decreased to "
+                << (player->isDying()
+                        ? std::string_view{"Dying"}
+                        : player->getCurrentFormName())
                 << std::endl;
     } else if (event.key.code == sf::Keyboard::Escape) {
       // Nhan Escape -> push PauseState (PlayState van con trong stack)
@@ -147,6 +184,10 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
 }
 
 void PlayState::update(float dt) {
+  if (levelWon) {
+    return;
+  }
+
   if (isFreeCameraMode) {
     float speed = freeCamSpeed;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) ||
@@ -222,6 +263,22 @@ void PlayState::update(float dt) {
       for (auto &platform : level.getMovingPlatforms()) {
         if (platform && platform->isActive()) {
           CollisionManager::resolveMovingPlatform(*player, *platform);
+        }
+      }
+
+      // 6.5. Kiểm tra chạm Cột Cờ (Win State)
+      if (!levelWon && player->isActive() && !player->isDying()) {
+        const sf::FloatRect pBounds = player->getBounds();
+        for (const TileHandle &h : level.getTileMap().getTilesInBounds(pBounds)) {
+          const Tile *tile = level.getTileMap().getTile(h);
+          if (tile && tile->isFlagpole()) {
+            levelWon = true;
+            if (stateManager) {
+              stateManager->pushState(std::make_unique<WinState>(
+                  this, level.getLevelId(), initialMapPath));
+            }
+            return;
+          }
         }
       }
 

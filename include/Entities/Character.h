@@ -106,6 +106,9 @@ public:
     bool receivePowerUp(std::unique_ptr<PlayerState> state);
     bool hasAbility(PlayerAbility ability) const;
     void takeDamage();
+    // Applies one damage transition even when a shield or invincibility effect
+    // is active. Used by deterministic tests and admin controls.
+    void takeDamageIgnoringProtection();
     void die(DeathCause cause);
     void respawn(float x, float y);
 
@@ -153,6 +156,7 @@ private:
     bool clearEffectsRequested{false};
 
     void changeState(std::unique_ptr<PlayerState> state);
+    void applyDamage(bool ignoreProtection);
     void insertEffect(std::unique_ptr<PlayerEffect> effect);
     PlayerMotion choosePlayerMotion() const;
     void updatePlayerAnimation(float dt);

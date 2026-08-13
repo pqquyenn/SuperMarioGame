@@ -18,6 +18,11 @@ struct EnemyRuntimeStats {
     std::size_t removed{0};
 };
 
+struct WarpZoneInfo {
+    sf::FloatRect bounds;
+    std::string label;
+};
+
 class Level {
 private:
     int levelId = 1;
@@ -54,6 +59,8 @@ public:
         float x,
         const Character* character = nullptr
     ) const;
+    // Returns an empty string for ordinary bricks without hidden contents.
+    std::string getBrickItemType(float x) const;
     void warpToUnderground(Character* character = nullptr);
     void warpToUnderground1_2(Character* character = nullptr);
     void warpToOverworldExit(Character* character = nullptr);
@@ -69,14 +76,21 @@ public:
     Camera& getCamera() { return camera; }
     const Camera& getCamera() const { return camera; }
     int  getLevelId() const { return levelId; }
+    void setLevelId(int id) { levelId = id; }
     bool getIsUnderground() const { return isUnderground; }
     bool getIsInBonusRoom() const { return isInBonusRoom; }
     void setIsUnderground(bool v) { isUnderground = v; }
     void setIsInBonusRoom(bool v) { isInBonusRoom = v; }
+
+    std::optional<sf::FloatRect> findFlagpoleBounds() const { return map.findFlagpoleBounds(); }
+    std::optional<sf::Vector2f> findCastleDoor() const { return map.findCastleDoor(); }
+    std::optional<sf::Vector2f> findFlagPosition() const { return map.findFlagPosition(); }
+    std::optional<sf::Vector2f> takeFlagPosition() { return map.takeFlagPosition(); }
     sf::Vector2f getStartPosition(
         const sf::Vector2f& characterSize
     ) const;
     EnemyRuntimeStats getEnemyRuntimeStats() const;
+    std::vector<WarpZoneInfo> getWarpZones() const;
 
     std::vector<std::unique_ptr<Enemy>>& getEnemies() { return enemies; }
     const std::vector<std::unique_ptr<Enemy>>& getEnemies() const { return enemies; }

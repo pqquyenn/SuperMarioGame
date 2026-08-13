@@ -189,17 +189,34 @@ void AdminDebugView::renderWorldAnnotations(
     const TileMap& map = level.getTileMap();
     for (const TileHandle& handle : map.getTilesInBounds(viewBounds)) {
         const Tile* tile = map.getTile(handle);
-        if (!tile || !tile->isQuestionBlock()) continue;
+        if (!tile) continue;
 
         const sf::FloatRect bounds = tile->getBounds();
         if (!intersects(bounds, viewBounds)) continue;
-        const sf::Color color(255, 220, 60);
+
+        std::string label;
+        sf::Color color;
+        if (tile->isQuestionBlock()) {
+            label = "? " + level.getBlockItemType(bounds.left, &character);
+            color = sf::Color(255, 220, 60);
+        } else if (tile->isBrick()) {
+            const std::string itemType = level.getBrickItemType(bounds.left);
+            if (itemType.empty()) continue;
+            label = "BRICK " + itemType;
+            color = sf::Color(255, 140, 220);
+        } else {
+            continue;
+        }
+
         drawWorldOutline(window, bounds, color);
-        annotations.push_back({
-            bounds,
-            "? " + level.getBlockItemType(bounds.left, &character),
-            color
-        });
+        annotations.push_back({bounds, label, color});
+    }
+
+    for (const WarpZoneInfo& warp : level.getWarpZones()) {
+        if (!intersects(warp.bounds, viewBounds)) continue;
+        const sf::Color color(190, 120, 255);
+        drawWorldOutline(window, warp.bounds, color);
+        annotations.push_back({warp.bounds, warp.label, color});
     }
 
     const sf::Vector2u windowSize = window.getSize();
@@ -235,7 +252,7 @@ void AdminDebugView::render(
 
     std::ostringstream information;
     information << std::fixed << std::setprecision(1)
-                << "ADMIN [T]\n"
+                << "ADMIN [T]  I:STAR  K:UP  L:HIT\n"
                 << "CHAR " << character.getCharacterType() << " | "
                 << (character.isDying()
                         ? std::string_view{"Dying"}

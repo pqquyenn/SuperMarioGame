@@ -2,6 +2,7 @@
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Enemies/GreenParatroopa.h"
+#include "Entities/Enemies/PiranhaPlant.h"
 #include "Entities/Entity.h"
 #include "Entities/Fireball.h"
 #include "Entities/Items/Coin.h"
@@ -22,6 +23,45 @@
 bool CollisionManager::checkAABB(const sf::FloatRect &a, const sf::FloatRect &b,
                                  sf::FloatRect &overlap) {
   return a.intersects(b, overlap);
+}
+
+bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
+  if (!character.isActive() || character.isDying()) {
+    return false;
+  }
+
+  constexpr float ContactTolerance = 3.f;
+  const sf::FloatRect bounds = character.getBounds();
+  const float centerX = bounds.left + bounds.width * 0.5f;
+  const float feetY = bounds.top + bounds.height;
+
+  const auto standsOnEntrance =
+      [centerX, feetY, ContactTolerance](const sf::FloatRect &entrance) {
+    const bool centeredOverEntrance =
+        centerX >= entrance.left &&
+        centerX <= entrance.left + entrance.width;
+    const bool feetTouchTop =
+        std::abs(feetY - entrance.top) <= ContactTolerance;
+    return centeredOverEntrance && feetTouchTop;
+  };
+
+  if (level.getLevelId() == 1 &&
+      !level.getIsUnderground() &&
+      !level.getIsInBonusRoom() &&
+      standsOnEntrance({912.f, 144.f, 32.f, 16.f})) {
+    level.warpToUnderground(&character);
+    return true;
+  }
+
+  if (level.getLevelId() == 2 &&
+      level.getIsUnderground() &&
+      !level.getIsInBonusRoom() &&
+      standsOnEntrance({1856.f, 400.f, 32.f, 16.f})) {
+    level.warpPipeB_Entry(&character);
+    return true;
+  }
+
+  return false;
 }
 
 void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
@@ -46,8 +86,14 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
 
     // Star invincibility: Mario defeats any enemy on contact (not just stomp)
     if (character->defeatsEnemiesOnContact()) {
-      enemy->onStomped();
+      enemy->onFireball();
       character->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+      return;
+    }
+
+    // PiranhaPlant is immune to stomping: touching it without Star invincibility damages Mario
+    if (dynamic_cast<PiranhaPlant *>(enemy)) {
+      character->takeDamage();
       return;
     }
 
@@ -120,6 +166,17 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
   Fireball *fireball = dynamic_cast<Fireball *>(&entity);
   bool landedThisFrame = false;
 
+  // Entering a downward pipe is a contact interaction, not penetration
+  // resolution. Check it independently from the collision passes so a
+  // stationary character resting exactly on the pipe can enter.
+  if (character && level &&
+      (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) ||
+       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))) {
+    if (tryEnterDownWarp(*character, *level)) {
+      return;
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────
   // PASS 1 — Y-axis resolution (Ground & Ceiling landing)
   // ──────────────────────────────────────────────────────────────
@@ -145,17 +202,6 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
             gp->notifyLanded();
           }
 
-          if (character && tile->isWarpPipe() && level) {
-            bool downPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S);
-            if (downPressed) {
-                // Pipe 2: Underground → Hidden Room (cols 116-118, x = 1856-1904)
-                if (level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
-                    && pos.x >= 1840.f && pos.x <= 1920.f) {
-                    level->warpPipeB_Entry(character);
-                    return;
-                }
-            }
-          }
         } else {
           pos.y += overlap.height; // Hit the underside (ceiling)
 
@@ -173,11 +219,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
           // Brick block logic
           if (character && tile->isBrick()) {
             // Check if this brick contains an item (e.g. 1UP Mushroom at x=1024, Star at x=1616 in 1-1)
-            bool isItemBrick = false;
-            if (level && level->getLevelId() == 1 &&
-                (std::abs(tileBounds.left - 1616.f) < 2.f || std::abs(tileBounds.left - 1024.f) < 2.f)) {
-              isItemBrick = true;
-            }
+            const bool isItemBrick =
+                level && !level->getBrickItemType(tileBounds.left).empty();
 
             if (isItemBrick) {
               tile->startBump();
@@ -243,6 +286,14 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
           if (rightPressed) {
+            // World 1-1: hidden bonus tunnel -> overworld exit pipe.
+            if (level->getLevelId() == 1 &&
+                level->getIsUnderground() &&
+                pos.x >= 3720.f) {
+                level->warpToOverworldExit(character);
+                return;
+            }
+
             // Pipe 1 Entry: Overworld -> Underground (horizontal pipe at start)
             if (!level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
                 && pos.x < 1000.f) {

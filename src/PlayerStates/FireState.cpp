@@ -1,6 +1,6 @@
 #include "PlayerStates/FireState.h"
 #include "Entities/Character.h"
-#include "PlayerStates/SmallState.h"
+#include "PlayerStates/SuperState.h"
 
 void FireState::onEnter(Character& character) const {
     character.applyForm(getName(), getHeightMultiplier());
@@ -28,5 +28,5 @@ void FireState::useSpecialAbility(Character& character) const {
 }
 
 std::unique_ptr<PlayerState> FireState::takeDamage() const {
-    return std::make_unique<SmallState>();
+    return std::make_unique<SuperState>();
 }

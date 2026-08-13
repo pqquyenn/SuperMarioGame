@@ -31,7 +31,8 @@ std::string_view Luigi::getCharacterType() const {
 void Luigi::setTexture(const sf::Texture& texture, bool resetRect) {
     constexpr unsigned LuigiBandTop = 62;
     constexpr unsigned LuigiBandBottom = 121;
-    const sf::Color backgroundColor{27, 89, 153};
+    const sf::Color darkBackground{27, 89, 153};
+    const sf::Color lightBackground{147, 187, 236};
 
     sf::Image image = texture.copyToImage();
     const sf::Vector2u size = image.getSize();
@@ -45,9 +46,16 @@ void Luigi::setTexture(const sf::Texture& texture, bool resetRect) {
     for (unsigned y = LuigiBandTop; y <= lastRow; ++y) {
         for (unsigned x = 0; x < size.x; ++x) {
             const sf::Color pixel = image.getPixel(x, y);
-            if (pixel.r == backgroundColor.r &&
-                pixel.g == backgroundColor.g &&
-                pixel.b == backgroundColor.b) {
+            const bool isDarkBackground =
+                pixel.r == darkBackground.r &&
+                pixel.g == darkBackground.g &&
+                pixel.b == darkBackground.b;
+            const bool isLightBackground =
+                pixel.r == lightBackground.r &&
+                pixel.g == lightBackground.g &&
+                pixel.b == lightBackground.b;
+
+            if (isDarkBackground || isLightBackground) {
                 image.setPixel(x, y, sf::Color::Transparent);
             }
         }

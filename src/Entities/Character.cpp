@@ -372,13 +372,23 @@ bool Character::hasAbility(PlayerAbility ability) const {
 }
 
 void Character::takeDamage() {
+    applyDamage(false);
+}
+
+void Character::takeDamageIgnoringProtection() {
+    applyDamage(true);
+}
+
+void Character::applyDamage(bool ignoreProtection) {
     if (!isActive() || !currentState) {
         return;
     }
 
-    for (auto& effect : activeEffects) {
-        if (effect->tryAbsorbDamage(*this)) {
-            return;
+    if (!ignoreProtection) {
+        for (auto& effect : activeEffects) {
+            if (effect->tryAbsorbDamage(*this)) {
+                return;
+            }
         }
     }
 
