@@ -24,8 +24,8 @@ std::string LevelCompleteState::getNextLevelMapPath() const {
 }
 
 void LevelCompleteState::onEnter() {
-    std::cout << "[LevelCompleteState] onEnter - Level " << levelId 
-              << " Completed! Score: " << finalScore << " Coins: " << coinsCollected 
+    std::cout << "[LevelCompleteState] onEnter - Level " << levelId
+              << " Completed! Score: " << finalScore << " Coins: " << coinsCollected
               << " TimeBonus: " << timeBonus << std::endl;
 
     // --- Load font ---

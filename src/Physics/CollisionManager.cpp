@@ -87,7 +87,7 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
     // Star invincibility: Mario defeats any enemy on contact (not just stomp)
     if (character->defeatsEnemiesOnContact()) {
       enemy->onFireball();
-      character->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+      character->notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
       return;
     }
 
@@ -112,7 +112,7 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
           enemyBounds.top - characterBounds.height);
       enemy->onStomped();
       // enemy->setActive(false);
-      character->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+      character->notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
       character->setVelocity(
           sf::Vector2f(character->getVelocity().x, -250.f));
       return;
@@ -213,7 +213,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
               level->spawnItemFromBlock(tileBounds.left, tileBounds.top,
                                         character);
             }
-            character->notify(GameEvent{GameEventType::COIN_COLLECTED, 200});
+            character->notify(
+                GameEvent::coinCollected(Coin::defaultScoreValue()));
           }
 
           // Brick block logic
@@ -332,7 +333,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
       if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
         if (tile->isCoinTile()) {
           map.removeTile(handle);
-          character->notify(GameEvent{GameEventType::COIN_COLLECTED, 200});
+          character->notify(
+              GameEvent::coinCollected(Coin::defaultScoreValue()));
         }
       }
     }

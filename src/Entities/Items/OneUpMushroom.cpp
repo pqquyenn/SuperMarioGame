@@ -17,7 +17,7 @@ bool OneUpMushroom::tryCollect(Character &character) {
     return false;
 
   // Phát sự kiện tăng 1 mạng
-  character.notify(GameEvent{GameEventType::LIFE_GAINED, 1});
+  character.notify(GameEvent::lifeGained(1, 1000));
 
   onCollect();
   return true;

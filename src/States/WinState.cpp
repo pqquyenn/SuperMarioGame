@@ -185,7 +185,7 @@ void WinState::updateScoreTally(float dt) {
         if (deduct < 1.f && timeRemaining <= 1.f) {
             deduct = timeRemaining;
         }
-        
+
         hud.setTimeRemaining(timeRemaining - deduct);
         int points = static_cast<int>(deduct * 50.f);
         hud.addScore(points);

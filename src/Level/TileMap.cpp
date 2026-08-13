@@ -539,5 +539,3 @@ std::optional<sf::Vector2f> TileMap::takeFlagPosition() {
     }
     return std::nullopt;
 }
-
-

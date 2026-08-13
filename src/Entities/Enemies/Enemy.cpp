@@ -59,6 +59,10 @@ float Enemy::getSpeed() const { return speed; }
 
 void Enemy::setSpeed(float spd) { speed = spd; }
 
+int Enemy::getScoreValue() const { return scoreValue; }
+
+void Enemy::setScoreValue(int score) { scoreValue = score; }
+
 bool Enemy::isSquished() const { return squished; }
 
 bool Enemy::isEnemyAlive() const { return isAlive; }

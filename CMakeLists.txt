@@ -82,5 +82,3 @@ if(WIN32 AND TARGET sfml-graphics)
         )
     endif()
 endif()
-
-
