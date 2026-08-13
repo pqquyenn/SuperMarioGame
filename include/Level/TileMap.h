@@ -73,6 +73,11 @@ public:
         return m_startMarker;
     }
 
+    std::optional<sf::FloatRect> findFlagpoleBounds() const;
+    std::optional<sf::Vector2f> findCastleDoor() const;
+    std::optional<sf::Vector2f> findFlagPosition() const;
+    std::optional<sf::Vector2f> takeFlagPosition();
+
 private:
     void initFlyweights();
 

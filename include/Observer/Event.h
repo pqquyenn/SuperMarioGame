@@ -6,7 +6,8 @@ enum class GameEventType {
     PLAYER_HIT,
     PLAYER_DIED,
     POWERUP_COLLECTED,
-    LIFE_GAINED
+    LIFE_GAINED,
+    FLAGPOLE_REACHED
 };
 
 struct GameEvent {

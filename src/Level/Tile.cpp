@@ -99,6 +99,14 @@ bool Tile::isAnimated() const {
     return m_type ? m_type->isAnimated : false;
 }
 
+bool Tile::isFlagpole() const {
+    return m_type ? m_type->isFlagpole : false;
+}
+
+bool Tile::isCastle() const {
+    return m_type ? m_type->isCastle : false;
+}
+
 void Tile::startBump() {
     m_bumping = true;
     m_bumpOffset = 0.f;

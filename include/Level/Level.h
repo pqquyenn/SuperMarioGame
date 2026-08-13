@@ -76,10 +76,16 @@ public:
     Camera& getCamera() { return camera; }
     const Camera& getCamera() const { return camera; }
     int  getLevelId() const { return levelId; }
+    void setLevelId(int id) { levelId = id; }
     bool getIsUnderground() const { return isUnderground; }
     bool getIsInBonusRoom() const { return isInBonusRoom; }
     void setIsUnderground(bool v) { isUnderground = v; }
     void setIsInBonusRoom(bool v) { isInBonusRoom = v; }
+
+    std::optional<sf::FloatRect> findFlagpoleBounds() const { return map.findFlagpoleBounds(); }
+    std::optional<sf::Vector2f> findCastleDoor() const { return map.findCastleDoor(); }
+    std::optional<sf::Vector2f> findFlagPosition() const { return map.findFlagPosition(); }
+    std::optional<sf::Vector2f> takeFlagPosition() { return map.takeFlagPosition(); }
     sf::Vector2f getStartPosition(
         const sf::Vector2f& characterSize
     ) const;
