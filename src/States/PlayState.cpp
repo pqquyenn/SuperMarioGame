@@ -309,7 +309,8 @@ void PlayState::update(float dt) {
       const sf::FloatRect camBounds = level.getCamera().getViewBounds();
       if (fireball->getPosition().x < camBounds.left - 64.f ||
           fireball->getPosition().x > camBounds.left + camBounds.width + 64.f ||
-          fireball->getPosition().y > 400.f) {
+          fireball->getPosition().y < camBounds.top - 64.f ||
+          fireball->getPosition().y > camBounds.top + camBounds.height + 64.f) {
         fireball->explode();
       }
     }
