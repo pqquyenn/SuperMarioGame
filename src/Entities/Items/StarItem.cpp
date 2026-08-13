@@ -122,7 +122,7 @@ bool StarItem::tryCollect(Character& character) {
     // Gắn StarEffect 10 giây bất tử + tăng tốc cho Mario
     if (character.addEffect(std::make_unique<StarEffect>(10.f))) {
         onCollect();
-        character.notify(GameEvent{GameEventType::POWERUP_COLLECTED, 1000});
+        character.notify(GameEvent::powerupCollected(1000));
         return true;
     }
     return false;

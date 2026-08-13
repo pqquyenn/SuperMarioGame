@@ -18,6 +18,7 @@ protected:
   bool isAlive{true};
   bool squished{false};
   bool activated{false};
+  int scoreValue{100};
 
   // ---- Vật lý trọng lực ----
   static constexpr float GRAVITY = 980.f;          // Gia tốc trọng lực (px/s²)
@@ -43,6 +44,9 @@ public:
 
   float getSpeed() const;
   void setSpeed(float spd);
+
+  int getScoreValue() const;
+  void setScoreValue(int score);
 
   bool isSquished() const;
   bool isEnemyAlive() const;

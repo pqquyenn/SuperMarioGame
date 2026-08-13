@@ -29,5 +29,6 @@ public:
 
     int getLives() const { return lives; }
     int getScore() const { return score; }
+    int getCoins() const { return coins; }
     float getTimeRemaining() const { return timeRemaining; }
 };

@@ -65,17 +65,20 @@ void HUD::onNotify(const GameEvent& event) {
     switch (event.type) {
         case GameEventType::COIN_COLLECTED:
             coins += 1;
-            score += 200;
+            score += event.value;
             break;
         case GameEventType::ENEMY_DEFEATED:
-            score += 100;
+            score += event.value;
             break;
         case GameEventType::PLAYER_DIED:
             lives -= 1;
             break;
+        case GameEventType::POWERUP_COLLECTED:
+            score += event.value;
+            break;
         case GameEventType::LIFE_GAINED:
             lives += (event.value > 0 ? event.value : 1);
-            score += 1000;
+            score += event.scoreDelta;
             break;
         default:
             break;

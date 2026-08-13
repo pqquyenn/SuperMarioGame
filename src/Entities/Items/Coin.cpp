@@ -101,7 +101,7 @@ void Coin::onCollect() {
 bool Coin::tryCollect(Character& character) {
     if (!active || collected) return false;
     onCollect();
-    character.notify(GameEvent{GameEventType::COIN_COLLECTED, scoreValue});
+    character.notify(GameEvent::coinCollected(scoreValue));
     return true;
 }
 
@@ -120,4 +120,8 @@ bool Coin::isPopping() const {
 
 int Coin::getScoreValue() const {
     return scoreValue;
+}
+
+void Coin::setScoreValue(int score) {
+    scoreValue = score;
 }

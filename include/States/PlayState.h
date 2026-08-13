@@ -19,6 +19,7 @@ private:
     std::string initialMapPath;
     sf::Vector2f playerSpawnPoint{0.f, 0.f};
     HUD hud;
+    ObserverConnection hudObserverConnection;
     AdminDebugView adminDebugView;
     std::vector<std::unique_ptr<Fireball>> fireballs;
 

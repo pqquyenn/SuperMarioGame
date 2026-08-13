@@ -24,6 +24,10 @@ PlayState::PlayState(const std::string &mapPath) : initialMapPath(mapPath) {}
 void PlayState::onEnter() {
   std::cout << "[PlayState] onEnter - Bat dau map " << initialMapPath
             << std::endl;
+  // Disconnect before replacing the player so the old Subject never retains
+  // the HUD observer or an RAII connection to the old player.
+  hudObserverConnection.disconnect();
+
   if (!level.loadLevel(initialMapPath)) {
     std::cerr << "[PlayState] Failed to load level " << initialMapPath << "!"
               << std::endl;
@@ -49,7 +53,7 @@ void PlayState::onEnter() {
   refreshPlayerSpawnPoint();
   player->setPosition(playerSpawnPoint);
 
-  player->addObserver(&hud);
+  hudObserverConnection = player->addObserver(&hud);
 
   Camera &cam = level.getCamera();
   cam.setSize(400.f, 225.f);
@@ -85,6 +89,7 @@ void PlayState::onEnter() {
 }
 
 void PlayState::onExit() {
+  hudObserverConnection.disconnect();
   std::cout << "[PlayState] Leaving gameplay" << std::endl;
 }
 
@@ -298,7 +303,7 @@ void PlayState::update(float dt) {
         enemy->onFireball();
         fireball->explode();
         if (player) {
-          player->notify(GameEvent{GameEventType::ENEMY_DEFEATED, 100});
+          player->notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
         }
         break;
       }
