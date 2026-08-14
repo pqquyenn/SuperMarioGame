@@ -78,6 +78,58 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(solid11_tests
+    tests/observer_and_entity_tests.cpp
+    src/Observer/Subject.cpp
+    src/UI/HUD.cpp
+    src/Entities/Entity.cpp
+    src/Entities/Character.cpp
+    src/Entities/PlayerAnimation.cpp
+    src/Animation/SpriteAnimator.cpp
+    src/PlayerStates/PlayerState.cpp
+    src/PlayerStates/SmallState.cpp
+    src/PlayerStates/SuperState.cpp
+    src/PlayerStates/FireState.cpp
+    src/PlayerEffects/PlayerEffect.cpp
+    src/PlayerEffects/DamageInvincibilityEffect.cpp
+    src/PlayerEffects/StarEffect.cpp
+    src/PlayerEffects/ShieldEffect.cpp
+    src/Entities/Enemies/Enemy.cpp
+    src/Entities/Enemies/Goomba.cpp
+    src/Entities/Enemies/Koopa.cpp
+    src/Entities/Enemies/PiranhaPlant.cpp
+    src/Entities/Items/Item.cpp
+    src/Entities/Items/Coin.cpp
+    src/Entities/Items/Mushroom.cpp
+    src/Entities/Items/FireFlower.cpp
+    src/Entities/Items/StarItem.cpp
+    src/Entities/Items/OneUpMushroom.cpp
+    src/Core/AssetManager.cpp
+)
+
+target_include_directories(solid11_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::Graphics)
+    target_link_libraries(solid11_tests PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+elseif(TARGET sfml-graphics)
+    target_link_libraries(solid11_tests PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
+else()
+    target_link_libraries(solid11_tests PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
+endif()
+
+add_test(
+    NAME solid11_observer_and_entity_tests
+    COMMAND solid11_tests
+)
+set_tests_properties(
+    solid11_observer_and_entity_tests
+    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 # Copy assets to executable folder post-build
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
     add_custom_command(TARGET mario POST_BUILD
