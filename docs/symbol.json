@@ -2,6 +2,7 @@
   "description": "Mapping of ASCII characters/tokens to static tile blocks in TileMap.cpp",
   "symbols": {
     "@": "Player start marker (metadata only; not rendered or solid)",
+    "!": "Stage end marker (metadata only; not rendered or solid)",
     "X": "GroundBlock (Overworld)",
     "B": "HardBlock (Stairs, Pyramids, Flagpole base)",
     "S": "Brick (Destructible)",
@@ -40,7 +41,21 @@
     "8": "Green Cap (SpriteIsland 0,0)",
     "G": "Green Cap (SpriteIsland 16,0)",
     "9": "Green Cap (SpriteIsland 48,0)",
-    "O": "Orange Wood Platform (Moving Platform spawn point)"
+    "O": "Reserved legacy symbol; moving platforms are defined in the .level manifest"
+  },
+  "entity_symbols": {
+    "E1": "Goomba",
+    "E2": "UndergroundGoomba",
+    "E3": "Koopa",
+    "E4": "RedKoopa",
+    "E5": "GreenParatroopa",
+    "E6": "RedParatroopa",
+    "E7": "PiranhaPlant",
+    "I1": "Coin",
+    "I2": "Mushroom",
+    "I3": "1UpMushroom",
+    "I4": "FireFlower",
+    "I5": "StarItem"
   },
   "scenery_groups": {
     "bu1..bu4": "Bush1 (Single Bush, 2x2 grid)",

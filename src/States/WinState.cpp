@@ -7,8 +7,12 @@
 #include <algorithm>
 #include <cmath>
 
-WinState::WinState(PlayState* play, int id, const std::string& path)
-    : playState(play), levelId(id), mapPath(path) {
+WinState::WinState(
+    PlayState* play,
+    int id,
+    const std::string& path,
+    const std::string& next)
+    : playState(play), levelId(id), mapPath(path), nextStage(next) {
 }
 
 void WinState::onEnter() {
@@ -200,6 +204,7 @@ void WinState::updateScoreTally(float dt) {
                 stateManager->changeState(std::make_unique<LevelCompleteState>(
                     levelId,
                     mapPath,
+                    nextStage,
                     hud.getScore(),
                     hud.getCoins(),
                     totalTimeBonus
