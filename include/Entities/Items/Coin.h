@@ -38,6 +38,7 @@ public:
     // Bắt đầu animation pop (bắn ra từ gạch)
     void startPop();
     bool isPopping() const;
+    bool shouldSkipTileCollision() const override { return popping; }
 
     int getScoreValue() const;
     void setScoreValue(int score);

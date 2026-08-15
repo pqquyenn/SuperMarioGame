@@ -145,9 +145,14 @@ int StarItem::getMoveDirection() const {
     return moveDirection;
 }
 
+void StarItem::onLanded() {
+    notifyGrounded();
+}
+
 void StarItem::notifyGrounded() {
     if (!emerging) {
         velocity.y = bounceForce;
     }
 }
+
 

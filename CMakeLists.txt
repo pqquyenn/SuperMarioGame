@@ -98,6 +98,7 @@ add_executable(solid11_tests
     src/Entities/Enemies/Goomba.cpp
     src/Entities/Enemies/Koopa.cpp
     src/Entities/Enemies/PiranhaPlant.cpp
+    src/Entities/Enemies/GreenParatroopa.cpp
     src/Entities/Items/Item.cpp
     src/Entities/Items/Coin.cpp
     src/Entities/Items/Mushroom.cpp

@@ -43,8 +43,13 @@ void GreenParatroopa::onStomped() {
     }
 }
 
+void GreenParatroopa::onLanded() {
+    notifyLanded();
+}
+
 void GreenParatroopa::notifyLanded() {
     if (hasWings) {
         onGround = true;
     }
 }
+

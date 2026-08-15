@@ -34,4 +34,5 @@ public:
 
     void startEmerge();
     bool isEmerging() const;
+    bool shouldSkipTileCollision() const override { return emerging; }
 };

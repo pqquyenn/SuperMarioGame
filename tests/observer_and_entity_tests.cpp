@@ -6,6 +6,7 @@
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Enemies/Goomba.h"
 #include "Entities/Enemies/Koopa.h"
+#include "Entities/Enemies/GreenParatroopa.h"
 #include "Entities/Enemies/PiranhaPlant.h"
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Coin.h"
@@ -503,6 +504,174 @@ void testOneUpMushroomCollect(TestRunner& runner) {
     }
 }
 
+// ============================================================
+// Suite 5: OCP Polymorphism Tests (Lương Nhật Minh)
+// ============================================================
+void testItemShouldSkipTileCollision(TestRunner& runner) {
+    // 1. Mushroom
+    {
+        Mushroom m;
+        runner.expect(!m.shouldSkipTileCollision(), "MushroomTileCollision", "Initial mushroom does not skip tile collision");
+        m.startEmerge();
+        runner.expect(m.shouldSkipTileCollision(), "MushroomTileCollision", "Emerging mushroom skips tile collision");
+        m.update(0.5f); // 40px/s * 0.5s = 20px >= 16px (emergeTarget)
+        runner.expect(!m.shouldSkipTileCollision(), "MushroomTileCollision", "Finished emerge mushroom does not skip tile collision");
+    }
+
+    // 2. FireFlower
+    {
+        FireFlower f;
+        runner.expect(!f.shouldSkipTileCollision(), "FireFlowerTileCollision", "Initial fire flower does not skip tile collision");
+        f.startEmerge();
+        runner.expect(f.shouldSkipTileCollision(), "FireFlowerTileCollision", "Emerging fire flower skips tile collision");
+    }
+
+    // 3. StarItem
+    {
+        StarItem s;
+        runner.expect(!s.shouldSkipTileCollision(), "StarItemTileCollision", "Initial star does not skip tile collision");
+        s.startEmerge();
+        runner.expect(s.shouldSkipTileCollision(), "StarItemTileCollision", "Emerging star skips tile collision");
+    }
+
+    // 4. Coin
+    {
+        Coin c;
+        runner.expect(!c.shouldSkipTileCollision(), "CoinTileCollision", "Initial coin does not skip tile collision");
+        c.startPop();
+        runner.expect(c.shouldSkipTileCollision(), "CoinTileCollision", "Popping coin skips tile collision");
+    }
+
+    // 5. OneUpMushroom (Inheritance)
+    {
+        OneUpMushroom oneUp;
+        runner.expect(!oneUp.shouldSkipTileCollision(), "OneUpTileCollision", "Initial 1UP does not skip tile collision");
+        oneUp.startEmerge();
+        runner.expect(oneUp.shouldSkipTileCollision(), "OneUpTileCollision", "Emerging 1UP skips tile collision");
+    }
+}
+
+void testEnemyCanBeStomped(TestRunner& runner) {
+    Goomba g;
+    runner.expect(g.canBeStomped(), "EnemyCanBeStomped", "Goomba can be stomped");
+
+    Koopa k;
+    runner.expect(k.canBeStomped(), "EnemyCanBeStomped", "Koopa can be stomped");
+
+    PiranhaPlant p;
+    runner.expect(!p.canBeStomped(), "EnemyCanBeStomped", "PiranhaPlant cannot be stomped");
+
+    GreenParatroopa gp;
+    runner.expect(gp.canBeStomped(), "EnemyCanBeStomped", "GreenParatroopa can be stomped");
+}
+
+void testEntityOnLanded(TestRunner& runner) {
+    // StarItem
+    {
+        StarItem s;
+        s.onLanded();
+        runner.expect(std::abs(s.getVelocity().y - (-220.f)) < 0.01f,
+                      "StarItemOnLanded", "StarItem bounces on landing when not emerging");
+
+        StarItem s2;
+        s2.startEmerge();
+        s2.onLanded();
+        runner.expect(std::abs(s2.getVelocity().y - 0.f) < 0.01f,
+                      "StarItemOnLanded", "StarItem does not bounce on landing when emerging");
+    }
+
+    // Goomba safe no-op
+    {
+        Goomba g;
+        g.onLanded();
+        runner.expect(std::abs(g.getVelocity().y - 0.f) < 0.01f,
+                      "GoombaOnLanded", "Goomba landing hook is safe no-op");
+    }
+
+    // GreenParatroopa
+    {
+        GreenParatroopa gp;
+        gp.onLanded();
+        runner.expect(std::abs(gp.getVelocity().y - 0.f) < 0.01f,
+                      "ParatroopaOnLanded", "Paratroopa does not hop immediately before update");
+
+        gp.update(0.016f);
+        runner.expect(gp.getVelocity().y < 0.f,
+                      "ParatroopaOnLanded", "Paratroopa hops upward on next update after landing");
+        const float expectedVel = -220.f + 980.f * 0.016f;
+        runner.expect(std::abs(gp.getVelocity().y - expectedVel) < 1.0f,
+                      "ParatroopaOnLanded", "Paratroopa hop velocity matches physics formula");
+
+        // Lost wings
+        GreenParatroopa gp2;
+        gp2.onStomped();
+        gp2.onLanded();
+        gp2.update(0.016f);
+        runner.expect(gp2.getVelocity().y >= 0.f,
+                      "ParatroopaOnLanded", "Wingless Paratroopa does not hop on landing");
+    }
+}
+
+void testItemReverseDirectionPolymorphism(TestRunner& runner) {
+    // Mushroom via Item*
+    {
+        Mushroom m;
+        Item* itemM = &m;
+        const int initialDir = m.getMoveDirection();
+        itemM->reverseDirection();
+        runner.expect(m.getMoveDirection() == -initialDir,
+                      "ItemReverseDirection", "Mushroom reverses direction via Item*");
+    }
+
+    // StarItem via Item*
+    {
+        StarItem s;
+        Item* itemS = &s;
+        const int initialDir = s.getMoveDirection();
+        itemS->reverseDirection();
+        runner.expect(s.getMoveDirection() == -initialDir,
+                      "ItemReverseDirection", "StarItem reverses direction via Item*");
+    }
+
+    // Safe no-op on static items
+    {
+        Coin c;
+        Item* itemC = &c;
+        itemC->reverseDirection();
+        runner.expect(true, "ItemReverseDirection", "Coin reverseDirection is safe no-op");
+
+        FireFlower f;
+        Item* itemF = &f;
+        itemF->reverseDirection();
+        runner.expect(true, "ItemReverseDirection", "FireFlower reverseDirection is safe no-op");
+    }
+}
+
+void testPiranhaPlantStompContract(TestRunner& runner) {
+    // PiranhaPlant contract vs Goomba
+    {
+        PiranhaPlant p;
+        runner.expect(!p.canBeStomped(),
+                      "PiranhaStompContract", "PiranhaPlant declares canBeStomped false");
+        p.onStomped();
+        runner.expect(p.isEnemyAlive(),
+                      "PiranhaStompContract", "PiranhaPlant is still alive after onStomped");
+        runner.expect(!p.isSquished(),
+                      "PiranhaStompContract", "PiranhaPlant is not squished after onStomped");
+    }
+
+    {
+        Goomba g;
+        runner.expect(g.canBeStomped(),
+                      "PiranhaStompContract", "Goomba declares canBeStomped true");
+        g.onStomped();
+        runner.expect(g.isSquished(),
+                      "PiranhaStompContract", "Goomba is squished after onStomped");
+        runner.expect(g.getSpeed() == 0.f,
+                      "PiranhaStompContract", "Goomba speed becomes 0 on stomp");
+    }
+}
+
 } // namespace
 
 // ============================================================
@@ -548,6 +717,14 @@ int main() {
     testOneUpMushroomCollect(runner);
     runner.report("Suite 4: Item Collection & States");
 
+    // Suite 5: OCP Polymorphism (Lương Nhật Minh)
+    testItemShouldSkipTileCollision(runner);
+    testEnemyCanBeStomped(runner);
+    testEntityOnLanded(runner);
+    testItemReverseDirectionPolymorphism(runner);
+    testPiranhaPlantStompContract(runner);
+    runner.report("Suite 5: OCP Polymorphism");
+
     std::cout << "\n====================================================\n";
     if (runner.exitCode() == 0) {
         std::cout << " ALL SOLID-11 TESTS PASSED SUCCESSFULLY! (" << runner.passed << "/" << runner.total << " assertions)\n";
@@ -558,3 +735,4 @@ int main() {
 
     return runner.exitCode();
 }
+
