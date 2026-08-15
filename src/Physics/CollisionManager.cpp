@@ -1,14 +1,10 @@
 #include "Physics/CollisionManager.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
-#include "Entities/Enemies/GreenParatroopa.h"
-#include "Entities/Enemies/PiranhaPlant.h"
 #include "Entities/Entity.h"
 #include "Entities/Fireball.h"
 #include "Entities/Items/Coin.h"
-#include "Entities/Items/FireFlower.h"
-#include "Entities/Items/Mushroom.h"
-#include "Entities/Items/StarItem.h"
+#include "Entities/Items/Item.h"
 #include "Entities/MovingPlatform.h"
 #include "Level/Level.h"
 #include "Level/Tile.h"
@@ -119,8 +115,8 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
       return;
     }
 
-    // PiranhaPlant is immune to stomping: touching it without Star invincibility damages Mario
-    if (dynamic_cast<PiranhaPlant *>(enemy)) {
+    // Stomp immunity / damage handling via polymorphic contract
+    if (!enemy->canBeStomped()) {
       character->takeDamage();
       return;
     }
@@ -158,20 +154,8 @@ void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
 
 void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
                                              Level *level) {
-  if (Coin *coin = dynamic_cast<Coin *>(&entity)) {
-    if (coin->isPopping())
-      return;
-  }
-  if (Mushroom *shroom = dynamic_cast<Mushroom *>(&entity)) {
-    if (shroom->isEmerging())
-      return;
-  }
-  if (FireFlower *flower = dynamic_cast<FireFlower *>(&entity)) {
-    if (flower->isEmerging())
-      return;
-  }
-  if (StarItem *star = dynamic_cast<StarItem *>(&entity)) {
-    if (star->isEmerging())
+  if (Item *item = dynamic_cast<Item *>(&entity)) {
+    if (item->shouldSkipTileCollision())
       return;
   }
 
@@ -224,10 +208,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
           if (character) {
             character->setGrounded(true);
-          } else if (auto *star = dynamic_cast<StarItem *>(&entity)) {
-            star->notifyGrounded();
-          } else if (auto *gp = dynamic_cast<GreenParatroopa *>(&entity)) {
-            gp->notifyLanded();
+          } else {
+            entity.onLanded();
           }
 
         } else {
@@ -298,10 +280,8 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
 
         if (enemy) {
           enemy->reverseDirection();
-        } else if (Mushroom *shroom = dynamic_cast<Mushroom *>(&entity)) {
-          shroom->reverseDirection();
-        } else if (StarItem *star = dynamic_cast<StarItem *>(&entity)) {
-          star->reverseDirection();
+        } else if (Item *item = dynamic_cast<Item *>(&entity)) {
+          item->reverseDirection();
         } else if (fireball) {
           // Fireball chạm tường thì nổ / biến mất
           fireball->explode();

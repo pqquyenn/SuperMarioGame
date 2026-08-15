@@ -40,10 +40,12 @@ public:
 
     void startEmerge();
     bool isEmerging() const;
+    bool shouldSkipTileCollision() const override { return emerging; }
 
-    void reverseDirection();
+    void reverseDirection() override;
     int getMoveDirection() const;
 
+    void onLanded() override;
     void notifyGrounded();
 };
 
