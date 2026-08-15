@@ -10,17 +10,21 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 find_package(SFML 2.5 COMPONENTS graphics audio window system QUIET)
 
 if(NOT SFML_FOUND)
-    include(FetchContent)
-    FetchContent_Declare(
-        SFML
-        GIT_REPOSITORY https://github.com/SFML/SFML.git
-        GIT_TAG 2.6.1
-    )
     set(SFML_BUILD_AUDIO ON CACHE BOOL "" FORCE)
     set(SFML_BUILD_GRAPHICS ON CACHE BOOL "" FORCE)
     set(SFML_BUILD_WINDOW ON CACHE BOOL "" FORCE)
     set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(SFML)
+    if(EXISTS "${CMAKE_BINARY_DIR}/_deps/sfml-src/CMakeLists.txt")
+        add_subdirectory("${CMAKE_BINARY_DIR}/_deps/sfml-src" "${CMAKE_BINARY_DIR}/_deps/sfml-build")
+    else()
+        include(FetchContent)
+        FetchContent_Declare(
+            SFML
+            GIT_REPOSITORY https://github.com/SFML/SFML.git
+            GIT_TAG 2.6.1
+        )
+        FetchContent_MakeAvailable(SFML)
+    endif()
 endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS 
@@ -128,7 +132,9 @@ add_test(
 )
 set_tests_properties(
     solid11_observer_and_entity_tests
-    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        ENVIRONMENT "PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY};$ENV{PATH}"
 )
 
 # Copy assets to executable folder post-build
@@ -154,8 +160,13 @@ if(WIN32 AND TARGET sfml-graphics)
     )
 
     # Copy OpenAL DLL (required by sfml-audio) - without this the game crashes silently on startup
-    set(OPENAL_DLL "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
-    if(EXISTS "${OPENAL_DLL}")
+    if(EXISTS "${CMAKE_BINARY_DIR}/_deps/sfml-src/extlibs/bin/x64/openal32.dll")
+        set(OPENAL_DLL "${CMAKE_BINARY_DIR}/_deps/sfml-src/extlibs/bin/x64/openal32.dll")
+    elseif(EXISTS "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
+        set(OPENAL_DLL "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
+    endif()
+
+    if(DEFINED OPENAL_DLL AND EXISTS "${OPENAL_DLL}")
         add_custom_command(TARGET mario POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${OPENAL_DLL}"
