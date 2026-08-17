@@ -2,6 +2,7 @@
 
 #include "Core/GameSettings.h"
 #include "Core/SoundManager.h"
+#include "Core/AssetManager.h"
 #include "States/GameStateManager.h"
 #include "States/PlayState.h"
 #include <algorithm>
@@ -13,15 +14,17 @@
 namespace {
 constexpr float UiWidth = 800.f;
 constexpr float UiHeight = 600.f;
-constexpr float EntryStartY = 270.f;
-constexpr float EntrySpacing = 46.f;
-const sf::Color Accent{228, 166, 61};
-const sf::Color Disabled{125, 125, 125};
+constexpr float EntryStartY = 255.f;
+constexpr float EntrySpacing = 42.f;
+
+const sf::Color AccentGold{255, 225, 60};
+const sf::Color TextWhite{255, 255, 255};
+const sf::Color TextDisabled{140, 140, 140};
 
 void centerText(sf::Text& text, float x, float y) {
     const sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin(bounds.left + bounds.width / 2.f,
-                   bounds.top + bounds.height / 2.f);
+    text.setOrigin(std::round(bounds.left + bounds.width / 2.f),
+                   std::round(bounds.top + bounds.height / 2.f));
     text.setPosition(x, y);
 }
 
@@ -31,77 +34,152 @@ const char* characterName(CharacterChoice choice) {
 }
 
 void MenuState::onEnter() {
-    std::cout << "[MenuState] Entered main menu" << std::endl;
+    std::cout << "[MenuState] Entered main menu (NSMBU Deluxe Style)" << std::endl;
 
-    const std::string fontPaths[] = {
-        "assets/fonts/press-start-2p.ttf",
-        "../assets/fonts/press-start-2p.ttf",
-        "../../assets/fonts/press-start-2p.ttf",
-        "../../../assets/fonts/press-start-2p.ttf"
-    };
+    loadFonts();
+    loadTextures();
+    initClouds();
 
-    for (const auto& path : fontPaths) {
-        if (std::filesystem::exists(path) && font.loadFromFile(path)) {
-            fontLoaded = true;
-            break;
-        }
-    }
+    const sf::Font& retroFont = fontRetroLoaded ? fontRetro : fontClean;
+    const sf::Font& cleanFont = fontCleanLoaded ? fontClean : retroFont;
 
-    if (!fontLoaded) {
-        std::cerr << "[MenuState] Could not load menu font" << std::endl;
-    }
+    // 1. "Press ENTER to start" prompt
+    promptText.setFont(retroFont);
+    promptText.setString("Press ENTER to start");
+    promptText.setCharacterSize(15);
+    promptText.setFillColor(AccentGold);
+    promptText.setOutlineColor(sf::Color(30, 20, 10));
+    promptText.setOutlineThickness(2.5f);
+    centerText(promptText, UiWidth / 2.f, 345.f);
 
-    titleText.setFont(font);
-    titleText.setString("SUPER MARIO BROS");
-    titleText.setCharacterSize(28);
-    titleText.setFillColor(Accent);
-    titleText.setOutlineColor(sf::Color::Black);
-    titleText.setOutlineThickness(2.f);
-    centerText(titleText, UiWidth / 2.f, 105.f);
+    // 2. Copyright and Version
+    copyrightText.setFont(cleanFont);
+    copyrightText.setString(L"\u00A9 2012-2018 Nintendo.");
+    copyrightText.setCharacterSize(14);
+    copyrightText.setFillColor(sf::Color(240, 240, 240, 230));
+    copyrightText.setOutlineColor(sf::Color(10, 10, 10, 180));
+    copyrightText.setOutlineThickness(1.5f);
+    centerText(copyrightText, UiWidth / 2.f, 578.f);
 
-    pageTitleText.setFont(font);
-    pageTitleText.setCharacterSize(14);
-    pageTitleText.setFillColor(sf::Color::White);
+    versionText.setFont(cleanFont);
+    versionText.setString("Ver.1.0.2");
+    versionText.setCharacterSize(14);
+    versionText.setFillColor(sf::Color(240, 240, 240, 230));
+    versionText.setOutlineColor(sf::Color(10, 10, 10, 180));
+    versionText.setOutlineThickness(1.5f);
+    centerText(versionText, 735.f, 578.f);
 
-    statusText.setFont(font);
-    statusText.setCharacterSize(9);
-    statusText.setFillColor(Accent);
+    // 3. Menu UI Elements
+    pageTitleText.setFont(cleanFont);
+    pageTitleText.setCharacterSize(16);
+    pageTitleText.setFillColor(sf::Color(40, 25, 5));
+    pageTitleText.setStyle(sf::Text::Bold);
 
-    footerText.setFont(font);
+    statusText.setFont(retroFont);
+    statusText.setCharacterSize(10);
+    statusText.setFillColor(AccentGold);
+    statusText.setOutlineColor(sf::Color::Black);
+    statusText.setOutlineThickness(1.5f);
+
+    footerText.setFont(retroFont);
     footerText.setCharacterSize(8);
-    footerText.setFillColor(sf::Color(205, 205, 205));
+    footerText.setFillColor(sf::Color(220, 220, 220));
+    footerText.setOutlineColor(sf::Color(10, 10, 10, 200));
+    footerText.setOutlineThickness(1.5f);
     footerText.setString("ARROWS / WASD: MOVE     ENTER: SELECT     ESC: BACK");
-    centerText(footerText, UiWidth / 2.f, 565.f);
+    centerText(footerText, UiWidth / 2.f, 578.f);
 
-    selectorText.setFont(font);
+    selectorText.setFont(retroFont);
     selectorText.setString(">");
     selectorText.setCharacterSize(16);
-    selectorText.setFillColor(Accent);
+    selectorText.setFillColor(AccentGold);
+    selectorText.setOutlineColor(sf::Color::Black);
+    selectorText.setOutlineThickness(2.f);
 
-    keyBindingsText.setFont(font);
-    keyBindingsText.setCharacterSize(10);
+    keyBindingsText.setFont(cleanFont);
+    keyBindingsText.setCharacterSize(15);
     keyBindingsText.setFillColor(sf::Color::White);
-    keyBindingsText.setLineSpacing(1.6f);
+    keyBindingsText.setLineSpacing(1.4f);
     keyBindingsText.setString(
-        "MOVE LEFT     A / LEFT\n"
-        "MOVE RIGHT    D / RIGHT\n"
-        "JUMP          SPACE / W / UP\n"
-        "ACTION / RUN  Z / J / Q\n"
-        "RUN           LEFT SHIFT / RIGHT SHIFT\n\n"
-        "KEY REMAPPING IS COMING SOON");
-    keyBindingsText.setPosition(175.f, 245.f);
+        "MOVE LEFT     : A / LEFT ARROW\n"
+        "MOVE RIGHT    : D / RIGHT ARROW\n"
+        "JUMP          : SPACE / W / UP ARROW\n"
+        "ACTION / RUN  : Z / J / Q\n"
+        "RUN (SPRINT)  : LEFT SHIFT / RIGHT SHIFT\n\n"
+        "[KEY REMAPPING COMING SOON]");
+    keyBindingsText.setPosition(180.f, 250.f);
 
-    groundBlock.setSize({UiWidth, 64.f});
-    groundBlock.setPosition(0.f, UiHeight - 64.f);
-    groundBlock.setFillColor(sf::Color(192, 96, 0));
+    // 4. Menu Card Container
+    menuCard.setSize({520.f, 320.f});
+    menuCard.setPosition(140.f, 185.f);
+    menuCard.setFillColor(sf::Color(15, 20, 35, 220));
+    menuCard.setOutlineColor(sf::Color(255, 215, 60, 200));
+    menuCard.setOutlineThickness(2.5f);
 
-    panel.setSize({540.f, 350.f});
-    panel.setPosition(130.f, 175.f);
-    panel.setFillColor(sf::Color(0, 0, 0, 145));
-    panel.setOutlineColor(sf::Color(255, 255, 255, 70));
-    panel.setOutlineThickness(2.f);
+    menuCardHeader.setSize({520.f, 36.f});
+    menuCardHeader.setPosition(140.f, 185.f);
+    menuCardHeader.setFillColor(sf::Color(255, 200, 40, 240));
 
-    loadBackground();
+    selectionGlow.setSize({460.f, 34.f});
+    selectionGlow.setFillColor(sf::Color(255, 215, 60, 50));
+    selectionGlow.setOutlineColor(sf::Color(255, 230, 80, 200));
+    selectionGlow.setOutlineThickness(1.5f);
+
+    // 5. Character Select Specific UI
+    charChooseTitle.setFont(cleanFont);
+    charChooseTitle.setString("Choose a character!");
+    charChooseTitle.setCharacterSize(26);
+    charChooseTitle.setFillColor(sf::Color::White);
+    charChooseTitle.setStyle(sf::Text::Bold);
+    charChooseTitle.setOutlineColor(sf::Color(20, 20, 20, 220));
+    charChooseTitle.setOutlineThickness(3.f);
+    centerText(charChooseTitle, UiWidth / 2.f, 85.f);
+
+    charChoosePrompt.setFont(retroFont);
+    charChoosePrompt.setCharacterSize(9);
+    charChoosePrompt.setFillColor(AccentGold);
+    charChoosePrompt.setOutlineColor(sf::Color::Black);
+    charChoosePrompt.setOutlineThickness(1.5f);
+
+    marioCardBadge.setFont(retroFont);
+    marioCardBadge.setCharacterSize(10);
+    marioCardBadge.setOutlineThickness(1.5f);
+
+    luigiCardBadge.setFont(retroFont);
+    luigiCardBadge.setCharacterSize(10);
+    luigiCardBadge.setOutlineThickness(1.5f);
+
+    marioCardGlow.setSize({230.f, 305.f});
+    marioCardGlow.setOrigin(115.f, 152.5f);
+    marioCardGlow.setFillColor(sf::Color(255, 50, 50, 45));
+    marioCardGlow.setOutlineColor(sf::Color(255, 220, 60, 230));
+    marioCardGlow.setOutlineThickness(3.5f);
+
+    luigiCardGlow.setSize({230.f, 305.f});
+    luigiCardGlow.setOrigin(115.f, 152.5f);
+    luigiCardGlow.setFillColor(sf::Color(50, 220, 80, 45));
+    luigiCardGlow.setOutlineColor(sf::Color(255, 220, 60, 230));
+    luigiCardGlow.setOutlineThickness(3.5f);
+
+    arrowLeft.setPointCount(3);
+    arrowLeft.setPoint(0, sf::Vector2f(0.f, 15.f));
+    arrowLeft.setPoint(1, sf::Vector2f(22.f, 0.f));
+    arrowLeft.setPoint(2, sf::Vector2f(22.f, 30.f));
+    arrowLeft.setOrigin(11.f, 15.f);
+    arrowLeft.setFillColor(sf::Color(255, 215, 30));
+    arrowLeft.setOutlineColor(sf::Color(20, 20, 20));
+    arrowLeft.setOutlineThickness(2.f);
+
+    arrowRight.setPointCount(3);
+    arrowRight.setPoint(0, sf::Vector2f(22.f, 15.f));
+    arrowRight.setPoint(1, sf::Vector2f(0.f, 0.f));
+    arrowRight.setPoint(2, sf::Vector2f(0.f, 30.f));
+    arrowRight.setOrigin(11.f, 15.f);
+    arrowRight.setFillColor(sf::Color(255, 215, 30));
+    arrowRight.setOutlineColor(sf::Color(20, 20, 20));
+    arrowRight.setOutlineThickness(2.f);
+
+    setDisplayMode(DisplayMode::TitleScreen);
     setPage(Page::GameMode);
 }
 
@@ -109,29 +187,148 @@ void MenuState::onExit() {
     std::cout << "[MenuState] Leaving main menu" << std::endl;
 }
 
-bool MenuState::loadBackground() {
-    const std::string paths[] = {
-        "assets/state/MenuGameBackGround.jpg",
-        "assets/state/MenuGameBackGround.png",
-        "../assets/state/MenuGameBackGround.jpg",
-        "../assets/state/MenuGameBackGround.png",
-        "../../assets/state/MenuGameBackGround.jpg",
-        "../../assets/state/MenuGameBackGround.png"
+void MenuState::loadFonts() {
+    const std::string retroPaths[] = {
+        "assets/fonts/press-start-2p.ttf",
+        "../assets/fonts/press-start-2p.ttf",
+        "../../assets/fonts/press-start-2p.ttf"
     };
-
-    for (const auto& path : paths) {
-        if (std::filesystem::exists(path) && bgTexture.loadFromFile(path)) {
-            bgLoaded = true;
-            bgSprite.setTexture(bgTexture);
-            const sf::Vector2u size = bgTexture.getSize();
-            if (size.x > 0 && size.y > 0) {
-                bgSprite.setScale(UiWidth / static_cast<float>(size.x),
-                                  UiHeight / static_cast<float>(size.y));
-            }
-            return true;
+    for (const auto& path : retroPaths) {
+        if (std::filesystem::exists(path) && fontRetro.loadFromFile(path)) {
+            fontRetroLoaded = true;
+            break;
         }
     }
-    return false;
+
+    const std::string cleanPaths[] = {
+        "assets/fonts/RobotoFont.ttf",
+        "../assets/fonts/RobotoFont.ttf",
+        "../../assets/fonts/RobotoFont.ttf"
+    };
+    for (const auto& path : cleanPaths) {
+        if (std::filesystem::exists(path) && fontClean.loadFromFile(path)) {
+            fontCleanLoaded = true;
+            break;
+        }
+    }
+}
+
+bool MenuState::loadTextures() {
+    const std::string basePrefixes[] = {"", "../", "../../"};
+
+    for (const auto& p : basePrefixes) {
+        std::string path = p + "assets/state/MenuGameBackGround.jpg";
+        if (std::filesystem::exists(path) && bgTexture.loadFromFile(path)) {
+            bgLoaded = true;
+            bgTexture.setSmooth(true);
+            bgSprite.setTexture(bgTexture);
+            const sf::Vector2u sz = bgTexture.getSize();
+            if (sz.x > 0 && sz.y > 0) {
+                bgSprite.setScale(UiWidth / static_cast<float>(sz.x),
+                                  UiHeight / static_cast<float>(sz.y));
+            }
+            break;
+        }
+    }
+
+    auto loadKeyedTexture = [](const std::string& path, sf::Texture& tex, sf::Sprite& spr, float& baseScale, float targetW) -> bool {
+        sf::Image img;
+        if (!std::filesystem::exists(path) || !img.loadFromFile(path)) return false;
+        const unsigned int w = img.getSize().x;
+        const unsigned int h = img.getSize().y;
+        for (unsigned int y = 0; y < h; ++y) {
+            for (unsigned int x = 0; x < w; ++x) {
+                sf::Color c = img.getPixel(x, y);
+                int brightness = c.r + c.g + c.b;
+                if (brightness < 30) {
+                    img.setPixel(x, y, sf::Color(0, 0, 0, 0));
+                } else if (brightness < 90) {
+                    sf::Uint8 alpha = static_cast<sf::Uint8>((brightness - 30) * 255 / 60);
+                    img.setPixel(x, y, sf::Color(c.r, c.g, c.b, alpha));
+                }
+            }
+        }
+        tex.loadFromImage(img);
+        tex.setSmooth(true);
+        spr.setTexture(tex);
+        spr.setOrigin(w * 0.5f, h * 0.5f);
+        baseScale = targetW / static_cast<float>(w);
+        spr.setScale(baseScale, baseScale);
+        return true;
+    };
+
+    for (const auto& p : basePrefixes) {
+        std::string path = p + "assets/state/MenuLogo.jpg";
+        if (loadKeyedTexture(path, logoTexture, logoSprite, baseLogoScale, 460.f)) {
+            logoLoaded = true;
+            break;
+        }
+    }
+
+    for (const auto& p : basePrefixes) {
+        std::string path = p + "assets/state/MenuCharacters.jpg";
+        if (loadKeyedTexture(path, charTexture, charSprite, baseCharScale, 540.f)) {
+            charLoaded = true;
+            break;
+        }
+    }
+
+    for (const auto& p : basePrefixes) {
+        std::string path = p + "assets/state/MarioCard.jpg";
+        if (std::filesystem::exists(path) && marioCardTexture.loadFromFile(path)) {
+            marioCardTexture.setSmooth(true);
+            marioCardLoaded = true;
+            marioCardSprite.setTexture(marioCardTexture);
+            const sf::Vector2u sz = marioCardTexture.getSize();
+            marioCardSprite.setOrigin(sz.x * 0.5f, sz.y * 0.5f);
+            baseMarioCardScale = 210.f / static_cast<float>(sz.x);
+            marioCardSprite.setScale(baseMarioCardScale, baseMarioCardScale);
+            break;
+        }
+    }
+
+    for (const auto& p : basePrefixes) {
+        std::string path = p + "assets/state/LuigiCard.jpg";
+        if (std::filesystem::exists(path) && luigiCardTexture.loadFromFile(path)) {
+            luigiCardTexture.setSmooth(true);
+            luigiCardLoaded = true;
+            luigiCardSprite.setTexture(luigiCardTexture);
+            const sf::Vector2u sz = luigiCardTexture.getSize();
+            luigiCardSprite.setOrigin(sz.x * 0.5f, sz.y * 0.5f);
+            baseLuigiCardScale = 210.f / static_cast<float>(sz.x);
+            luigiCardSprite.setScale(baseLuigiCardScale, baseLuigiCardScale);
+            break;
+        }
+    }
+
+    AssetManager& assets = AssetManager::getInstance();
+    assets.loadLevelAssets();
+    const sf::Texture& c1 = assets.getTexture("Cloud1");
+    const sf::Texture& c2 = assets.getTexture("Cloud2");
+    const sf::Texture& c3 = assets.getTexture("Cloud3");
+    if (c1.getSize().x > 0) {
+        cloudSprite1.setTexture(c1);
+        cloudSprite2.setTexture(c2);
+        cloudSprite3.setTexture(c3);
+        cloudsLoaded = true;
+    }
+
+    return bgLoaded;
+}
+
+void MenuState::initClouds() {
+    clouds.clear();
+    clouds.push_back({{80.f, 40.f}, 12.f, 1.3f, 1});
+    clouds.push_back({{380.f, 65.f}, 8.f, 1.1f, 2});
+    clouds.push_back({{650.f, 35.f}, 15.f, 1.4f, 3});
+    clouds.push_back({{-120.f, 80.f}, 10.f, 1.2f, 1});
+}
+
+void MenuState::setDisplayMode(DisplayMode newMode) {
+    displayMode = newMode;
+    blinkTimer = 0.f;
+    showSelector = true;
+    updateVisuals();
 }
 
 void MenuState::setPage(Page newPage) {
@@ -139,8 +336,17 @@ void MenuState::setPage(Page newPage) {
     selectedIndex = 0;
     showSelector = true;
     blinkTimer = 0.f;
-    rebuildEntries();
+    isCharacterConfirming = false;
+    characterConfirmTimer = 0.f;
+    characterFlashTimer = 0.f;
 
+    if (page == Page::Character) {
+        characterCardSelection = (GameSettings::getInstance().getCharacterChoice() == CharacterChoice::Luigi) ? 1 : 0;
+        marioCurrentScale = (characterCardSelection == 0) ? (baseMarioCardScale * 1.14f) : (baseMarioCardScale * 0.88f);
+        luigiCurrentScale = (characterCardSelection == 1) ? (baseLuigiCardScale * 1.14f) : (baseLuigiCardScale * 0.88f);
+    }
+
+    rebuildEntries();
     if (!entries.empty() && !entries[selectedIndex].enabled) {
         moveSelection(1);
     }
@@ -149,86 +355,54 @@ void MenuState::setPage(Page newPage) {
 
 void MenuState::rebuildEntries() {
     entries.clear();
-
     switch (page) {
         case Page::GameMode:
             pageTitleText.setString("GAME MODE");
-            entries = {
-                {"SOLO"},
-                {"DUO  [COMING SOON]", false},
-                {"PVP  [COMING SOON]", false},
-                {"SETTINGS"},
-                {"EXIT"}
-            };
+            entries = {{"SOLO"}, {"DUO  [COMING SOON]", false}, {"PVP  [COMING SOON]", false}, {"SETTINGS"}, {"BACK TO TITLE"}};
             break;
-
         case Page::Solo:
             pageTitleText.setString("SOLO");
-            entries = {
-                {"PLAY"},
-                {"CHARACTER"},
-                {"ACHIEVEMENTS  [COMING SOON]", false},
-                {"BACK"}
-            };
+            entries = {{"PLAY"}, {"CHARACTER"}, {"ACHIEVEMENTS  [COMING SOON]", false}, {"BACK"}};
             break;
-
         case Page::Play:
             pageTitleText.setString("SELECT WORLD");
-            entries = {
-                {"WORLD 1-1"},
-                {"WORLD 1-2"},
-                {"WORLD 1-3"},
-                {"BACK"}
-            };
+            entries = {{"WORLD 1-1"}, {"WORLD 1-2"}, {"WORLD 1-3"}, {"BACK"}};
             break;
-
-        case Page::Character: {
-            pageTitleText.setString("SELECT CHARACTER");
-            const CharacterChoice selected =
-                GameSettings::getInstance().getCharacterChoice();
-            entries = {
-                {std::string("MARIO") +
-                 (selected == CharacterChoice::Mario ? "  [SELECTED]" : "")},
-                {std::string("LUIGI") +
-                 (selected == CharacterChoice::Luigi ? "  [SELECTED]" : "")},
-                {"BACK"}
-            };
+        case Page::Character:
             break;
-        }
-
         case Page::Settings: {
             pageTitleText.setString("SETTINGS");
-            const int volume = static_cast<int>(std::round(
-                SoundManager::getInstance().getMasterVolume()));
-            entries = {
-                {"KEY BINDINGS"},
-                {"MASTER VOLUME  < " + std::to_string(volume) + "% >"},
-                {"BACK"}
-            };
+            const int volume = static_cast<int>(std::round(SoundManager::getInstance().getMasterVolume()));
+            entries = {{"KEY BINDINGS"}, {"MASTER VOLUME  < " + std::to_string(volume) + "% >"}, {"BACK"}};
             break;
         }
-
         case Page::KeyBindings:
             pageTitleText.setString("KEY BINDINGS");
             entries = {{"BACK"}};
             break;
     }
 
+    const sf::Font& retroFont = fontRetroLoaded ? fontRetro : fontClean;
     entryTexts.clear();
     entryTexts.reserve(entries.size());
     for (const auto& entry : entries) {
         sf::Text text;
-        text.setFont(font);
+        text.setFont(retroFont);
         text.setString(entry.label);
-        text.setCharacterSize(entry.label.size() > 24 ? 11 : 15);
-        text.setFillColor(entry.enabled ? sf::Color::White : Disabled);
+        text.setCharacterSize(entry.label.size() > 24 ? 10 : 13);
+        text.setFillColor(entry.enabled ? TextWhite : TextDisabled);
+        text.setOutlineColor(sf::Color(10, 10, 10, 200));
+        text.setOutlineThickness(1.5f);
         entryTexts.push_back(text);
     }
 }
 
 void MenuState::moveSelection(int direction) {
+    if (page == Page::Character) {
+        characterCardSelection = (characterCardSelection == 0) ? 1 : 0;
+        return;
+    }
     if (entries.empty()) return;
-
     const int count = static_cast<int>(entries.size());
     for (int attempt = 0; attempt < count; ++attempt) {
         selectedIndex = (selectedIndex + direction + count) % count;
@@ -240,93 +414,93 @@ void MenuState::moveSelection(int direction) {
 }
 
 void MenuState::updateVisuals() {
-    centerText(pageTitleText, UiWidth / 2.f, 205.f);
+    if (page == Page::Character) {
+        const CharacterChoice activeChoice = GameSettings::getInstance().getCharacterChoice();
+        if (activeChoice == CharacterChoice::Mario) {
+            marioCardBadge.setString("[ACTIVE]");
+            marioCardBadge.setFillColor(sf::Color(255, 220, 50));
+            marioCardBadge.setOutlineColor(sf::Color(30, 20, 10));
+        } else {
+            marioCardBadge.setString("ENTER: SELECT");
+            marioCardBadge.setFillColor(sf::Color(230, 230, 230));
+            marioCardBadge.setOutlineColor(sf::Color(20, 20, 20));
+        }
+        if (activeChoice == CharacterChoice::Luigi) {
+            luigiCardBadge.setString("[ACTIVE]");
+            luigiCardBadge.setFillColor(sf::Color(255, 220, 50));
+            luigiCardBadge.setOutlineColor(sf::Color(30, 20, 10));
+        } else {
+            luigiCardBadge.setString("ENTER: SELECT");
+            luigiCardBadge.setFillColor(sf::Color(230, 230, 230));
+            luigiCardBadge.setOutlineColor(sf::Color(20, 20, 20));
+        }
+        charChoosePrompt.setString("LEFT / RIGHT / WASD: CHOOSE     ENTER: CONFIRM     ESC: BACK");
+        centerText(charChoosePrompt, UiWidth / 2.f, 565.f);
+        return;
+    }
 
+    centerText(pageTitleText, UiWidth / 2.f, 203.f);
     for (std::size_t i = 0; i < entryTexts.size(); ++i) {
-        const float firstEntryY =
-            page == Page::KeyBindings ? 445.f : EntryStartY;
+        const float firstEntryY = page == Page::KeyBindings ? 440.f : EntryStartY;
         const float y = firstEntryY + static_cast<float>(i) * EntrySpacing;
         centerText(entryTexts[i], UiWidth / 2.f, y);
         if (!entries[i].enabled) {
-            entryTexts[i].setFillColor(Disabled);
+            entryTexts[i].setFillColor(TextDisabled);
         } else {
-            entryTexts[i].setFillColor(
-                static_cast<int>(i) == selectedIndex ? Accent : sf::Color::White);
+            entryTexts[i].setFillColor(static_cast<int>(i) == selectedIndex ? AccentGold : TextWhite);
         }
     }
-
-    if (!entryTexts.empty()) {
+    if (!entryTexts.empty() && selectedIndex >= 0 && selectedIndex < static_cast<int>(entryTexts.size())) {
         const sf::FloatRect bounds = entryTexts[selectedIndex].getGlobalBounds();
-        selectorText.setPosition(bounds.left - 30.f,
-                                 bounds.top + bounds.height / 2.f - 8.f);
+        selectorText.setPosition(bounds.left - 24.f, bounds.top + bounds.height / 2.f - 10.f);
+        selectionGlow.setPosition(UiWidth / 2.f - 230.f, bounds.top + bounds.height / 2.f - 16.f);
     }
-
-    if (page == Page::Character) {
-        statusText.setString(std::string("CURRENT: ") + characterName(
-            GameSettings::getInstance().getCharacterChoice()));
-    } else if (page == Page::Settings && selectedIndex == 1) {
-        statusText.setString("LEFT / RIGHT CHANGES VOLUME");
-    } else if (page == Page::KeyBindings) {
-        statusText.setString("DISPLAY ONLY - REMAPPING WILL BE ADDED LATER");
+    if (page == Page::Settings && selectedIndex == 1) {
+        statusText.setString("LEFT / RIGHT: ADJUST VOLUME");
     } else {
         statusText.setString("");
     }
-    centerText(statusText, UiWidth / 2.f, 500.f);
+    centerText(statusText, UiWidth / 2.f, 485.f);
 }
 
 void MenuState::activateSelection(sf::RenderWindow& window) {
+    if (page == Page::Character) {
+        if (isCharacterConfirming) return;
+        CharacterChoice choice = (characterCardSelection == 0) ? CharacterChoice::Mario : CharacterChoice::Luigi;
+        GameSettings::getInstance().setCharacterChoice(choice);
+        SoundManager::getInstance().playSound("powerupcollect");
+        isCharacterConfirming = true;
+        characterConfirmTimer = 0.f;
+        characterFlashTimer = 0.f;
+        updateVisuals();
+        return;
+    }
     if (entries.empty() || !entries[selectedIndex].enabled) return;
-
     switch (page) {
         case Page::GameMode:
             if (selectedIndex == 0) setPage(Page::Solo);
             else if (selectedIndex == 3) setPage(Page::Settings);
-            else if (selectedIndex == 4) window.close();
+            else if (selectedIndex == 4) setDisplayMode(DisplayMode::TitleScreen);
             break;
-
         case Page::Solo:
             if (selectedIndex == 0) setPage(Page::Play);
             else if (selectedIndex == 1) setPage(Page::Character);
             else if (selectedIndex == 3) setPage(Page::GameMode);
             break;
-
         case Page::Play: {
-            if (selectedIndex == 3) {
-                setPage(Page::Solo);
-                break;
-            }
-            static const char* maps[] = {
-                "1.1/1-1.level", "1.2/1-2.level", "1.3/1-3.level"
-            };
+            if (selectedIndex == 3) { setPage(Page::Solo); break; }
+            static const char* maps[] = {"1.1/1-1.level", "1.2/1-2.level", "1.3/1-3.level"};
             if (stateManager) {
-                stateManager->clearAndPushState(
-                    std::make_unique<PlayState>(maps[selectedIndex]));
+                stateManager->clearAndPushState(std::make_unique<PlayState>(maps[selectedIndex]));
             }
             break;
         }
-
-        case Page::Character:
-            if (selectedIndex == 0) {
-                GameSettings::getInstance().setCharacterChoice(
-                    CharacterChoice::Mario);
-                rebuildEntries();
-                updateVisuals();
-            } else if (selectedIndex == 1) {
-                GameSettings::getInstance().setCharacterChoice(
-                    CharacterChoice::Luigi);
-                rebuildEntries();
-                updateVisuals();
-            } else {
-                setPage(Page::Solo);
-            }
-            break;
-
+        case Page::Character: break;
         case Page::Settings:
             if (selectedIndex == 0) setPage(Page::KeyBindings);
             else if (selectedIndex == 1) adjustVolume(10.f);
             else setPage(Page::GameMode);
             break;
-
         case Page::KeyBindings:
             setPage(Page::Settings);
             break;
@@ -343,7 +517,7 @@ void MenuState::adjustVolume(float delta) {
 
 void MenuState::goBack() {
     switch (page) {
-        case Page::GameMode: break;
+        case Page::GameMode: setDisplayMode(DisplayMode::TitleScreen); break;
         case Page::Solo: setPage(Page::GameMode); break;
         case Page::Play:
         case Page::Character: setPage(Page::Solo); break;
@@ -353,47 +527,201 @@ void MenuState::goBack() {
 }
 
 void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
+    if (displayMode == DisplayMode::TitleScreen) {
+        if (event.type == sf::Event::KeyPressed || event.type == sf::Event::MouseButtonPressed) {
+            SoundManager::getInstance().playSound("pause");
+            setDisplayMode(DisplayMode::InMenu);
+            setPage(Page::GameMode);
+        }
+        return;
+    }
     if (event.type != sf::Event::KeyPressed) return;
 
+    if (page == Page::Character) {
+        if (isCharacterConfirming) return;
+        switch (event.key.code) {
+            case sf::Keyboard::Left: case sf::Keyboard::A:
+            case sf::Keyboard::Right: case sf::Keyboard::D:
+            case sf::Keyboard::Up: case sf::Keyboard::W:
+            case sf::Keyboard::Down: case sf::Keyboard::S:
+                characterCardSelection = (characterCardSelection == 0) ? 1 : 0;
+                SoundManager::getInstance().playSound("kick");
+                updateVisuals();
+                break;
+            case sf::Keyboard::Enter: case sf::Keyboard::Space:
+                activateSelection(window); break;
+            case sf::Keyboard::Escape:
+                SoundManager::getInstance().playSound("pipe");
+                goBack(); break;
+            default: break;
+        }
+        return;
+    }
+
     switch (event.key.code) {
-        case sf::Keyboard::Up:
-        case sf::Keyboard::W:
-            moveSelection(-1);
-            break;
-        case sf::Keyboard::Down:
-        case sf::Keyboard::S:
-            moveSelection(1);
-            break;
-        case sf::Keyboard::Left:
-        case sf::Keyboard::A:
+        case sf::Keyboard::Up: case sf::Keyboard::W:
+            SoundManager::getInstance().playSound("stomp"); moveSelection(-1); break;
+        case sf::Keyboard::Down: case sf::Keyboard::S:
+            SoundManager::getInstance().playSound("stomp"); moveSelection(1); break;
+        case sf::Keyboard::Left: case sf::Keyboard::A:
             if (page == Page::Settings && selectedIndex == 1) {
-                adjustVolume(-10.f);
-            }
-            break;
-        case sf::Keyboard::Right:
-        case sf::Keyboard::D:
+                SoundManager::getInstance().playSound("stomp"); adjustVolume(-10.f);
+            } break;
+        case sf::Keyboard::Right: case sf::Keyboard::D:
             if (page == Page::Settings && selectedIndex == 1) {
-                adjustVolume(10.f);
-            }
-            break;
-        case sf::Keyboard::Enter:
-        case sf::Keyboard::Space:
-            activateSelection(window);
-            break;
+                SoundManager::getInstance().playSound("stomp"); adjustVolume(10.f);
+            } break;
+        case sf::Keyboard::Enter: case sf::Keyboard::Space:
+            SoundManager::getInstance().playSound("coin"); activateSelection(window); break;
         case sf::Keyboard::Escape:
-            goBack();
-            break;
-        default:
-            break;
+            SoundManager::getInstance().playSound("pipe"); goBack(); break;
+        default: break;
     }
 }
 
 void MenuState::update(float dt) {
-    blinkTimer += dt;
-    if (blinkTimer >= 0.4f) {
-        showSelector = !showSelector;
-        blinkTimer = 0.f;
+    globalTime += dt;
+
+    for (auto& c : clouds) {
+        c.position.x += c.speed * dt;
+        if (c.position.x > UiWidth + 100.f) c.position.x = -150.f;
     }
+
+    blinkTimer += dt;
+    if (blinkTimer >= 0.4f) { showSelector = !showSelector; blinkTimer = 0.f; }
+
+    if (displayMode == DisplayMode::TitleScreen) {
+        if (logoLoaded) {
+            float logoY = 185.f + std::sin(globalTime * 2.2f) * 6.f;
+            float logoScale = baseLogoScale * (1.0f + 0.015f * std::sin(globalTime * 2.2f));
+            logoSprite.setPosition(UiWidth / 2.f, logoY);
+            logoSprite.setScale(logoScale, logoScale);
+        }
+        if (charLoaded) {
+            float charBounce = -std::abs(std::sin(globalTime * 5.0f)) * 4.f;
+            charSprite.setPosition(UiWidth / 2.f, 485.f + charBounce);
+            charSprite.setScale(baseCharScale, baseCharScale);
+        }
+        float pulse = (std::sin(globalTime * 4.0f) + 1.f) * 0.5f;
+        promptText.setScale(1.0f + pulse * 0.08f, 1.0f + pulse * 0.08f);
+        promptText.setFillColor(sf::Color(255, static_cast<sf::Uint8>(215 + pulse * 35), static_cast<sf::Uint8>(40 + pulse * 40)));
+        centerText(promptText, UiWidth / 2.f, 345.f);
+    } else {
+        if (logoLoaded && page != Page::Character) {
+            float logoY = 100.f + std::sin(globalTime * 1.5f) * 3.f;
+            float logoScale = baseLogoScale * 0.55f;
+            logoSprite.setPosition(UiWidth / 2.f, logoY);
+            logoSprite.setScale(logoScale, logoScale);
+        }
+        if (charLoaded && page != Page::Character) {
+            float charBounce = -std::abs(std::sin(globalTime * 4.0f)) * 2.5f;
+            charSprite.setPosition(UiWidth / 2.f, 520.f + charBounce);
+            charSprite.setScale(baseCharScale * 0.85f, baseCharScale * 0.85f);
+        }
+        if (page == Page::Character) {
+            if (isCharacterConfirming) {
+                characterConfirmTimer += dt;
+                characterFlashTimer += dt;
+                const float popScaleBonus = 1.20f;
+                if (characterCardSelection == 0) {
+                    marioCurrentScale += (baseMarioCardScale * popScaleBonus - marioCurrentScale) * std::min(1.f, dt * 15.f);
+                } else {
+                    luigiCurrentScale += (baseLuigiCardScale * popScaleBonus - luigiCurrentScale) * std::min(1.f, dt * 15.f);
+                }
+                if (characterConfirmTimer >= 0.7f) {
+                    isCharacterConfirming = false;
+                    characterConfirmTimer = 0.f;
+                    setPage(Page::Solo);
+                }
+            } else {
+                float marioTarget = (characterCardSelection == 0) ? (baseMarioCardScale * 1.15f) : (baseMarioCardScale * 0.88f);
+                float luigiTarget = (characterCardSelection == 1) ? (baseLuigiCardScale * 1.15f) : (baseLuigiCardScale * 0.88f);
+                marioCurrentScale += (marioTarget - marioCurrentScale) * std::min(1.f, dt * 10.f);
+                luigiCurrentScale += (luigiTarget - luigiCurrentScale) * std::min(1.f, dt * 10.f);
+            }
+        }
+    }
+}
+
+void MenuState::renderCharacterSelect(sf::RenderWindow& window) {
+    window.draw(charChooseTitle);
+    const float marioX = 270.f, luigiX = 530.f, baseCardY = 310.f;
+    const float bob = isCharacterConfirming ? 0.f : (std::sin(globalTime * 3.5f) * 4.f);
+    const float marioY = baseCardY + (characterCardSelection == 0 ? bob : 0.f);
+    const float luigiY = baseCardY + (characterCardSelection == 1 ? bob : 0.f);
+    const bool flashOn = !isCharacterConfirming || (static_cast<int>(characterFlashTimer * 16.f) % 2 == 0);
+
+    if (marioCardLoaded) {
+        if (characterCardSelection == 0) {
+            if (isCharacterConfirming) {
+                marioCardGlow.setOutlineColor(flashOn ? sf::Color(255,255,255,255) : sf::Color(255,220,60,160));
+                marioCardGlow.setFillColor(flashOn ? sf::Color(255,255,255,100) : sf::Color(255,50,50,60));
+                marioCardSprite.setColor(flashOn ? sf::Color(255,255,255) : sf::Color(255,220,180));
+            } else {
+                marioCardGlow.setOutlineColor(sf::Color(255,220,60,230));
+                marioCardGlow.setFillColor(sf::Color(255,50,50,45));
+                marioCardSprite.setColor(sf::Color::White);
+            }
+            marioCardGlow.setPosition(marioX, marioY);
+            marioCardGlow.setScale(marioCurrentScale / baseMarioCardScale, marioCurrentScale / baseMarioCardScale);
+            window.draw(marioCardGlow);
+        } else {
+            marioCardSprite.setColor(sf::Color(170,170,170,210));
+        }
+        marioCardSprite.setPosition(marioX, marioY);
+        marioCardSprite.setScale(marioCurrentScale, marioCurrentScale);
+        window.draw(marioCardSprite);
+        const float badgeY = marioY + 160.f * (marioCurrentScale / baseMarioCardScale);
+        if (isCharacterConfirming && characterCardSelection == 0) {
+            marioCardBadge.setString(flashOn ? "[★ CONFIRMED! ★]" : "[              ]");
+            marioCardBadge.setFillColor(sf::Color(255,255,100));
+        }
+        centerText(marioCardBadge, marioX, badgeY);
+        window.draw(marioCardBadge);
+    }
+
+    if (luigiCardLoaded) {
+        if (characterCardSelection == 1) {
+            if (isCharacterConfirming) {
+                luigiCardGlow.setOutlineColor(flashOn ? sf::Color(255,255,255,255) : sf::Color(255,220,60,160));
+                luigiCardGlow.setFillColor(flashOn ? sf::Color(255,255,255,100) : sf::Color(50,220,80,60));
+                luigiCardSprite.setColor(flashOn ? sf::Color(255,255,255) : sf::Color(200,255,200));
+            } else {
+                luigiCardGlow.setOutlineColor(sf::Color(255,220,60,230));
+                luigiCardGlow.setFillColor(sf::Color(50,220,80,45));
+                luigiCardSprite.setColor(sf::Color::White);
+            }
+            luigiCardGlow.setPosition(luigiX, luigiY);
+            luigiCardGlow.setScale(luigiCurrentScale / baseLuigiCardScale, luigiCurrentScale / baseLuigiCardScale);
+            window.draw(luigiCardGlow);
+        } else {
+            luigiCardSprite.setColor(sf::Color(170,170,170,210));
+        }
+        luigiCardSprite.setPosition(luigiX, luigiY);
+        luigiCardSprite.setScale(luigiCurrentScale, luigiCurrentScale);
+        window.draw(luigiCardSprite);
+        const float badgeY = luigiY + 160.f * (luigiCurrentScale / baseLuigiCardScale);
+        if (isCharacterConfirming && characterCardSelection == 1) {
+            luigiCardBadge.setString(flashOn ? "[★ CONFIRMED! ★]" : "[              ]");
+            luigiCardBadge.setFillColor(sf::Color(255,255,100));
+        }
+        centerText(luigiCardBadge, luigiX, badgeY);
+        window.draw(luigiCardBadge);
+    }
+
+    if (!isCharacterConfirming) {
+        const float arrowPulse = std::sin(globalTime * 6.f) * 4.f;
+        if (characterCardSelection == 0) {
+            arrowLeft.setPosition(marioX - 140.f + arrowPulse, marioY);
+            arrowRight.setPosition(marioX + 140.f - arrowPulse, marioY);
+        } else {
+            arrowLeft.setPosition(luigiX - 140.f + arrowPulse, luigiY);
+            arrowRight.setPosition(luigiX + 140.f - arrowPulse, luigiY);
+        }
+        window.draw(arrowLeft);
+        window.draw(arrowRight);
+    }
+    window.draw(charChoosePrompt);
 }
 
 void MenuState::render(sf::RenderWindow& window) {
@@ -405,15 +733,39 @@ void MenuState::render(sf::RenderWindow& window) {
         window.draw(bgSprite);
     } else {
         window.clear(sf::Color(92, 148, 252));
-        window.draw(groundBlock);
     }
-    window.draw(panel);
 
-    if (fontLoaded) {
-        window.draw(titleText);
+    if (cloudsLoaded) {
+        for (const auto& c : clouds) {
+            sf::Sprite* spr = (c.textureIndex == 1) ? &cloudSprite1 : (c.textureIndex == 2 ? &cloudSprite2 : &cloudSprite3);
+            if (spr) {
+                spr->setPosition(c.position);
+                spr->setScale(c.scale, c.scale);
+                window.draw(*spr);
+            }
+        }
+    }
+
+    if (charLoaded && page != Page::Character) {
+        window.draw(charSprite);
+    }
+
+    if (displayMode == DisplayMode::TitleScreen) {
+        if (logoLoaded) window.draw(logoSprite);
+        window.draw(promptText);
+        window.draw(copyrightText);
+        window.draw(versionText);
+    } else if (page == Page::Character) {
+        renderCharacterSelect(window);
+    } else {
+        if (logoLoaded) window.draw(logoSprite);
+        window.draw(menuCard);
+        window.draw(menuCardHeader);
         window.draw(pageTitleText);
+        if (!entryTexts.empty() && selectedIndex >= 0 && selectedIndex < static_cast<int>(entryTexts.size()) && entries[selectedIndex].enabled) {
+            window.draw(selectionGlow);
+        }
         for (const auto& text : entryTexts) window.draw(text);
-
         if (page == Page::KeyBindings) window.draw(keyBindingsText);
         window.draw(statusText);
         window.draw(footerText);
