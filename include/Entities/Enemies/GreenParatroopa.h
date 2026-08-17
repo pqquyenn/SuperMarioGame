@@ -13,6 +13,7 @@ public:
 
     void update(float dt) override;
     void onStomped() override;
+    void onLanded() override;
     void notifyLanded();
 
     bool isWinged() const { return hasWings; }

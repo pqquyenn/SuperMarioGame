@@ -10,17 +10,21 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 find_package(SFML 2.5 COMPONENTS graphics audio window system QUIET)
 
 if(NOT SFML_FOUND)
-    include(FetchContent)
-    FetchContent_Declare(
-        SFML
-        GIT_REPOSITORY https://github.com/SFML/SFML.git
-        GIT_TAG 2.6.1
-    )
     set(SFML_BUILD_AUDIO ON CACHE BOOL "" FORCE)
     set(SFML_BUILD_GRAPHICS ON CACHE BOOL "" FORCE)
     set(SFML_BUILD_WINDOW ON CACHE BOOL "" FORCE)
     set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(SFML)
+    if(EXISTS "${CMAKE_BINARY_DIR}/_deps/sfml-src/CMakeLists.txt")
+        add_subdirectory("${CMAKE_BINARY_DIR}/_deps/sfml-src" "${CMAKE_BINARY_DIR}/_deps/sfml-build")
+    else()
+        include(FetchContent)
+        FetchContent_Declare(
+            SFML
+            GIT_REPOSITORY https://github.com/SFML/SFML.git
+            GIT_TAG 2.6.1
+        )
+        FetchContent_MakeAvailable(SFML)
+    endif()
 endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS 
@@ -78,6 +82,61 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(solid11_tests
+    tests/observer_and_entity_tests.cpp
+    src/Observer/Subject.cpp
+    src/UI/HUD.cpp
+    src/Entities/Entity.cpp
+    src/Entities/Character.cpp
+    src/Entities/PlayerAnimation.cpp
+    src/Animation/SpriteAnimator.cpp
+    src/PlayerStates/PlayerState.cpp
+    src/PlayerStates/SmallState.cpp
+    src/PlayerStates/SuperState.cpp
+    src/PlayerStates/FireState.cpp
+    src/PlayerEffects/PlayerEffect.cpp
+    src/PlayerEffects/DamageInvincibilityEffect.cpp
+    src/PlayerEffects/StarEffect.cpp
+    src/PlayerEffects/ShieldEffect.cpp
+    src/Entities/Enemies/Enemy.cpp
+    src/Entities/Enemies/Goomba.cpp
+    src/Entities/Enemies/Koopa.cpp
+    src/Entities/Enemies/PiranhaPlant.cpp
+    src/Entities/Enemies/GreenParatroopa.cpp
+    src/Entities/Items/Item.cpp
+    src/Entities/Items/Coin.cpp
+    src/Entities/Items/Mushroom.cpp
+    src/Entities/Items/FireFlower.cpp
+    src/Entities/Items/StarItem.cpp
+    src/Entities/Items/OneUpMushroom.cpp
+    src/Core/AssetManager.cpp
+)
+
+target_include_directories(solid11_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::Graphics)
+    target_link_libraries(solid11_tests PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+elseif(TARGET sfml-graphics)
+    target_link_libraries(solid11_tests PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
+else()
+    target_link_libraries(solid11_tests PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
+endif()
+
+add_test(
+    NAME solid11_observer_and_entity_tests
+    COMMAND solid11_tests
+)
+set_tests_properties(
+    solid11_observer_and_entity_tests
+    PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        ENVIRONMENT "PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY};$ENV{PATH}"
+)
+
 # Copy assets to executable folder post-build
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
     add_custom_command(TARGET mario POST_BUILD
@@ -101,8 +160,13 @@ if(WIN32 AND TARGET sfml-graphics)
     )
 
     # Copy OpenAL DLL (required by sfml-audio) - without this the game crashes silently on startup
-    set(OPENAL_DLL "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
-    if(EXISTS "${OPENAL_DLL}")
+    if(EXISTS "${CMAKE_BINARY_DIR}/_deps/sfml-src/extlibs/bin/x64/openal32.dll")
+        set(OPENAL_DLL "${CMAKE_BINARY_DIR}/_deps/sfml-src/extlibs/bin/x64/openal32.dll")
+    elseif(EXISTS "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
+        set(OPENAL_DLL "${sfml_SOURCE_DIR}/extlibs/bin/x64/openal32.dll")
+    endif()
+
+    if(DEFINED OPENAL_DLL AND EXISTS "${OPENAL_DLL}")
         add_custom_command(TARGET mario POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${OPENAL_DLL}"
