@@ -218,14 +218,16 @@ bool TileMap::readFromFile(const std::string& filepath) {
                     auto it = m_tileRegistry.find(token);
                     if (it != m_tileRegistry.end()) {
                         float yOff = m_tileOffset.y;
+                        float xOff = m_tileOffset.x;
                         if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
                             yOff -= 4.f;
                         }
                         if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
+                        if (token == "F") xOff += 8.f;              // Flag attaches directly to flagpole
                         
                         row.push_back(std::make_unique<Tile>(
                             it->second.get(),
-                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
+                            sf::Vector2f(float(x * m_tileSize) + xOff, float(y * m_tileSize) + yOff)));
                     } else {
                         std::shared_ptr<TileType> typeToUse = nullptr;
                         if (token == "ground1") typeToUse = m_tileRegistry["u"];
@@ -259,9 +261,12 @@ bool TileMap::readFromFile(const std::string& filepath) {
                 }
                 auto it = m_tileRegistry.find(std::string(1, c));
                 if (it != m_tileRegistry.end()) {
+                    float xOff = m_tileOffset.x;
+                    float yOff = m_tileOffset.y;
+                    if (c == 'F') xOff += 8.f;              // Flag attaches directly to flagpole
                     row.push_back(std::make_unique<Tile>(
                         it->second.get(),
-                        sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
+                        sf::Vector2f(float(x * m_tileSize) + xOff, float(y * m_tileSize) + yOff)));
                 } else {
                     if (c != 'e' && c != 'E' && c != 'o') {
                         std::cerr << "TileMap Warning: Unregistered char '" << c << "' at row " << y << ", col " << x << " in " << filepath << std::endl;
@@ -409,16 +414,19 @@ void TileMap::breakBrick(const TileHandle& handle) {
     if (!tile) return;
     
     sf::FloatRect bounds = tile->getBounds();
+    const sf::Texture* brickTex = (tile->getType() && tile->getType()->texture)
+                                      ? tile->getType()->texture
+                                      : &AssetManager::getInstance().getTexture("Brick");
     
     // Spawn 4 debris pieces flying in different directions
     // Top-left piece
-    m_debris.push_back({{bounds.left, bounds.top}, {-60.f, -250.f}, 0.f, 400.f, 0.f, true});
+    m_debris.push_back({{bounds.left, bounds.top}, {-60.f, -250.f}, 0.f, 400.f, 0.f, true, brickTex});
     // Top-right piece
-    m_debris.push_back({{bounds.left + 8.f, bounds.top}, {60.f, -250.f}, 0.f, -350.f, 0.f, true});
+    m_debris.push_back({{bounds.left + 8.f, bounds.top}, {60.f, -250.f}, 0.f, -350.f, 0.f, true, brickTex});
     // Bottom-left piece
-    m_debris.push_back({{bounds.left, bounds.top + 8.f}, {-50.f, -180.f}, 0.f, 300.f, 0.f, true});
+    m_debris.push_back({{bounds.left, bounds.top + 8.f}, {-50.f, -180.f}, 0.f, 300.f, 0.f, true, brickTex});
     // Bottom-right piece
-    m_debris.push_back({{bounds.left + 8.f, bounds.top + 8.f}, {50.f, -180.f}, 0.f, -280.f, 0.f, true});
+    m_debris.push_back({{bounds.left + 8.f, bounds.top + 8.f}, {50.f, -180.f}, 0.f, -280.f, 0.f, true, brickTex});
     
     // The resolved pointer becomes invalid here and must not be used again.
     removeTile(handle);
@@ -451,13 +459,14 @@ void TileMap::updateDebris(float dt) {
 
 void TileMap::renderDebris(sf::RenderTarget& target) const {
     AssetManager& assets = AssetManager::getInstance();
-    const sf::Texture& brickTex = assets.getTexture("Brick");
+    const sf::Texture& defaultBrickTex = assets.getTexture("Brick");
     
     for (const auto& d : m_debris) {
         if (!d.active) continue;
         
+        const sf::Texture* tex = d.texture ? d.texture : &defaultBrickTex;
         // Each debris piece is an 8x8 quarter of the brick texture
-        sf::Sprite sprite(brickTex, sf::IntRect(0, 0, 8, 8));
+        sf::Sprite sprite(*tex, sf::IntRect(0, 0, 8, 8));
         sprite.setOrigin(4.f, 4.f);
         sprite.setPosition(d.position);
         sprite.setRotation(d.rotation);
