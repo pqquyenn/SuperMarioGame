@@ -15,6 +15,7 @@
 #include "PlayerEffects/StarEffect.h"
 #include "PlayerStates/FireState.h"
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -107,9 +108,22 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
         player && CollisionManager::tryEnterDownWarp(*player, level)) {
       return;
     } else if (event.key.code == sf::Keyboard::T) {
+      const bool wasFlying = adminDebugView.isFlyMode();
       adminDebugView.toggle();
+      if (wasFlying && player) {
+        player->setVelocity(0.f, 0.f);
+        player->setJumpHeld(false);
+      }
       std::cout << "[AdminDebugView] "
                 << (adminDebugView.isVisible() ? "ENABLED" : "DISABLED")
+                << std::endl;
+    } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::F) {
+      adminDebugView.toggleFlyMode();
+      player->setVelocity(0.f, 0.f);
+      player->setJumpHeld(false);
+      std::cout << "[AdminDebugView] Fly mode "
+                << (adminDebugView.isFlyMode() ? "ENABLED" : "DISABLED")
                 << std::endl;
     } else if (adminDebugView.isVisible() && player &&
                event.key.code == sf::Keyboard::I) {
@@ -250,28 +264,31 @@ void PlayState::update(float dt) {
         }
       }
     } else if (player->isActive()) {
-      inputHandler.handleInput(*player, dt);
+      const bool debugFlying = adminDebugView.isFlyMode();
+      if (debugFlying) {
+        updateDebugFly(dt);
+      } else {
+        inputHandler.handleInput(*player, dt);
+        player->update(dt);
+        CollisionManager::resolveTileCollisions(
+            *player, level.getTileMap(), &level);
 
-      player->update(dt);
+        for (auto &enemy : level.getEnemies()) {
+          if (enemy && enemy->isActive()) {
+            CollisionManager::resolveEntityCollisions(*player, *enemy);
+          }
+        }
 
-      CollisionManager::resolveTileCollisions(*player, level.getTileMap(),
-                                              &level);
-
-      for (auto &enemy : level.getEnemies()) {
-        if (enemy && enemy->isActive()) {
-          CollisionManager::resolveEntityCollisions(*player, *enemy);
+        for (auto &platform : level.getMovingPlatforms()) {
+          if (platform && platform->isActive()) {
+            CollisionManager::resolveMovingPlatform(*player, *platform);
+          }
         }
       }
 
       for (auto &item : level.getItems()) {
         if (item && item->isActive()) {
           CollisionManager::resolveEntityCollisions(*player, *item);
-        }
-      }
-
-      for (auto &platform : level.getMovingPlatforms()) {
-        if (platform && platform->isActive()) {
-          CollisionManager::resolveMovingPlatform(*player, *platform);
         }
       }
 
@@ -294,21 +311,19 @@ void PlayState::update(float dt) {
         }
       }
 
-      // The camera is presentation state and can move independently during
-      // fullscreen changes, warps, or Map Viewer mode. Constrain the player
-      // against stable map-space bounds so camera changes cannot teleport it.
-      constrainPlayerHorizontally();
+      if (!debugFlying) {
+        // The camera is presentation state and can move independently during
+        // fullscreen changes or warps. Constrain normal gameplay against
+        // stable map-space bounds, while debug flight remains unrestricted.
+        constrainPlayerHorizontally();
 
-      // 7. Kiểm tra rơi xuống vực (Void Death)
-      // Threshold is 900px to cover the full 1-2 vertical layout
-      // (overworld+underground+bonus room)
-      if (player->getPosition().y > level.getKillPlaneY()) {
-        player->die(DeathCause::Void);
-      }
+        if (player->getPosition().y > level.getKillPlaneY()) {
+          player->die(DeathCause::Void);
+        }
 
-      // 8. Kiểm tra hết giờ (Time Out)
-      if (hud.getTimeRemaining() <= 0.f && !player->isDying()) {
-        player->die(DeathCause::TimeOut);
+        if (hud.getTimeRemaining() <= 0.f && !player->isDying()) {
+          player->die(DeathCause::TimeOut);
+        }
       }
     }
   }
@@ -405,6 +420,57 @@ void PlayState::render(sf::RenderWindow &window) {
                           textBounds.top + textBounds.height);
     freeCamText.setPosition(camCenter.x, camCenter.y + camSize.y / 2.f - 6.f);
     window.draw(freeCamText);
+  }
+}
+
+void PlayState::updateDebugFly(float dt) {
+  if (!player || !player->isActive() || player->isDying()) {
+    return;
+  }
+
+  const bool leftHeld = sf::Keyboard::isKeyPressed(sf::Keyboard::Left) ||
+                        sf::Keyboard::isKeyPressed(sf::Keyboard::A);
+  const bool rightHeld = sf::Keyboard::isKeyPressed(sf::Keyboard::Right) ||
+                         sf::Keyboard::isKeyPressed(sf::Keyboard::D);
+  const bool upHeld = sf::Keyboard::isKeyPressed(sf::Keyboard::Up) ||
+                      sf::Keyboard::isKeyPressed(sf::Keyboard::W);
+  const bool downHeld = sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ||
+                        sf::Keyboard::isKeyPressed(sf::Keyboard::S);
+
+  sf::Vector2f direction{
+      static_cast<float>(rightHeld) - static_cast<float>(leftHeld),
+      static_cast<float>(downHeld) - static_cast<float>(upHeld)};
+  const float length = std::sqrt(
+      direction.x * direction.x + direction.y * direction.y);
+  if (length > 0.f) {
+    direction /= length;
+  }
+
+  // Let effects and animation advance, then discard physics displacement.
+  // Calling moveLeft/moveRight with zero dt updates only the facing direction.
+  const sf::Vector2f startPosition = player->getPosition();
+  if (leftHeld != rightHeld) {
+    if (leftHeld) {
+      player->moveLeft(0.f);
+    } else {
+      player->moveRight(0.f);
+    }
+  }
+  player->setVelocity(0.f, 0.f);
+  player->setGrounded(false);
+  player->setJumpHeld(false);
+  player->update(dt);
+  player->setPosition(
+      startPosition + direction * debugFlySpeed * dt);
+  player->setVelocity(direction * debugFlySpeed);
+
+  // Flight ignores solid tiles, so portal activation must be checked directly.
+  // Down portals retain their stricter "feet on pipe top" requirement.
+  if (downHeld && CollisionManager::tryEnterDownWarp(*player, level)) {
+    return;
+  }
+  if (rightHeld) {
+    CollisionManager::tryEnterRightWarp(*player, level);
   }
 }
 

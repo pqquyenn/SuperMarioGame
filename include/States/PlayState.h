@@ -29,8 +29,10 @@ private:
     sf::Font freeCamFont;
     bool freeCamFontLoaded = false;
     bool levelWon = false;
+    float debugFlySpeed = 220.f;
 
     void spawnFireball(const ProjectileRequest& request);
+    void updateDebugFly(float dt);
     void refreshPlayerSpawnPoint();
     void centerCameraOnPlayerSpawn();
     void constrainPlayerHorizontally();

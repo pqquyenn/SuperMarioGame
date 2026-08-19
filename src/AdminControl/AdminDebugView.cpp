@@ -150,10 +150,23 @@ AdminDebugView::AdminDebugView() {
 
 void AdminDebugView::toggle() {
     visible = !visible;
+    if (!visible) {
+        flyMode = false;
+    }
 }
 
 bool AdminDebugView::isVisible() const {
     return visible;
+}
+
+void AdminDebugView::toggleFlyMode() {
+    if (visible) {
+        flyMode = !flyMode;
+    }
+}
+
+bool AdminDebugView::isFlyMode() const {
+    return visible && flyMode;
 }
 
 void AdminDebugView::renderWorldAnnotations(
@@ -254,7 +267,8 @@ void AdminDebugView::render(
 
     std::ostringstream information;
     information << std::fixed << std::setprecision(1)
-                << "ADMIN [T]  I:STAR  K:UP  L:HIT\n"
+                << "ADMIN [T]  I:STAR  K:UP  L:HIT  F:FLY "
+                << (isFlyMode() ? "ON" : "OFF") << "\n"
                 << "CHAR " << character.getCharacterType() << " | "
                 << (character.isDying()
                         ? std::string_view{"Dying"}

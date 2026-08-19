@@ -88,6 +88,16 @@ bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
   return false;
 }
 
+bool CollisionManager::tryEnterRightWarp(Character &character, Level &level) {
+  if (!character.isActive() || character.isDying() ||
+      !level.isDataDriven()) {
+    return false;
+  }
+
+  return level.tryActivatePortal(
+      character, character.getBounds(), PortalActivation::Right);
+}
+
 void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
   sf::FloatRect overlap;
   if (!checkAABB(a.getBounds(), b.getBounds(), overlap)) {

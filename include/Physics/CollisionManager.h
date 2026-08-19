@@ -44,6 +44,12 @@ public:
     static bool tryEnterDownWarp(Character& character, Level& level);
 
     /**
+     * @brief Attempts to enter a right-activated data-driven warp while the
+     * character overlaps its trigger. Used by collision-free debug flight.
+     */
+    static bool tryEnterRightWarp(Character& character, Level& level);
+
+    /**
      * @brief Checks if a character is standing on a MovingPlatform and carries it.
      * Call once per platform per frame after tile collisions are resolved.
      */
