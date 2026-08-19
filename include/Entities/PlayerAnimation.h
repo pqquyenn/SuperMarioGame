@@ -11,6 +11,7 @@ enum class PlayerMotion {
     Running,
     Jumping,
     Sliding,
+    Crouching,
     Dead,
     Shooting
 };
@@ -20,6 +21,7 @@ struct PlayerAnimationSet {
     AnimationClip running;
     AnimationClip jumping;
     AnimationClip sliding;
+    AnimationClip crouching;
     AnimationClip dead;
     AnimationClip shooting;
 

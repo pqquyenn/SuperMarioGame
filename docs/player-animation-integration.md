@@ -39,11 +39,14 @@ Idle
 Running
 Jumping
 Sliding
+Crouching
 Dead
+Shooting
 ```
 
-Rising and falling share the Jumping frame. Swimming, climbing, crouching, and
-transformation animations should be added only when those mechanics exist.
+Rising and falling share the Jumping frame. Crouching is available only to
+powered forms. Swimming, climbing, and transformation animations should be
+added only when those mechanics exist.
 
 ## Current PlayerSpriteSheet Layout
 
@@ -64,7 +67,7 @@ Frame columns use a 16-pixel stride starting at `x = 1`:
 | Motion | Frame index | X coordinate |
 |---|---:|---:|
 | Idle | 0 | 1 |
-| Dead | 1 | 17 |
+| Small death / powered crouch | 1 | 17 |
 | Running | 2, 3, 4 | 33, 49, 65 |
 | Sliding | 5 | 81 |
 | Jumping | 6 | 97 |
@@ -165,6 +168,7 @@ Character selects motion in this order:
 
 ```text
 Inactive -> Dead
+Powered + grounded + Down/S held -> Crouching
 Airborne -> Jumping
 No horizontal velocity -> Idle
 Facing opposite current velocity -> Sliding
