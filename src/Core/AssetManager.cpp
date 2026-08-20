@@ -133,6 +133,8 @@ void AssetManager::loadLevelAssets() {
 
   tryLoad("PlayerSpriteSheet",
           "assets/sprites/characters/PlayerSpriteSheet.png");
+  tryLoad("DragonLugia",
+          "assets/sprites/characters/dragon_lugia.png");
   // Generate solid black tile
   if (textures.find("BlackTile") == textures.end()) {
     sf::Image blackImg;

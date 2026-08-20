@@ -7,6 +7,7 @@ enemy E4 RedKoopa
 enemy E5 GreenParatroopa
 enemy E6 RedParatroopa
 enemy E7 PiranhaPlant
+enemy E8 DragonLugia
 item I1 Coin
 item I2 Mushroom
 item I3 1UpMushroom
