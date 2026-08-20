@@ -16,6 +16,7 @@
 #include "Entities/Items/OneUpMushroom.h"
 #include "Entities/Mario.h"
 #include "Entities/Luigi.h"
+#include "Entities/PlayerPalette.h"
 #include "Commands/CrawlCommand.h"
 #include "AdminControl/DebugMovementTrail.h"
 #include "PlayerStates/SmallState.h"
@@ -352,8 +353,8 @@ void testPiranhaPlantStateMachineAndTiming(TestRunner& runner) {
     runner.expect(plant.isActive(), "PiranhaPlant", "PiranhaPlant is immune to stomping");
     runner.expect(plant.isEnemyAlive(), "PiranhaPlant", "PiranhaPlant remains alive after stomp");
 
-    // After setPipeTopY, waitTimer is 0 and waitDuration is 2.0s -> wait 2.0s at bottom to transition to RISING
-    plant.update(2.01f);
+    // The default first appearance waits one second.
+    plant.update(1.01f);
     runner.expect(plant.getCurrentState() == PiranhaPlant::State::RISING,
                   "PiranhaPlant", "State transitions to RISING after bottom wait");
 
@@ -373,6 +374,69 @@ void testPiranhaPlantStateMachineAndTiming(TestRunner& runner) {
     runner.expect(plant.getCurrentState() == PiranhaPlant::State::WAITING_BOT,
                   "PiranhaPlant", "State transitions to WAITING_BOT after descent");
     runner.expect(plant.getCurrentRise() == 0.f, "PiranhaPlant", "Rise is back to 0 (hidden)");
+
+    plant.setCycleTiming(1.25f, 3.f, 0.5f);
+    runner.expect(plant.getVisibleDuration() == 1.25f,
+                  "PiranhaPlantTiming", "Visible duration is configurable");
+    runner.expect(plant.getHiddenDuration() == 3.f,
+                  "PiranhaPlantTiming", "Hidden duration is configurable");
+    plant.update(0.49f);
+    runner.expect(plant.getCurrentState() == PiranhaPlant::State::WAITING_BOT,
+                  "PiranhaPlantTiming", "Plant honors its initial hidden delay");
+    plant.update(0.02f);
+    runner.expect(plant.getCurrentState() == PiranhaPlant::State::RISING,
+                  "PiranhaPlantTiming", "Plant rises after its initial delay");
+
+    plant.update(0.41f);
+    plant.update(1.26f);
+    plant.update(0.41f);
+    runner.expect(plant.getCurrentState() == PiranhaPlant::State::WAITING_BOT,
+                  "PiranhaPlantTiming", "Plant returns to its hidden state");
+    plant.update(2.99f);
+    runner.expect(plant.getCurrentState() == PiranhaPlant::State::WAITING_BOT,
+                  "PiranhaPlantTiming", "Recurring hidden duration is honored");
+    plant.update(0.02f);
+    runner.expect(plant.getCurrentState() == PiranhaPlant::State::RISING,
+                  "PiranhaPlantTiming", "Plant repeats after hidden duration");
+}
+
+void testAlternatingPiranhaPlantTiming(TestRunner& runner) {
+    PiranhaPlant left(192.f, 176.f);
+    PiranhaPlant right(208.f, 176.f);
+    left.setCycleTiming(1.5f, 2.3f, 0.f);
+    right.setCycleTiming(1.5f, 2.3f, 2.3f);
+
+    std::vector<int> appearanceOrder;
+    bool leftWasVisible = false;
+    bool rightWasVisible = false;
+    bool neverOverlap = true;
+    constexpr float FrameTime = 1.f / 60.f;
+    for (int frame = 0; frame < 900; ++frame) {
+        left.update(FrameTime);
+        right.update(FrameTime);
+        const bool leftVisible = left.getCurrentRise() > 0.f;
+        const bool rightVisible = right.getCurrentRise() > 0.f;
+        neverOverlap = neverOverlap && !(leftVisible && rightVisible);
+        if (leftVisible && !leftWasVisible) {
+            appearanceOrder.push_back(1);
+        }
+        if (rightVisible && !rightWasVisible) {
+            appearanceOrder.push_back(2);
+        }
+        leftWasVisible = leftVisible;
+        rightWasVisible = rightVisible;
+    }
+
+    bool alternates = appearanceOrder.size() >= 6 &&
+                      appearanceOrder.front() == 1;
+    for (std::size_t index = 1; index < appearanceOrder.size(); ++index) {
+        alternates = alternates &&
+                     appearanceOrder[index] != appearanceOrder[index - 1];
+    }
+    runner.expect(neverOverlap, "PiranhaPlantAlternation",
+                  "Staggered plants are never visible together");
+    runner.expect(alternates, "PiranhaPlantAlternation",
+                  "Staggered plants repeatedly appear left then right");
 }
 
 void testEnemyDirectionAndProperties(TestRunner& runner) {
@@ -655,6 +719,53 @@ void testMarioCanReachPvPSuperPlatform(TestRunner& runner) {
                   "Super Mario can reach the lowered PvP ledge");
 }
 
+struct HeldJumpMetrics {
+    float height{0.f};
+    float airtime{0.f};
+};
+
+HeldJumpMetrics measureHeldJump(Character& character) {
+    character.setPosition(0.f, 192.f);
+    character.receivePowerUp(std::make_unique<SuperState>());
+    character.setGrounded(true);
+    const float startingFeet =
+        character.getBounds().top + character.getBounds().height;
+    float highestFeet = startingFeet;
+    constexpr float FrameTime = 1.f / 60.f;
+
+    character.setJumpHeld(true);
+    character.jump();
+    HeldJumpMetrics metrics;
+    for (int frame = 0; frame < 180; ++frame) {
+        character.setJumpHeld(true);
+        character.update(FrameTime);
+        metrics.airtime += FrameTime;
+        const float currentFeet =
+            character.getBounds().top + character.getBounds().height;
+        highestFeet = std::min(highestFeet, currentFeet);
+        if (character.getVelocity().y >= 0.f &&
+            currentFeet >= startingFeet) {
+            break;
+        }
+    }
+    metrics.height = startingFeet - highestFeet;
+    return metrics;
+}
+
+void testLuigiHeldJumpBalance(TestRunner& runner) {
+    Mario mario;
+    Luigi luigi;
+    const HeldJumpMetrics marioJump = measureHeldJump(mario);
+    const HeldJumpMetrics luigiJump = measureHeldJump(luigi);
+
+    runner.expect(luigiJump.height > marioJump.height,
+                  "LuigiJumpBalance", "Luigi retains his higher-jump identity");
+    runner.expect(luigiJump.height <= 6.25f * 16.f,
+                  "LuigiJumpBalance", "Luigi's held jump stays near 6.2 tiles");
+    runner.expect(luigiJump.airtime - marioJump.airtime <= 0.13f,
+                  "LuigiJumpBalance", "Luigi's airtime advantage is bounded");
+}
+
 void testDebugMovementTrailEvents(TestRunner& runner) {
     TestPlayer player;
     player.setGrounded(true);
@@ -901,6 +1012,42 @@ void testPiranhaPlantStompContract(TestRunner& runner) {
     }
 }
 
+void testSecondaryPlayerPalette(TestRunner& runner) {
+    sf::Image source;
+    source.create(4, 217, sf::Color::Transparent);
+
+    source.setPixel(0, 9, sf::Color{216, 40, 0});
+    source.setPixel(1, 9, sf::Color{136, 112, 0});
+    source.setPixel(0, 73, sf::Color{0, 148, 0});
+    source.setPixel(1, 73, sf::Color{252, 252, 252});
+    source.setPixel(0, 153, sf::Color{216, 40, 0});
+    source.setPixel(1, 153, sf::Color{252, 152, 56});
+    source.setPixel(2, 153, sf::Color{252, 216, 168});
+    source.setPixel(3, 73, sf::Color{147, 187, 236});
+
+    const sf::Image secondary = makeSecondaryPlayerPalette(source);
+    runner.expect(
+        secondary.getPixel(0, 9) == sf::Color{252, 112, 16} &&
+        secondary.getPixel(1, 9) == sf::Color{36, 84, 204},
+        "SecondaryPalette",
+        "Mario normal clothing changes to orange and blue");
+    runner.expect(
+        secondary.getPixel(0, 73) == sf::Color{252, 112, 16} &&
+        secondary.getPixel(1, 73) == sf::Color{36, 84, 204},
+        "SecondaryPalette",
+        "Luigi normal clothing changes to orange and blue");
+    runner.expect(
+        secondary.getPixel(0, 153) == sf::Color{0, 128, 136} &&
+        secondary.getPixel(1, 153) == sf::Color{252, 252, 252},
+        "SecondaryPalette",
+        "Fire clothing changes to cyan and white");
+    runner.expect(
+        secondary.getPixel(2, 153) == sf::Color{252, 216, 168} &&
+        secondary.getPixel(3, 73) == sf::Color{147, 187, 236},
+        "SecondaryPalette",
+        "Skin and Luigi cleanup background colors remain unchanged");
+}
+
 } // namespace
 
 // ============================================================
@@ -935,6 +1082,7 @@ int main() {
     testGoombaFireballDefeat(runner);
     testKoopaShellCycle(runner);
     testPiranhaPlantStateMachineAndTiming(runner);
+    testAlternatingPiranhaPlantTiming(runner);
     testEnemyDirectionAndProperties(runner);
     runner.report("Suite 3: Enemy State Transitions");
 
@@ -947,7 +1095,9 @@ int main() {
     testCrawlUsesFinalGroundContact(runner);
     testRulesetMovementScale(runner);
     testMarioCanReachPvPSuperPlatform(runner);
+    testLuigiHeldJumpBalance(runner);
     testDebugMovementTrailEvents(runner);
+    testSecondaryPlayerPalette(runner);
     testStarItemBounceAndCollect(runner);
     testOneUpMushroomCollect(runner);
     runner.report("Suite 4: Item Collection & States");

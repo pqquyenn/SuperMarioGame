@@ -12,7 +12,8 @@ PiranhaPlant::PiranhaPlant(float x, float y) : Enemy(x, y) {
     pipeTopY = y;        // Lưu vị trí đỉnh ống
     currentRise = 0.f;   // Bắt đầu ẩn hoàn toàn trong ống
     currentState = State::WAITING_BOT;
-    waitTimer = 1.0f;    // Chờ 1 giây trước khi nhô lên lần đầu
+    waitTimer = 0.f;
+    waitingForInitialRise = true;
 
     // Đặt position ban đầu = ẩn hoàn toàn (dưới đỉnh ống)
     position.y = pipeTopY;
@@ -27,6 +28,20 @@ void PiranhaPlant::setPipeTopY(float y) {
     currentRise = 0.f;
     currentState = State::WAITING_BOT;
     waitTimer = 0.f;
+    waitingForInitialRise = true;
+}
+
+void PiranhaPlant::setCycleTiming(float visibleSeconds,
+                                  float hiddenSeconds,
+                                  float initialDelaySeconds) {
+    visibleDuration = std::max(0.f, visibleSeconds);
+    hiddenDuration = std::max(0.f, hiddenSeconds);
+    initialHiddenDelay = std::max(0.f, initialDelaySeconds);
+    position.y = pipeTopY;
+    currentRise = 0.f;
+    currentState = State::WAITING_BOT;
+    waitTimer = 0.f;
+    waitingForInitialRise = true;
 }
 
 // ============================================================
@@ -52,7 +67,7 @@ void PiranhaPlant::update(float dt) {
         case State::WAITING_TOP:
             // Chờ ở đỉnh
             waitTimer += dt;
-            if (waitTimer >= waitDuration) {
+            if (waitTimer >= visibleDuration) {
                 currentState = State::DESCENDING;
             }
             break;
@@ -64,6 +79,7 @@ void PiranhaPlant::update(float dt) {
                 currentRise = 0.f;
                 currentState = State::WAITING_BOT;
                 waitTimer = 0.f;
+                waitingForInitialRise = false;
             }
             position.y = pipeTopY - currentRise;
             break;
@@ -71,8 +87,12 @@ void PiranhaPlant::update(float dt) {
         case State::WAITING_BOT:
             // Chờ ở đáy (ẩn hoàn toàn trong ống)
             waitTimer += dt;
-            if (waitTimer >= waitDuration) {
+            const float targetWait = waitingForInitialRise
+                ? initialHiddenDelay
+                : hiddenDuration;
+            if (waitTimer >= targetWait) {
                 currentState = State::RISING;
+                waitTimer = 0.f;
             }
             break;
     }

@@ -92,6 +92,7 @@ add_executable(solid11_tests
     src/Entities/Character.cpp
     src/Entities/Mario.cpp
     src/Entities/Luigi.cpp
+    src/Entities/PlayerPalette.cpp
     src/Entities/PlayerAnimation.cpp
     src/Animation/SpriteAnimator.cpp
     src/PlayerStates/PlayerState.cpp

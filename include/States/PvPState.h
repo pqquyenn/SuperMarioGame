@@ -1,6 +1,8 @@
 #pragma once
 
 #include "AdminControl/DebugMovementTrail.h"
+#include "Core/GameSettings.h"
+#include "Entities/PlayerPalette.h"
 #include "Input/InputHandler.h"
 #include "Level/Level.h"
 #include "PvP/PvPTypes.h"
@@ -21,6 +23,8 @@ class PvPState : public GameState {
 private:
     struct PlayerSlot {
         PlayerId id;
+        CharacterChoice characterChoice;
+        PlayerPalette palette{PlayerPalette::Primary};
         std::unique_ptr<Character> character;
         InputHandler input;
         sf::Vector2f spawnPoint{0.f, 0.f};
@@ -30,7 +34,9 @@ private:
         float fireTimeRemaining{0.f};
         float fireCooldown{0.f};
 
-        PlayerSlot(PlayerId playerId, const InputBindings& bindings);
+        PlayerSlot(PlayerId playerId,
+                   CharacterChoice choice,
+                   const InputBindings& bindings);
     };
 
     struct OwnedFireball {
@@ -49,6 +55,7 @@ private:
     std::unique_ptr<FireFlower> fireFlower;
     std::vector<sf::Vector2f> fireFlowerSpawns;
     std::mt19937 randomEngine;
+    bool sameCharacterMatch{false};
 
     sf::Font font;
     bool fontLoaded{false};
@@ -83,10 +90,16 @@ private:
     void constrainToArena(PlayerSlot& slot);
     void loadFont();
     void renderHud(sf::RenderWindow& window);
+    void renderPlayerMarkers(sf::RenderWindow& window);
     void renderDebug(sf::RenderWindow& window);
 
 public:
-    explicit PvPState(PvPMatchType type, std::string mapPath = {});
+    explicit PvPState(
+        PvPMatchType type,
+        std::string mapPath = {},
+        CharacterChoice playerOneChoice = CharacterChoice::Mario,
+        CharacterChoice playerTwoChoice = CharacterChoice::Luigi
+    );
     ~PvPState() override;
 
     void onEnter() override;

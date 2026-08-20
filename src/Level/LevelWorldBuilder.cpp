@@ -1,6 +1,7 @@
 #include "Level/LevelWorldBuilder.h"
 
 #include "Entities/Enemies/Enemy.h"
+#include "Entities/Enemies/PiranhaPlant.h"
 #include "Entities/Enemies/RedKoopa.h"
 #include "Entities/Items/Item.h"
 #include "Entities/MovingPlatform.h"
@@ -64,6 +65,18 @@ bool LevelWorldBuilder::build(
         enemy->setDirection(specification.direction);
         if (specification.speed >= 0.f) {
             enemy->setSpeed(specification.speed);
+        }
+        if (auto* plant = dynamic_cast<PiranhaPlant*>(enemy)) {
+            plant->setCycleTiming(
+                specification.visibleDuration >= 0.f
+                    ? specification.visibleDuration
+                    : plant->getVisibleDuration(),
+                specification.hiddenDuration >= 0.f
+                    ? specification.hiddenDuration
+                    : plant->getHiddenDuration(),
+                specification.initialDelay >= 0.f
+                    ? specification.initialDelay
+                    : plant->getInitialHiddenDelay());
         }
         if (auto* redKoopa = dynamic_cast<RedKoopa*>(enemy)) {
             redKoopa->setTileMap(&map);

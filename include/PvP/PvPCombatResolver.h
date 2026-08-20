@@ -15,9 +15,20 @@ struct PvPBodyFrame {
     sf::Vector2f velocity;
 };
 
+struct PvPPushDistribution {
+    bool playerOneIsLeft{true};
+    // Fraction of total separation/recoil received by each player.
+    float playerOneShare{0.5f};
+    float playerTwoShare{0.5f};
+};
+
 class PvPCombatResolver {
 public:
     static PvPContactOutcome classifyPlayerContact(
+        const PvPBodyFrame& playerOne,
+        const PvPBodyFrame& playerTwo
+    );
+    static PvPPushDistribution calculatePushDistribution(
         const PvPBodyFrame& playerOne,
         const PvPBodyFrame& playerTwo
     );

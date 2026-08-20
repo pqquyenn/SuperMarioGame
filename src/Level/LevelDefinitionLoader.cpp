@@ -529,6 +529,19 @@ bool LevelDefinitionLoader::load(
                 addParseError(errors, manifestPath, lineNumber,
                               "speed must be numeric");
             }
+            const auto parseOptionalSeconds = [&](const char* key,
+                                                   float& destination) {
+                if (values.find(key) != values.end() &&
+                    !parseFloat(valueOr(values, key), destination)) {
+                    addParseError(errors, manifestPath, lineNumber,
+                                  std::string{key} + " must be numeric");
+                }
+            };
+            if (!item) {
+                parseOptionalSeconds("visible_time", entity.visibleDuration);
+                parseOptionalSeconds("hidden_time", entity.hiddenDuration);
+                parseOptionalSeconds("initial_delay", entity.initialDelay);
+            }
 
             (item ? definition.items : definition.entities).push_back(entity);
         };
@@ -794,6 +807,16 @@ std::vector<std::string> LevelValidator::validate(
         if (entity.area.empty()) {
             addValidationError(errors, definition,
                                "entity area cannot be empty: " + entity.id);
+        }
+        const auto validOptionalDuration = [](float duration) {
+            return duration == -1.f || duration >= 0.f;
+        };
+        if (!validOptionalDuration(entity.visibleDuration) ||
+            !validOptionalDuration(entity.hiddenDuration) ||
+            !validOptionalDuration(entity.initialDelay)) {
+            addValidationError(
+                errors, definition,
+                "entity cycle timing cannot be negative: " + entity.id);
         }
     }
 

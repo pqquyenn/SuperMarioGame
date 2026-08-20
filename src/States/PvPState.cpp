@@ -54,13 +54,25 @@ void centerText(sf::Text& text, float x, float y) {
                    bounds.top + bounds.height * 0.5f);
     text.setPosition(x, y);
 }
+
+const char* characterName(CharacterChoice choice) {
+    return choice == CharacterChoice::Luigi ? "LUIGI" : "MARIO";
+}
+
+std::unique_ptr<Character> makeCharacter(CharacterChoice choice) {
+    if (choice == CharacterChoice::Luigi) {
+        return std::make_unique<Luigi>();
+    }
+    return std::make_unique<Mario>();
+}
 }
 
 PvPState::PlayerSlot::PlayerSlot(
     PlayerId playerId,
+    CharacterChoice choice,
     const InputBindings& bindings
 )
-    : id{playerId}, input{bindings, false} {}
+    : id{playerId}, characterChoice{choice}, input{bindings, false} {}
 
 InputBindings PvPState::makePlayerOneBindings() {
     InputBindings bindings;
@@ -84,15 +96,20 @@ InputBindings PvPState::makePlayerTwoBindings() {
     return bindings;
 }
 
-PvPState::PvPState(PvPMatchType type, std::string mapPath)
+PvPState::PvPState(
+    PvPMatchType type,
+    std::string mapPath,
+    CharacterChoice playerOneChoice,
+    CharacterChoice playerTwoChoice
+)
     : matchType{type},
       arenaMapPath{mapPath.empty()
           ? (type == PvPMatchType::Small
                  ? "pvp/small-arena.level"
                  : "pvp/super-arena.level")
           : std::move(mapPath)},
-      playerOne{PlayerId::One, makePlayerOneBindings()},
-      playerTwo{PlayerId::Two, makePlayerTwoBindings()},
+      playerOne{PlayerId::One, playerOneChoice, makePlayerOneBindings()},
+      playerTwo{PlayerId::Two, playerTwoChoice, makePlayerTwoBindings()},
       randomEngine{std::random_device{}()} {}
 
 PvPState::~PvPState() = default;
@@ -145,13 +162,27 @@ sf::Vector2f PvPState::findAnchor(
 }
 
 void PvPState::createPlayers() {
-    playerOne.character = std::make_unique<Mario>();
-    playerTwo.character = std::make_unique<Luigi>();
+    playerOne.character = makeCharacter(playerOne.characterChoice);
+    playerTwo.character = makeCharacter(playerTwo.characterChoice);
+    playerOne.palette = PlayerPalette::Primary;
+    playerTwo.palette = PlayerPalette::Primary;
+    sameCharacterMatch =
+        playerOne.characterChoice == playerTwo.characterChoice;
 
+    AssetManager& assets = AssetManager::getInstance();
     auto& playerTexture =
-        AssetManager::getInstance().getTexture("PlayerSpriteSheet");
+        assets.getPlayerTexture(PlayerPalette::Primary);
     playerOne.character->setTexture(playerTexture);
-    playerTwo.character->setTexture(playerTexture);
+    if (sameCharacterMatch) {
+        sf::Texture& secondary =
+            assets.getPlayerTexture(PlayerPalette::Secondary);
+        if (&secondary != &playerTexture) {
+            playerTwo.palette = PlayerPalette::Secondary;
+        }
+        playerTwo.character->setTexture(secondary);
+    } else {
+        playerTwo.character->setTexture(playerTexture);
+    }
     playerOne.character->setHorizontalMovementScale(PvPMovementScale);
     playerTwo.character->setHorizontalMovementScale(PvPMovementScale);
 
@@ -182,11 +213,19 @@ void PvPState::createPlayers() {
 
 void PvPState::configureArenaCamera() {
     Camera& camera = level.getCamera();
-    camera.setSize(ArenaViewWidth, ArenaViewHeight);
     const float tileSize = level.getDefinition().tileSize;
-    camera.setLevelBounds(level.getTileMap().getMapWidth() * tileSize,
-                          level.getTileMap().getMapHeight() * tileSize);
-    camera.setCenter(ArenaViewWidth * 0.5f, ArenaViewHeight * 0.5f);
+    const float worldWidth = level.getTileMap().getMapWidth() * tileSize;
+    const float worldHeight = level.getTileMap().getMapHeight() * tileSize;
+    const float viewWidth = std::max(ArenaViewWidth, worldWidth);
+    // The final terrain row is a backing row below the playable floor. Keep
+    // it outside the view while allowing taller custom arenas to show their
+    // actual ground instead of clipping it at the bottom edge.
+    const float viewHeight = std::max(
+        ArenaViewHeight, worldHeight - tileSize);
+
+    camera.setSize(viewWidth, viewHeight);
+    camera.setLevelBounds(worldWidth, worldHeight);
+    camera.setCenter(viewWidth * 0.5f, viewHeight * 0.5f);
 }
 
 void PvPState::handleInput(sf::Event& event, sf::RenderWindow&) {
@@ -213,7 +252,11 @@ void PvPState::handleInput(sf::Event& event, sf::RenderWindow&) {
     if (matchOver && event.key.code == sf::Keyboard::Enter) {
         if (stateManager) {
             stateManager->clearAndPushState(
-                std::make_unique<PvPState>(matchType, arenaMapPath));
+                std::make_unique<PvPState>(
+                    matchType,
+                    arenaMapPath,
+                    playerOne.characterChoice,
+                    playerTwo.characterChoice));
         }
         return;
     }
@@ -371,13 +414,29 @@ void PvPState::pushPlayersApart() {
         return;
     }
 
-    const bool oneIsLeft = centerX(one.getBounds()) <= centerX(two.getBounds());
-    const float separation = overlap.width * 0.5f + 0.5f;
-    one.move(oneIsLeft ? -separation : separation, 0.f);
-    two.move(oneIsLeft ? separation : -separation, 0.f);
-    one.setVelocity(oneIsLeft ? -ContactPushVelocity : ContactPushVelocity,
+    const PvPPushDistribution push =
+        PvPCombatResolver::calculatePushDistribution(
+            {playerOne.previousBounds, one.getBounds(), one.getVelocity()},
+            {playerTwo.previousBounds, two.getBounds(), two.getVelocity()});
+    const float totalSeparation = overlap.width + 1.f;
+    one.move(push.playerOneIsLeft
+                 ? -totalSeparation * push.playerOneShare
+                 : totalSeparation * push.playerOneShare,
+             0.f);
+    two.move(push.playerOneIsLeft
+                 ? totalSeparation * push.playerTwoShare
+                 : -totalSeparation * push.playerTwoShare,
+             0.f);
+
+    // Equal shares preserve the old recoil speed. A faster attacker receives
+    // less recoil, while the slower/stationary player receives more.
+    const float oneRecoil = ContactPushVelocity *
+                            (0.5f + push.playerOneShare);
+    const float twoRecoil = ContactPushVelocity *
+                            (0.5f + push.playerTwoShare);
+    one.setVelocity(push.playerOneIsLeft ? -oneRecoil : oneRecoil,
                     one.getVelocity().y);
-    two.setVelocity(oneIsLeft ? ContactPushVelocity : -ContactPushVelocity,
+    two.setVelocity(push.playerOneIsLeft ? twoRecoil : -twoRecoil,
                     two.getVelocity().y);
     constrainToArena(playerOne);
     constrainToArena(playerTwo);
@@ -593,9 +652,11 @@ void PvPState::evaluateWinner() {
     if (playerOne.lives <= 0 && playerTwo.lives <= 0) {
         resultText = "DRAW";
     } else if (playerOne.lives <= 0) {
-        resultText = "PLAYER 2 - LUIGI WINS";
+        resultText = std::string{"PLAYER 2 - "} +
+                     characterName(playerTwo.characterChoice) + " WINS";
     } else {
-        resultText = "PLAYER 1 - MARIO WINS";
+        resultText = std::string{"PLAYER 1 - "} +
+                     characterName(playerOne.characterChoice) + " WINS";
     }
 }
 
@@ -663,12 +724,18 @@ void PvPState::renderHud(sf::RenderWindow& window) {
         return text.str();
     };
 
-    sf::Text left{playerLabel(playerOne, "MARIO"), font, 13};
+    sf::Text left{
+        playerLabel(playerOne, characterName(playerOne.characterChoice)),
+        font,
+        13};
     left.setPosition(22.f, 18.f);
     left.setFillColor(sf::Color{255, 110, 90});
     window.draw(left);
 
-    sf::Text right{playerLabel(playerTwo, "LUIGI"), font, 13};
+    sf::Text right{
+        playerLabel(playerTwo, characterName(playerTwo.characterChoice)),
+        font,
+        13};
     const sf::FloatRect rightBounds = right.getLocalBounds();
     right.setPosition(UiWidth - rightBounds.width - 24.f, 18.f);
     right.setFillColor(sf::Color{110, 255, 130});
@@ -705,6 +772,32 @@ void PvPState::renderHud(sf::RenderWindow& window) {
     }
 
     window.setView(previous);
+}
+
+void PvPState::renderPlayerMarkers(sf::RenderWindow& window) {
+    if (!sameCharacterMatch || !fontLoaded) {
+        return;
+    }
+
+    auto marker = [this, &window](const PlayerSlot& slot,
+                                  const char* label,
+                                  sf::Color color) {
+        if (!slot.character || !slot.character->isActive()) {
+            return;
+        }
+        const sf::FloatRect bounds = slot.character->getBounds();
+        sf::Text text{label, font, 6};
+        text.setFillColor(color);
+        text.setOutlineColor(sf::Color::Black);
+        text.setOutlineThickness(0.75f);
+        centerText(text,
+                   bounds.left + bounds.width * 0.5f,
+                   bounds.top - 6.f);
+        window.draw(text);
+    };
+
+    marker(playerOne, "P1", sf::Color{255, 100, 80});
+    marker(playerTwo, "P2", sf::Color{80, 225, 255});
 }
 
 void PvPState::renderDebug(sf::RenderWindow& window) {
@@ -797,6 +890,7 @@ void PvPState::render(sf::RenderWindow& window) {
     if (playerTwo.character && playerTwo.character->isActive()) {
         playerTwo.character->render(window);
     }
+    renderPlayerMarkers(window);
     for (const auto& owned : fireballs) {
         if (owned.projectile && owned.projectile->isActive()) {
             owned.projectile->render(window);
