@@ -108,6 +108,56 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(solid04_tile_tests
+    tests/tile_collision_tests.cpp
+    src/Physics/CollisionManager.cpp
+    src/Physics/CollisionGeometry.cpp
+    src/Level/Tile.cpp
+    src/Level/TileMap.cpp
+    src/Level/Camera.cpp
+    src/Entities/Entity.cpp
+    src/Entities/Character.cpp
+    src/Entities/MovingPlatform.cpp
+    src/Entities/PlayerAnimation.cpp
+    src/Entities/Enemies/Enemy.cpp
+    src/Animation/SpriteAnimator.cpp
+    src/Observer/Subject.cpp
+    src/PlayerStates/PlayerState.cpp
+    src/PlayerStates/SmallState.cpp
+    src/PlayerStates/SuperState.cpp
+    src/PlayerStates/FireState.cpp
+    src/PlayerEffects/PlayerEffect.cpp
+    src/PlayerEffects/DamageInvincibilityEffect.cpp
+    src/PlayerEffects/StarEffect.cpp
+    src/PlayerEffects/ShieldEffect.cpp
+    src/Core/AssetManager.cpp
+)
+
+target_include_directories(solid04_tile_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::Graphics)
+    target_link_libraries(solid04_tile_tests PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+elseif(TARGET sfml-graphics)
+    target_link_libraries(solid04_tile_tests PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
+else()
+    target_link_libraries(solid04_tile_tests PRIVATE sfml-graphics sfml-audio sfml-window sfml-system)
+endif()
+
+add_test(
+    NAME solid04_tile_collision_tests
+    COMMAND solid04_tile_tests
+)
+set_tests_properties(
+    solid04_tile_collision_tests
+    PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        ENVIRONMENT "PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY};$ENV{PATH}"
+)
+
 add_executable(solid11_tests
     tests/observer_and_entity_tests.cpp
     src/Observer/Subject.cpp

@@ -1,397 +1,187 @@
 #include "Physics/CollisionManager.h"
+
 #include "Entities/Character.h"
-#include "Entities/Enemies/Enemy.h"
 #include "Entities/Entity.h"
-#include "Entities/Fireball.h"
-#include "Entities/Items/Coin.h"
-#include "Entities/Items/Item.h"
 #include "Entities/MovingPlatform.h"
-#include "Level/Level.h"
 #include "Level/Tile.h"
 #include "Level/TileMap.h"
-#include "PlayerStates/PlayerState.h"
+#include "Physics/CollisionGeometry.h"
+#include "Physics/TileCollisionHandler.h"
+
 #include <algorithm>
-#include <cmath>
-#include <iostream>
 #include <vector>
 
-
-bool CollisionManager::checkAABB(const sf::FloatRect &a, const sf::FloatRect &b,
-                                 sf::FloatRect &overlap) {
-  return a.intersects(b, overlap);
+bool CollisionManager::checkAABB(
+    const sf::FloatRect& a,
+    const sf::FloatRect& b,
+    sf::FloatRect& overlap) {
+    return CollisionGeometry::intersects(a, b, overlap);
 }
 
-bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
-  if (!character.isActive() || character.isDying()) {
-    return false;
-  }
-
-  if (level.isDataDriven()) {
-    const sf::FloatRect bounds = character.getBounds();
-    const float centerX = bounds.left + bounds.width * 0.5f;
-    const float feetY = bounds.top + bounds.height;
-    constexpr float contactTolerance = 3.f;
-    for (const auto& portal : level.getDefinition().portals) {
-      if (portal.activation != PortalActivation::Down ||
-          portal.sourceArea != level.getCurrentArea()) {
-        continue;
-      }
-      const float tileSize = level.getDefinition().tileSize;
-      const sf::FloatRect trigger{
-          portal.triggerTiles.left * tileSize,
-          portal.triggerTiles.top * tileSize,
-          portal.triggerTiles.width * tileSize,
-          portal.triggerTiles.height * tileSize};
-      const bool centered = centerX >= trigger.left &&
-                            centerX <= trigger.left + trigger.width;
-      const bool touchingTop = std::abs(feetY - trigger.top) <=
-                               contactTolerance;
-      if (centered && touchingTop) {
-        return level.tryActivatePortal(
-            character, trigger, PortalActivation::Down);
-      }
+void CollisionManager::resolveEntityCollisions(Entity& a, Entity& b) {
+    if (!a.isActive() || !b.isActive()) {
+        return;
     }
-    return false;
-  }
 
-  constexpr float ContactTolerance = 3.f;
-  const sf::FloatRect bounds = character.getBounds();
-  const float centerX = bounds.left + bounds.width * 0.5f;
-  const float feetY = bounds.top + bounds.height;
+    const auto contact = CollisionGeometry::findContact(
+        a.getBounds(), b.getBounds());
+    if (!contact) {
+        return;
+    }
 
-  const auto standsOnEntrance =
-      [centerX, feetY, ContactTolerance](const sf::FloatRect &entrance) {
-    const bool centeredOverEntrance =
-        centerX >= entrance.left &&
-        centerX <= entrance.left + entrance.width;
-    const bool feetTouchTop =
-        std::abs(feetY - entrance.top) <= ContactTolerance;
-    return centeredOverEntrance && feetTouchTop;
-  };
-
-  if (level.getLevelId() == 1 &&
-      !level.getIsUnderground() &&
-      !level.getIsInBonusRoom() &&
-      standsOnEntrance({912.f, 144.f, 32.f, 16.f})) {
-    level.warpToUnderground(&character);
-    return true;
-  }
-
-  if (level.getLevelId() == 2 &&
-      level.getIsUnderground() &&
-      !level.getIsInBonusRoom() &&
-      standsOnEntrance({1856.f, 400.f, 32.f, 16.f})) {
-    level.warpPipeB_Entry(&character);
-    return true;
-  }
-
-  return false;
+    // Both entities receive the same contact. Each concrete gameplay object
+    // owns its reaction instead of being selected here through RTTI.
+    a.onCollision(b, contact->overlap);
+    b.onCollision(a, contact->overlap);
 }
 
-bool CollisionManager::tryStandUp(Character &character, const TileMap &map) {
-  if (!character.isCrouching()) {
-    return true;
-  }
-
-  // Test only the extra headroom added above the 16px crouched body. Testing
-  // the complete standing bounds before floor resolution made the floor's
-  // small gravity penetration look like an overhead obstruction.
-  const sf::FloatRect headroom = character.getStandingHeadroomBounds();
-  bool headroomBlocked = false;
-  for (const TileHandle &handle : map.getTilesInBounds(headroom)) {
-    const Tile *tile = map.getTile(handle);
-    if (!tile || !tile->isSolid()) {
-      continue;
+void CollisionManager::resolveTileCollisions(
+    Entity& entity,
+    TileMap& map,
+    TileCollisionHandler* tileHandler) {
+    if (!entity.isActive() || entity.shouldSkipTileCollision()) {
+        return;
     }
 
-    sf::FloatRect overlap;
-    if (checkAABB(headroom, tile->getBounds(), overlap)) {
-      headroomBlocked = true;
-      break;
-    }
-  }
+    entity.beginTileCollision();
 
-  character.resolveCrouchState(headroomBlocked);
-  return !character.isCrouching();
-}
+    sf::FloatRect bounds = entity.getBounds();
+    const std::vector<TileHandle> nearbyTiles = map.getTilesInBounds(bounds);
+    sf::Vector2f position = entity.getPosition();
+    sf::Vector2f velocity = entity.getVelocity();
 
-void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
-  sf::FloatRect overlap;
-  if (!checkAABB(a.getBounds(), b.getBounds(), overlap)) {
-    return;
-  }
-
-  Character *character = dynamic_cast<Character *>(&a);
-  Enemy *enemy = dynamic_cast<Enemy *>(&b);
-  if (!character) {
-    character = dynamic_cast<Character *>(&b);
-    enemy = dynamic_cast<Enemy *>(&a);
-  }
-
-  if (character && !character->isDying() && enemy && enemy->isActive()) {
-    // A flattened enemy remains active briefly so its defeat animation can be
-    // rendered. It must not damage the player again during that interval.
-    if (enemy->isSquished()) {
-      return;
-    }
-
-    // Star invincibility: Mario defeats any enemy on contact (not just stomp)
-    if (character->defeatsEnemiesOnContact()) {
-      enemy->onFireball();
-      character->notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
-      return;
-    }
-
-    // Stomp immunity / damage handling via polymorphic contract
-    if (!enemy->canBeStomped()) {
-      character->takeDamage();
-      return;
-    }
-
-    sf::FloatRect characterBounds = character->getBounds();
-    sf::FloatRect enemyBounds = enemy->getBounds();
-
-    // Stomp condition: Mario is moving downward and feet are above enemy top
-    if (character->getVelocity().y > 0.f &&
-        (characterBounds.top + characterBounds.height - overlap.height <=
-         enemyBounds.top + 8.f)) {
-      // Resolve the overlap before bouncing. Without this separation Mario
-      // can still overlap the active defeat/shell animation on the next frame,
-      // where his new upward velocity would misclassify it as side damage.
-      character->setPosition(
-          character->getPosition().x,
-          enemyBounds.top - characterBounds.height);
-      enemy->onStomped();
-      // enemy->setActive(false);
-      character->notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
-      character->setVelocity(
-          sf::Vector2f(character->getVelocity().x, -250.f));
-      return;
-    } else {
-      character->takeDamage();
-      return;
-    }
-  }
-
-  // Pure OOP: no type-checking. Entities resolve their own state via double
-  // dispatch.
-  a.onCollision(b, overlap);
-  b.onCollision(a, overlap);
-}
-
-void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
-                                             Level *level) {
-  if (Item *item = dynamic_cast<Item *>(&entity)) {
-    if (item->shouldSkipTileCollision())
-      return;
-  }
-
-  sf::FloatRect bounds = entity.getBounds();
-
-  // Grounded is contact state, not a persistent movement state. Clear the
-  // previous frame's result before testing the current position; landing on a
-  // tile (or the later moving-platform pass) will set it back to true.
-  Character *character = dynamic_cast<Character *>(&entity);
-  if (character) {
-    character->setGrounded(false);
-  }
-
-  // Retrieve only tiles physically near the entity to minimize comparisons
-  const std::vector<TileHandle> nearbyTiles = map.getTilesInBounds(bounds);
-
-  sf::Vector2f pos = entity.getPosition();
-  sf::Vector2f vel = entity.getVelocity();
-  Enemy *enemy = dynamic_cast<Enemy *>(&entity);
-  Fireball *fireball = dynamic_cast<Fireball *>(&entity);
-  bool landedThisFrame = false;
-
-  // Entering a downward pipe is a contact interaction, not penetration
-  // resolution. Check it independently from the collision passes so a
-  // stationary character resting exactly on the pipe can enter.
-  if (character && level && !level->isDataDriven() &&
-      (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down) ||
-       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))) {
-    if (tryEnterDownWarp(*character, *level)) {
-      return;
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  // PASS 1 — Y-axis resolution (Ground & Ceiling landing)
-  // ──────────────────────────────────────────────────────────────
-  for (const TileHandle& handle : nearbyTiles) {
-    Tile *tile = map.getTile(handle);
-    if (!tile || !tile->isSolid()) {
-      continue;
-    }
-
-    const sf::FloatRect tileBounds = tile->getBounds();
-
-    if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
-      if (overlap.height <= overlap.width) {
-        if (bounds.top < tileBounds.top) {
-          pos.y -= overlap.height; // Landed on top of the tile (ground)
-          landedThisFrame = true;
-
-          if (character) {
-            character->setGrounded(true);
-          } else {
-            entity.onLanded();
-          }
-
-        } else {
-          pos.y += overlap.height; // Hit the underside (ceiling)
-
-          // Question block bump logic
-          if (character && tile->isQuestionBlock()) {
-            tile->startBump();
-            map.hitTile(handle);
-            if (level) {
-              level->spawnItemFromBlock(tileBounds.left, tileBounds.top,
-                                        character);
-            }
-            character->notify(
-                GameEvent::coinCollected(Coin::defaultScoreValue()));
-          }
-
-          // Brick block logic
-          if (character && tile->isBrick()) {
-            // Block contents come from the current .level definition.
-            const bool isItemBrick =
-                level && !level->getBrickItemType(
-                             tileBounds.left, tileBounds.top).empty();
-
-            if (isItemBrick) {
-              tile->startBump();
-              map.hitTile(handle);
-              if (level) {
-                level->spawnItemFromBlock(tileBounds.left, tileBounds.top,
-                                          character);
-              }
-            } else if (character->hasAbility(PlayerAbility::BreakBricks)) {
-              // Super/Fire Mario breaks the brick
-              map.breakBrick(handle);
-            } else {
-              // Small Mario just bumps the brick
-              tile->startBump();
-            }
-          }
-        }
-        vel.y = 0.f;
-
-        entity.setPosition(pos);
-        bounds = entity.getBounds();
-      }
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  // PASS 2 — X-axis resolution (Wall contact & Direction reversal)
-  // ──────────────────────────────────────────────────────────────
-  for (const TileHandle& handle : nearbyTiles) {
-    Tile *tile = map.getTile(handle);
-    if (!tile || !tile->isSolid()) {
-      continue;
-    }
-
-    const sf::FloatRect tileBounds = tile->getBounds();
-
-    if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
-      if (overlap.width < overlap.height) {
-        if (bounds.left < tileBounds.left) {
-          pos.x -= overlap.width; // Entity is to the left of the tile
-        } else {
-          pos.x += overlap.width; // Entity is to the right of the tile
-        }
-        vel.x = 0.f; // Kill horizontal momentum on wall contact
-
-        if (enemy) {
-          enemy->reverseDirection();
-        } else if (Item *item = dynamic_cast<Item *>(&entity)) {
-          item->reverseDirection();
-        } else if (fireball) {
-          // Fireball chạm tường thì nổ / biến mất
-          fireball->explode();
-          entity.setPosition(pos);
-          entity.setVelocity(vel);
-          return;
-        }
-
-        // Horizontal Warp Pipes (Right-key triggers)
-        if (character && tile->isWarpPipe() && level) {
-          bool rightPressed =
-              sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right) ||
-              sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D);
-          if (rightPressed && level->isDataDriven()) {
-            if (level->tryActivatePortal(
-                    *character, tileBounds, PortalActivation::Right)) {
-              return;
-            }
-          } else if (rightPressed) {
-            // World 1-1: hidden bonus tunnel -> overworld exit pipe.
-            if (level->getLevelId() == 1 &&
-                level->getIsUnderground() &&
-                pos.x >= 3720.f) {
-                level->warpToOverworldExit(character);
-                return;
-            }
-
-            // Pipe 1 Entry: Overworld -> Underground (horizontal pipe at start)
-            if (!level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
-                && pos.x < 1000.f) {
-                level->warpPipeA_Entry(character);
-                return;
-            }
-            // Pipe 4: Hidden room exit -> back to Underground
-            if (level->getIsInBonusRoom() && level->getLevelId() == 2) {
-                level->warpPipeC1_Exit(character);
-                return;
-            }
-            // Last pipe: Underground -> Overworld (horizontal pipe at end)
-            if (level->getIsUnderground() && !level->getIsInBonusRoom() && level->getLevelId() == 2
-                && pos.x >= 2900.f) {
-                level->warpToOverworldExit(character);
-                return;
-            }
-          }
-        }
-
-        entity.setPosition(pos);
-        bounds = entity.getBounds();
-      }
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  // PASS 3 — Collectibles & Warp Exits (non-solid tile checks)
-  // ──────────────────────────────────────────────────────────────
-  if (character) {
+    // Pass 1: resolve vertical penetration before horizontal penetration so
+    // landing and ceiling contacts receive deterministic normals.
     for (const TileHandle& handle : nearbyTiles) {
-      Tile *tile = map.getTile(handle);
-      if (!tile)
-        continue;
-      sf::FloatRect tileBounds = tile->getBounds();
-      if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
-        if (tile->isCoinTile()) {
-          map.removeTile(handle);
-          character->notify(
-              GameEvent::coinCollected(Coin::defaultScoreValue()));
+        Tile* tile = map.getTile(handle);
+        if (!tile || !tile->isSolid()) {
+            continue;
         }
-      }
+
+        const auto contact = CollisionGeometry::findContact(
+            bounds, tile->getBounds());
+        if (!contact ||
+            (contact->side != CollisionSide::Top &&
+             contact->side != CollisionSide::Bottom)) {
+            continue;
+        }
+
+        if (contact->side == CollisionSide::Top) {
+            position.y -= contact->overlap.height;
+        } else {
+            position.y += contact->overlap.height;
+        }
+
+        velocity.y = 0.f;
+        entity.setPosition(position);
+        entity.setVelocity(velocity);
+
+        if (contact->side == CollisionSide::Top) {
+            entity.onLanded();
+        } else if (tileHandler) {
+            tileHandler->onTileCeilingContact(
+                entity, map, *tile, handle, *contact);
+        }
+
+        // Hooks may intentionally alter motion, such as a fireball bounce.
+        position = entity.getPosition();
+        velocity = entity.getVelocity();
+        bounds = entity.getBounds();
     }
-  }
 
-  // Write the constrained velocity back to the entity
-  entity.setVelocity(vel);
+    // Pass 2: resolve horizontal penetration and delegate the wall reaction.
+    for (const TileHandle& handle : nearbyTiles) {
+        Tile* tile = map.getTile(handle);
+        if (!tile || !tile->isSolid()) {
+            continue;
+        }
 
-  // Fireball bounces back up when it touches ground.
-  if (fireball && landedThisFrame) {
-    fireball->bounce();
-  }
+        const auto contact = CollisionGeometry::findContact(
+            bounds, tile->getBounds());
+        if (!contact ||
+            (contact->side != CollisionSide::Left &&
+             contact->side != CollisionSide::Right)) {
+            continue;
+        }
+
+        if (contact->side == CollisionSide::Left) {
+            position.x -= contact->overlap.width;
+        } else {
+            position.x += contact->overlap.width;
+        }
+
+        velocity.x = 0.f;
+        entity.setPosition(position);
+        entity.setVelocity(velocity);
+        entity.onWallCollision();
+
+        position = entity.getPosition();
+        velocity = entity.getVelocity();
+        bounds = entity.getBounds();
+        if (!entity.isActive() || bounds.width <= 0.f || bounds.height <= 0.f) {
+            return;
+        }
+    }
+
+    // Pass 3: report non-solid and residual overlaps to the gameplay adapter.
+    if (tileHandler) {
+        for (const TileHandle& handle : nearbyTiles) {
+            Tile* tile = map.getTile(handle);
+            if (!tile) {
+                continue;
+            }
+
+            const auto contact = CollisionGeometry::findContact(
+                bounds, tile->getBounds());
+            if (!contact) {
+                continue;
+            }
+
+            tileHandler->onTileOverlap(
+                entity, map, *tile, handle, *contact);
+            position = entity.getPosition();
+            velocity = entity.getVelocity();
+            bounds = entity.getBounds();
+        }
+    }
+
+    entity.setVelocity(velocity);
 }
-void CollisionManager::resolveMovingPlatform(Character& character,
-                                              MovingPlatform& platform) {
-    if (!character.isActive() || !platform.isActive()) return;
+
+bool CollisionManager::tryStandUp(
+    Character& character,
+    const TileMap& map) {
+    if (!character.isCrouching()) {
+        return true;
+    }
+
+    // Check only the height added above the crouched body. Including the full
+    // standing body would misclassify small floor penetration as headroom.
+    const sf::FloatRect headroom = character.getStandingHeadroomBounds();
+    bool headroomBlocked = false;
+    for (const TileHandle& handle : map.getTilesInBounds(headroom)) {
+        const Tile* tile = map.getTile(handle);
+        if (!tile || !tile->isSolid()) {
+            continue;
+        }
+
+        sf::FloatRect overlap;
+        if (checkAABB(headroom, tile->getBounds(), overlap)) {
+            headroomBlocked = true;
+            break;
+        }
+    }
+
+    character.resolveCrouchState(headroomBlocked);
+    return !character.isCrouching();
+}
+
+void CollisionManager::resolveMovingPlatform(
+    Character& character,
+    MovingPlatform& platform) {
+    if (!character.isActive() || !platform.isActive()) {
+        return;
+    }
 
     const sf::FloatRect characterBounds = character.getBounds();
     const sf::FloatRect platformBounds = platform.getBounds();
@@ -420,8 +210,9 @@ void CollisionManager::resolveMovingPlatform(Character& character,
         if (overlapTop < overlapBottom) {
             position.y = platformBounds.top - characterBounds.height;
             const sf::Vector2f platformDelta = platform.getDelta();
-            character.setPosition(position.x + platformDelta.x,
-                                  position.y + platformDelta.y);
+            character.setPosition(
+                position.x + platformDelta.x,
+                position.y + platformDelta.y);
             character.setVelocity(sf::Vector2f(velocity.x, 0.f));
             character.setGrounded(true);
         } else {
