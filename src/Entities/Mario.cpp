@@ -11,8 +11,11 @@ constexpr int SuperHeight = 32;
 CharacterProfile makeMarioProfile() {
     CharacterProfile profile;
     profile.moveAcceleration = 1000.f;
-    profile.walkSpeed = 170.f;
-    profile.runSpeed = 260.f;
+    profile.walkSpeed = 150.f;
+    profile.crawlSpeed = 70.f;
+    profile.runSpeed = 210.f;
+    profile.groundDeceleration = profile.runSpeed / 0.14f;
+    profile.crawlDeceleration = profile.crawlSpeed / 0.05f;
     profile.jumpForce = 350.f;
     profile.jumpHoldGravityMultiplier = 0.45f;
     profile.jumpReleaseGravityMultiplier = 2.5f;
@@ -64,6 +67,7 @@ PlayerAnimationSet makeSmallAnimationSet(
         SmallWidth,
         SmallHeight
     ));
+    set.crouching = set.idle;
     set.dead = AnimationClip{
         {
             fullFrame(
@@ -109,6 +113,9 @@ PlayerAnimationSet makeSuperAnimationSet(
         SuperWidth,
         SuperHeight
     ));
+    // The individual-image asset set has no crouch image. Atlas-backed Mario
+    // uses the dedicated crouch frame; this profile falls back to idle.
+    set.crouching = set.idle;
     set.dead = deathClip;
     return set;
 }

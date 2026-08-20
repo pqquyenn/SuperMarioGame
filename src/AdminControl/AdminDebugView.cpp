@@ -142,7 +142,7 @@ AdminDebugView::AdminDebugView() {
     }
 
     panel.setPosition(8.f, 8.f);
-    panel.setSize({290.f, 92.f});
+    panel.setSize({290.f, 108.f});
     panel.setFillColor(sf::Color(0, 0, 0, 240));
     panel.setOutlineColor(sf::Color(255, 210, 70));
     panel.setOutlineThickness(1.f);
@@ -163,6 +163,17 @@ void AdminDebugView::renderWorldAnnotations(
     const sf::FloatRect viewBounds = level.getCamera().getViewBounds();
     const sf::View worldView = window.getView();
     std::vector<WorldAnnotation> annotations;
+
+    const sf::FloatRect characterBounds = character.getBounds();
+    if (intersects(characterBounds, viewBounds)) {
+        const sf::Color color(80, 255, 120);
+        std::ostringstream label;
+        label << (character.isCrouching() ? "PLAYER CRAWL " : "PLAYER HITBOX ")
+              << static_cast<int>(std::round(characterBounds.width)) << "x"
+              << static_cast<int>(std::round(characterBounds.height));
+        drawWorldOutline(window, characterBounds, color);
+        annotations.push_back({characterBounds, label.str(), color});
+    }
 
     for (const auto& enemy : level.getEnemies()) {
         if (enemy && enemy->isActive() && enemy->isActivated()) {
@@ -248,6 +259,7 @@ void AdminDebugView::render(
 
     const sf::Vector2f position = character.getPosition();
     const sf::Vector2f velocity = character.getVelocity();
+    const sf::FloatRect bounds = character.getBounds();
     const float speed = std::sqrt(
         velocity.x * velocity.x + velocity.y * velocity.y);
     const EnemyRuntimeStats enemyStats = level.getEnemyRuntimeStats();
@@ -263,6 +275,9 @@ void AdminDebugView::render(
                 << "SPD " << speed << " | VEL "
                 << velocity.x << "," << velocity.y << "\n"
                 << "POS " << position.x << "," << position.y << "\n"
+                << "HITBOX " << bounds.width << "x" << bounds.height
+                << " | " << (character.isCrouching() ? "CRAWL" : "STAND")
+                << "\n"
                 << "ENEMY A " << enemyStats.active
                 << " | I " << enemyStats.inactive
                 << " | R " << enemyStats.removed;

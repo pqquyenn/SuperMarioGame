@@ -2,6 +2,7 @@
 #include "Commands/JumpCommand.h"
 #include "Commands/MoveCommand.h"
 #include "Commands/FireCommand.h"
+#include "Commands/CrawlCommand.h"
 #include "Entities/Character.h"
 #include <SFML/Window/Keyboard.hpp>
 
@@ -28,12 +29,14 @@ InputHandler::InputHandler(const InputBindings& inputBindings)
       moveLeftCommand{std::make_unique<MoveLeftCommand>()},
       moveRightCommand{std::make_unique<MoveRightCommand>()},
       actionCommand{std::make_unique<FireCommand>()},
+      crawlCommand{std::make_unique<CrawlCommand>()},
       bindings{inputBindings} {}
 
 void InputHandler::handleInput(Character& character, float dt) {
     if (!character.isActive() || character.isDying()) {
         character.setRunning(false);
         character.setJumpHeld(false);
+        crawlCommand->release(character);
         // Preserve physical key history so held buttons through death or
         // respawn are not mistaken for new presses on the first active frame.
         jumpWasHeld = isHeld(bindings.jump);
@@ -44,12 +47,20 @@ void InputHandler::handleInput(Character& character, float dt) {
     const bool moveLeftHeld = isHeld(bindings.moveLeft);
     const bool moveRightHeld = isHeld(bindings.moveRight);
     const bool jumpHeld = isHeld(bindings.jump);
+    const bool crouchHeld = isHeld(bindings.crouch);
     const bool actionHeld = isHeld(bindings.action);
     const bool separateRunHeld = isHeld(bindings.run);
 
+    if (crouchHeld) {
+        crawlCommand->execute(character, dt);
+    } else {
+        crawlCommand->release(character);
+    }
+
     // Movement commands must observe the current frame's running state.
     // The action key follows classic controls: hold to run, press to act.
-    character.setRunning(actionHeld || separateRunHeld);
+    character.setRunning(
+        !character.isCrouching() && (actionHeld || separateRunHeld));
 
     // Opposing horizontal inputs cancel one another.
     if (moveLeftHeld != moveRightHeld) {
@@ -63,13 +74,13 @@ void InputHandler::handleInput(Character& character, float dt) {
     // A fresh press starts a jump. Holding the button after takeoff continues
     // to produce a higher jump, but holding it through landing does not start
     // another jump automatically.
-    character.setJumpHeld(jumpHeld);
-    if (jumpHeld && !jumpWasHeld) {
+    character.setJumpHeld(!character.isCrouching() && jumpHeld);
+    if (!character.isCrouching() && jumpHeld && !jumpWasHeld) {
         jumpCommand->execute(character, dt);
     }
 
     // The action key fires only on a new press.
-    if (actionHeld && !actionWasHeld) {
+    if (!character.isCrouching() && actionHeld && !actionWasHeld) {
         actionCommand->execute(character, dt);
     }
 

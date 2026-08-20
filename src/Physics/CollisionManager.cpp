@@ -88,6 +88,33 @@ bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
   return false;
 }
 
+bool CollisionManager::tryStandUp(Character &character, const TileMap &map) {
+  if (!character.isCrouching()) {
+    return true;
+  }
+
+  // Test only the extra headroom added above the 16px crouched body. Testing
+  // the complete standing bounds before floor resolution made the floor's
+  // small gravity penetration look like an overhead obstruction.
+  const sf::FloatRect headroom = character.getStandingHeadroomBounds();
+  bool headroomBlocked = false;
+  for (const TileHandle &handle : map.getTilesInBounds(headroom)) {
+    const Tile *tile = map.getTile(handle);
+    if (!tile || !tile->isSolid()) {
+      continue;
+    }
+
+    sf::FloatRect overlap;
+    if (checkAABB(headroom, tile->getBounds(), overlap)) {
+      headroomBlocked = true;
+      break;
+    }
+  }
+
+  character.resolveCrouchState(headroomBlocked);
+  return !character.isCrouching();
+}
+
 void CollisionManager::resolveEntityCollisions(Entity &a, Entity &b) {
   sf::FloatRect overlap;
   if (!checkAABB(a.getBounds(), b.getBounds(), overlap)) {

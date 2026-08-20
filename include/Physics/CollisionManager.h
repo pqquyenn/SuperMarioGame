@@ -44,8 +44,15 @@ public:
     static bool tryEnterDownWarp(Character& character, Level& level);
 
     /**
+     * @brief Finalizes crouch/stand state after every tile and moving-platform
+     * ground contact for the frame has been resolved.
+     */
+    static bool tryStandUp(Character& character, const TileMap& map);
+
+    /**
      * @brief Checks if a character is standing on a MovingPlatform and carries it.
-     * Call once per platform per frame after tile collisions are resolved.
+     * Call once per platform per frame after tile collisions are resolved,
+     * then call tryStandUp once after the complete platform pass.
      */
     static void resolveMovingPlatform(Character& character, class MovingPlatform& platform);
 };

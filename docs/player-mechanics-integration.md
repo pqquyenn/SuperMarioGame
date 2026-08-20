@@ -226,10 +226,11 @@ PlayerState already updates:
 - Collision-body height
 - Player feet position when growing or shrinking
 
-Character now also selects and advances Idle, Running, Jumping, Sliding, and
-Dead sprite clips through the reusable `SpriteAnimator` component. The current
-frame rectangles match `PlayerSpriteSheet.png` and change automatically during
-`Character::update(dt)`.
+Character now also selects and advances Idle, Running, Jumping, Sliding,
+Crouching, Shooting, and Dead sprite clips through the reusable
+`SpriteAnimator` component. Super and Fire forms use powered frame index 1 for
+crouching. The current frame rectangles match `PlayerSpriteSheet.png` and
+change automatically during `Character::update(dt)`.
 
 The asset/animation integration can query:
 
@@ -251,6 +252,21 @@ See `docs/player-animation-integration.md` for the exact atlas rows, frame
 coordinates, and the Luigi opaque-background warning.
 
 ## Input Bindings
+
+Holding `S` or Down while grounded crouches Super and Fire characters. Their
+collision body shrinks to Small height while their feet stay anchored. They can
+move left or right at reduced crawl speed, but cannot jump or shoot. Releasing
+the key stands as soon as the additional powered-form headroom is clear; under a
+low ceiling, the character stays crouched and can crawl out. Holding the key only
+keeps crawl mode active while grounded, so crawling off a ledge restores the
+standing body unless terrain overhead still blocks it. A valid pipe entry
+continues to take priority over crouching.
+
+`CrawlCommand` translates held/released crawl input into a per-character
+request. The final stance is resolved after both static tiles and moving
+platforms report their ground contacts, so crawling remains stable while a
+platform carries the character. Mario and Luigi share the same crawl release
+deceleration and stop from full crawl speed in `0.05` seconds.
 
 Create one `InputHandler` per player. Default controls preserve the original
 combined keyboard mappings.

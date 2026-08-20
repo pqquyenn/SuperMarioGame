@@ -275,6 +275,10 @@ void PlayState::update(float dt) {
         }
       }
 
+      // Finalize stance only after static tiles and moving platforms have both
+      // contributed their grounded contact for this frame.
+      CollisionManager::tryStandUp(*player, level.getTileMap());
+
       // 6.5. Kiểm tra chạm Cột Cờ (Win State)
       if (!levelWon && player->isActive() && !player->isDying()) {
         const sf::FloatRect pBounds = player->getBounds();

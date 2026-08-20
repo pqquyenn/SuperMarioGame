@@ -71,10 +71,12 @@ void WinState::initSequence() {
 
     // Position player on the left side of the flagpole
     if (player) {
+        player->setCrouchRequested(false);
         player->setVelocity(0.f, 0.f);
         player->setGrounded(false);
         // Place Mario grabbing the flagpole
         player->setPosition(flagpoleBounds.left - 6.f, player->getPosition().y);
+        CollisionManager::tryStandUp(*player, level.getTileMap());
     }
 
     currentPhase = Phase::FlagSlide;
@@ -168,6 +170,7 @@ void WinState::updateAutoWalk(float dt) {
 
     // Resolve floor collisions so Mario stays on ground while walking
     CollisionManager::resolveTileCollisions(*player, level.getTileMap(), &level);
+    CollisionManager::tryStandUp(*player, level.getTileMap());
 
     // Keep camera following or centered
     float camX = std::max(200.f, player->getPosition().x);

@@ -14,6 +14,9 @@
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/StarItem.h"
 #include "Entities/Items/OneUpMushroom.h"
+#include "Entities/Mario.h"
+#include "Entities/Luigi.h"
+#include "Commands/CrawlCommand.h"
 #include "PlayerStates/SmallState.h"
 #include "PlayerStates/SuperState.h"
 #include "PlayerStates/FireState.h"
@@ -80,6 +83,10 @@ class TestPlayer : public Character {
 public:
     TestPlayer(float x = 0.f, float y = 0.f)
         : Character(x, y) {}
+
+    sf::IntRect getTextureRectForTest() const {
+        return sprite.getTextureRect();
+    }
 };
 
 // ============================================================
@@ -461,6 +468,141 @@ void testFireFlowerCollectWithPrecondition(TestRunner& runner) {
     runner.expect(flower.isCollected(), "FireFlowerTest", "Flower marked collected");
 }
 
+void testPoweredCharacterCrouch(TestRunner& runner) {
+    CrawlCommand crawlCommand;
+    TestPlayer smallPlayer(20.f, 30.f);
+    smallPlayer.setGrounded(true);
+    crawlCommand.execute(smallPlayer, 0.f);
+    runner.expect(!smallPlayer.isCrouching(), "PoweredCrouch",
+                  "Small form ignores crouch input");
+
+    TestPlayer player(100.f, 50.f);
+    Mushroom mushroom(0.f, 0.f);
+    mushroom.tryCollect(player);
+    player.setGrounded(true);
+
+    const sf::FloatRect standingBefore = player.getBounds();
+    const float feetBefore = standingBefore.top + standingBefore.height;
+    crawlCommand.execute(player, 0.f);
+    const sf::FloatRect crouchingBounds = player.getBounds();
+
+    runner.expect(player.isCrouching(), "PoweredCrouch",
+                  "Super form enters crouch while grounded");
+    runner.expect(player.getTextureRectForTest() ==
+                      sf::IntRect{17, 25, 16, 32},
+                  "PoweredCrouch",
+                  "Super crouch selects powered atlas frame 1");
+    runner.expect(std::abs(crouchingBounds.height - 16.f) < 0.001f,
+                  "PoweredCrouch", "Crouch uses Small-height collision body");
+    runner.expect(std::abs(crouchingBounds.top + crouchingBounds.height -
+                           feetBefore) < 0.001f,
+                  "PoweredCrouch", "Crouch keeps the feet anchored");
+
+    player.moveRight(1.f);
+    player.jump();
+    runner.expect(player.getVelocity().x > 0.f &&
+                      player.getVelocity().x <= 70.f,
+                  "PoweredCrouch",
+                  "Crouching permits movement at the reduced crawl speed");
+    runner.expect(std::abs(player.getVelocity().y) < 0.001f,
+                  "PoweredCrouch", "Crouching blocks jumping");
+
+    crawlCommand.release(player);
+    runner.expect(player.isCrouching(), "PoweredCrouch",
+                  "Release waits for terrain clearance before standing");
+    const sf::FloatRect proposedStanding = player.getStandingBounds();
+    const sf::FloatRect proposedHeadroom =
+        player.getStandingHeadroomBounds();
+    runner.expect(std::abs(proposedStanding.top - standingBefore.top) < 0.001f,
+                  "PoweredCrouch", "Proposed standing bounds restore full height");
+    runner.expect(std::abs(proposedHeadroom.height - 16.f) < 0.001f &&
+                      std::abs(proposedHeadroom.top + proposedHeadroom.height -
+                               crouchingBounds.top) < 0.001f,
+                  "PoweredCrouch",
+                  "Stand-up clearance checks only the added upper headroom");
+
+    player.standUp();
+    const sf::FloatRect standingAfter = player.getBounds();
+    runner.expect(!player.isCrouching(), "PoweredCrouch",
+                  "Character stands after clearance is approved");
+    runner.expect(std::abs(standingAfter.height - 32.f) < 0.001f,
+                  "PoweredCrouch", "Standing restores powered collision height");
+    runner.expect(std::abs(standingAfter.top + standingAfter.height -
+                           feetBefore) < 0.001f,
+                  "PoweredCrouch", "Standing also keeps the feet anchored");
+
+    FireFlower flower(0.f, 0.f);
+    flower.tryCollect(player);
+    player.setGrounded(true);
+    crawlCommand.execute(player, 0.f);
+    int projectileRequests = 0;
+    player.setProjectileRequestHandler(
+        [&projectileRequests](const ProjectileRequest&) {
+            ++projectileRequests;
+        });
+    player.shootFireball();
+    runner.expect(player.isCrouching(), "PoweredCrouch",
+                  "Fire form also supports crouching");
+    runner.expect(player.getTextureRectForTest() ==
+                      sf::IntRect{17, 153, 16, 32},
+                  "PoweredCrouch",
+                  "Fire crouch selects Fire atlas frame 1");
+    runner.expect(projectileRequests == 0, "PoweredCrouch",
+                  "Fire form cannot shoot while crouching");
+}
+
+void testCharacterReleaseTiming(TestRunner& runner) {
+    Mario mario;
+    Luigi luigi;
+    Mushroom marioMushroom(0.f, 0.f);
+    Mushroom luigiMushroom(0.f, 0.f);
+    marioMushroom.tryCollect(mario);
+    luigiMushroom.tryCollect(luigi);
+    mario.setGrounded(true);
+    luigi.setGrounded(true);
+
+    CrawlCommand crawlCommand;
+    crawlCommand.execute(mario, 0.f);
+    crawlCommand.execute(luigi, 0.f);
+    mario.moveRight(1.f);
+    luigi.moveRight(1.f);
+    mario.update(0.f);
+    luigi.update(0.f);
+    crawlCommand.release(mario);
+    crawlCommand.release(luigi);
+    mario.update(0.05f);
+    luigi.update(0.05f);
+
+    runner.expect(std::abs(mario.getVelocity().x) < 0.001f &&
+                      std::abs(luigi.getVelocity().x) < 0.001f,
+                  "ReleaseTiming",
+                  "Mario and Luigi stop from crawl speed in the same time");
+}
+
+void testCrawlUsesFinalGroundContact(TestRunner& runner) {
+    TestPlayer player(100.f, 50.f);
+    Mushroom mushroom(0.f, 0.f);
+    mushroom.tryCollect(player);
+    player.setGrounded(true);
+
+    CrawlCommand crawlCommand;
+    crawlCommand.execute(player, 0.f);
+
+    // Tile collision clears grounded first; a later moving-platform pass
+    // restores it before stance finalization.
+    player.setGrounded(false);
+    player.setGrounded(true);
+    player.resolveCrouchState(false);
+    runner.expect(player.isCrouching(), "CrawlFinalGroundContact",
+                  "Moving-platform grounding preserves held crawl");
+
+    // Without a final ground contact, held Down alone must not preserve crawl.
+    player.setGrounded(false);
+    player.resolveCrouchState(false);
+    runner.expect(!player.isCrouching(), "CrawlFinalGroundContact",
+                  "Walking off a platform restores standing in open air");
+}
+
 void testStarItemBounceAndCollect(TestRunner& runner) {
     StarItem star(100.f, 100.f);
     star.notifyGrounded(); // Triggers bounceForce
@@ -713,6 +855,9 @@ int main() {
     testCoinCollectionAndPop(runner);
     testMushroomEmergingAndCollect(runner);
     testFireFlowerCollectWithPrecondition(runner);
+    testPoweredCharacterCrouch(runner);
+    testCharacterReleaseTiming(runner);
+    testCrawlUsesFinalGroundContact(runner);
     testStarItemBounceAndCollect(runner);
     testOneUpMushroomCollect(runner);
     runner.report("Suite 4: Item Collection & States");
