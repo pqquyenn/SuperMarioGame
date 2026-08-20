@@ -133,6 +133,14 @@ void AssetManager::loadLevelAssets() {
 
   tryLoad("PlayerSpriteSheet",
           "assets/sprites/characters/PlayerSpriteSheet.png");
+  tryLoad("DragonLugia",
+          "assets/sprites/characters/dragon_lugia.png");
+  tryLoad("DragonFlameProjectile",
+          "assets/sprites/effects/flame_green_glowing.png");
+  tryLoad("DragonFlameBurst",
+          "assets/sprites/effects/burst_green_bright.png");
+  tryLoad("DragonFlameBurstSheet",
+          "assets/sprites/effects/dragon_flame_burst_green.png");
   // Generate solid black tile
   if (textures.find("BlackTile") == textures.end()) {
     sf::Image blackImg;

@@ -1,4 +1,4 @@
-﻿#include "Level/Level.h"
+#include "Level/Level.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Coin.h"
@@ -104,6 +104,8 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
     levelId = 2;
   } else if (definition.id == "world-1-3") {
     levelId = 3;
+  } else if (definition.id == "world-1-4") {
+    levelId = 4;
   }
 
   return spawnEntitiesFromMap();

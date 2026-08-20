@@ -5,7 +5,8 @@
 #include <memory>
 #include <filesystem>
 
-GameOverState::GameOverState(int score) : finalScore(score) {}
+GameOverState::GameOverState(int score, const std::string& mapPath)
+    : finalScore(score), currentMapPath(mapPath) {}
 
 void GameOverState::onEnter() {
     std::cout << "[GameOverState] onEnter - GAME OVER (Score: " << finalScore << ")" << std::endl;
@@ -120,9 +121,9 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
             case sf::Keyboard::Enter:
             case sf::Keyboard::Space:
                 if (selectedIndex == 0) {
-                    // TRY AGAIN -> Restart Game in PlayState
+                    // TRY AGAIN -> Restart Game in PlayState with currentMapPath
                     if (stateManager) {
-                        stateManager->changeState(std::make_unique<PlayState>());
+                        stateManager->changeState(std::make_unique<PlayState>(currentMapPath));
                     }
                 } else if (selectedIndex == 1) {
                     // MAIN MENU -> Return to MenuState

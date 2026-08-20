@@ -29,6 +29,7 @@ private:
     sf::Font freeCamFont;
     bool freeCamFontLoaded = false;
     bool levelWon = false;
+    float skyDropTimer = 5.f;
 
     void spawnFireball(const ProjectileRequest& request);
     void refreshPlayerSpawnPoint();
