@@ -95,6 +95,8 @@ PvPState::PvPState(PvPMatchType type, std::string mapPath)
       playerTwo{PlayerId::Two, makePlayerTwoBindings()},
       randomEngine{std::random_device{}()} {}
 
+PvPState::~PvPState() = default;
+
 void PvPState::onEnter() {
     AssetManager::getInstance().loadLevelAssets();
     arenaLoadFailed = !level.loadLevel(arenaMapPath);

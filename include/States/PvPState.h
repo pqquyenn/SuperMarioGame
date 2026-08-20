@@ -87,6 +87,7 @@ private:
 
 public:
     explicit PvPState(PvPMatchType type, std::string mapPath = {});
+    ~PvPState() override;
 
     void onEnter() override;
     void onExit() override;
