@@ -246,7 +246,7 @@ void PlayState::update(float dt) {
           centerCameraOnPlayerSpawn();
         } else if (stateManager) {
           stateManager->changeState(
-              std::make_unique<GameOverState>(hud.getScore()));
+              std::make_unique<GameOverState>(hud.getScore(), initialMapPath));
         }
       }
     } else if (player->isActive()) {

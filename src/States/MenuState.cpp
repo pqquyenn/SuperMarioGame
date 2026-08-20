@@ -528,7 +528,8 @@ void MenuState::goBack() {
 
 void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
     if (displayMode == DisplayMode::TitleScreen) {
-        if (event.type == sf::Event::KeyPressed || event.type == sf::Event::MouseButtonPressed) {
+        if (event.type == sf::Event::KeyPressed &&
+            (event.key.code == sf::Keyboard::Enter || event.key.code == sf::Keyboard::Return)) {
             SoundManager::getInstance().playSound("pause");
             setDisplayMode(DisplayMode::InMenu);
             setPage(Page::GameMode);
