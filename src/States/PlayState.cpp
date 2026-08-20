@@ -1,11 +1,14 @@
 #include "States/PlayState.h"
 #include "Core/AssetManager.h"
+#include "Core/SoundManager.h"
 #include "Entities/Enemies/Enemy.h"
+#include "Entities/Enemies/DragonLugia.h"
 #include "Entities/Items/Item.h"
 #include "Entities/Items/StarItem.h"
 #include "Factories/EntityFactory.h"
 #include "Physics/CollisionManager.h"
 #include "States/GameOverState.h"
+#include "States/LevelCompleteState.h"
 #include "States/PauseState.h"
 #include "States/WinState.h"
 #include "UI/HUD.h"
@@ -253,7 +256,7 @@ void PlayState::update(float dt) {
           centerCameraOnPlayerSpawn();
         } else if (stateManager) {
           stateManager->changeState(
-              std::make_unique<GameOverState>(hud.getScore()));
+              std::make_unique<GameOverState>(hud.getScore(), initialMapPath));
         }
       }
     } else if (player->isActive()) {
@@ -266,6 +269,9 @@ void PlayState::update(float dt) {
 
       for (auto &enemy : level.getEnemies()) {
         if (enemy && enemy->isActive()) {
+          if (auto* dragon = dynamic_cast<DragonLugia*>(enemy.get())) {
+            dragon->updateWithPlayer(dt, player.get(), &level.getTileMap());
+          }
           CollisionManager::resolveEntityCollisions(*player, *enemy);
         }
       }
@@ -301,6 +307,75 @@ void PlayState::update(float dt) {
                   level.getNextStage()));
             }
             return;
+          }
+        }
+
+        // Check if boss dragon was defeated in World 1-4
+        for (const auto& enemy : level.getEnemies()) {
+          if (auto* dragon = dynamic_cast<DragonLugia*>(enemy.get())) {
+            if (dragon->isBossDefeated()) {
+              levelWon = true;
+              if (stateManager) {
+                stateManager->changeState(std::make_unique<LevelCompleteState>(
+                    4,
+                    initialMapPath,
+                    "",
+                    hud.getScore(),
+                    hud.getCoins(),
+                    static_cast<int>(hud.getTimeRemaining() * 50.f)
+                ));
+              }
+              return;
+            }
+          }
+        }
+      }
+
+      // Dynamic Drops in Boss Stage (World 1-4)
+      if (!levelWon && player && player->isActive() && !player->isDying() && level.getLevelId() == 4) {
+        skyDropTimer -= dt;
+        if (skyDropTimer <= 0.f) {
+          skyDropTimer = 6.5f + static_cast<float>(rand() % 40) / 10.f; // 6.5s - 10.5s
+
+          int dropType = rand() % 100;
+          if (dropType < 55) {
+            // 55% chance: Powerup Items (Mushroom, FireFlower, StarItem)
+            // Spawn directly on ground or blue castle blocks so they don't hover in empty sky
+            struct SurfaceSpot {
+              float x;
+              float y;
+            };
+            static const SurfaceSpot surfaces[] = {
+                {80.f, 192.f},   // Ground Left
+                {200.f, 192.f},  // Ground Center
+                {310.f, 192.f},  // Ground Right
+                {88.f, 144.f},   // Left Blue Platform (row 10)
+                {184.f, 96.f},   // Middle Blue Platform (row 7)
+                {300.f, 128.f}   // Right Blue Platform (row 9)
+            };
+            int spotIdx = rand() % 6;
+            sf::Vector2f spawnPos(surfaces[spotIdx].x + static_cast<float>(rand() % 16 - 8), surfaces[spotIdx].y);
+
+            static const char* itemTypes[] = {"Mushroom", "FireFlower", "StarItem"};
+            int itemIdx = rand() % 3;
+            if (auto itemEnt = EntityFactory::getInstance().create(itemTypes[itemIdx], spawnPos)) {
+              if (auto* item = dynamic_cast<Item*>(itemEnt.get())) {
+                itemEnt.release();
+                level.getItems().push_back(std::unique_ptr<Item>(item));
+                SoundManager::getInstance().playSound("powerupappear");
+              }
+            }
+          } else {
+            // 45% chance: ONLY Goomba spawns and drops from the ceiling
+            float spawnX = 60.f + static_cast<float>(rand() % 280);
+            float spawnY = 20.f;
+            if (auto enemyEnt = EntityFactory::getInstance().create("Goomba", {spawnX, spawnY})) {
+              if (auto* enemy = dynamic_cast<Enemy*>(enemyEnt.get())) {
+                enemy->setActivated(true);
+                enemyEnt.release();
+                level.getEnemies().push_back(std::unique_ptr<Enemy>(enemy));
+              }
+            }
           }
         }
       }

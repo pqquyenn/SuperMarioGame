@@ -1,0 +1,34 @@
+# World 1-4 stage manifest. Positions are in 16px tile coordinates.
+[stage]
+version=1
+id=world-1-4
+name=WORLD 1-4 (BOSS)
+terrain=1-4.txt
+background=background.txt
+next_stage=
+initial_area=overworld
+time_limit=300
+tile_size=16
+
+[rules]
+kill_plane_tile=20
+left_boundary_tile=0
+right_boundary_tile=25
+enemy_void_margin_tiles=4
+
+[entities]
+entity id=boss01 symbol=E8 area=overworld tile=18,10 direction=-1
+
+[items]
+
+[platforms]
+
+[blocks]
+block area=overworld tile=11,7 content=PowerupByForm
+
+[anchors]
+
+[portals]
+
+[camera_zones]
+camera id=boss_camera area=overworld bounds=0,0,25,15 follow_x=false follow_y=false center_y=7.5 dark=true

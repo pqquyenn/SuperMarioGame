@@ -219,9 +219,9 @@ void testTxtCompatibilityResolution() {
 int main() {
     testCatalog();
     testStage("1.1/1-1.level", 17, 0, 6, "1.2/1-2.level");
-    testStage("1.2/1-2.level", 18, 4, 2, "1.3/1-3.level");
-    testStage("1.3/1-3.level", 8, 4, 0, "");
-    testOneTwoTerrainAndBackground();
+    testStage("1.2/1-2.level", 18, 4, 1, "1.3/1-3.level");
+    testStage("1.3/1-3.level", 8, 4, 0, "1.4/1-4.level");
+    testStage("1.4/1-4.level", 1, 0, 1, "");
     testInvalidManifest();
     testMalformedManifest();
     testMissingFiles();

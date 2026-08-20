@@ -366,7 +366,7 @@ void MenuState::rebuildEntries() {
             break;
         case Page::Play:
             pageTitleText.setString("SELECT WORLD");
-            entries = {{"WORLD 1-1"}, {"WORLD 1-2"}, {"WORLD 1-3"}, {"BACK"}};
+            entries = {{"WORLD 1-1"}, {"WORLD 1-2"}, {"WORLD 1-3"}, {"WORLD 1-4"}, {"BACK"}};
             break;
         case Page::Character:
             break;
@@ -488,8 +488,8 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
             else if (selectedIndex == 3) setPage(Page::GameMode);
             break;
         case Page::Play: {
-            if (selectedIndex == 3) { setPage(Page::Solo); break; }
-            static const char* maps[] = {"1.1/1-1.level", "1.2/1-2.level", "1.3/1-3.level"};
+            if (selectedIndex == 4) { setPage(Page::Solo); break; }
+            static const char* maps[] = {"1.1/1-1.level", "1.2/1-2.level", "1.3/1-3.level", "1.4/1-4.level"};
             if (stateManager) {
                 stateManager->clearAndPushState(std::make_unique<PlayState>(maps[selectedIndex]));
             }
@@ -528,7 +528,8 @@ void MenuState::goBack() {
 
 void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
     if (displayMode == DisplayMode::TitleScreen) {
-        if (event.type == sf::Event::KeyPressed || event.type == sf::Event::MouseButtonPressed) {
+        if (event.type == sf::Event::KeyPressed &&
+            (event.key.code == sf::Keyboard::Enter || event.key.code == sf::Keyboard::Return)) {
             SoundManager::getInstance().playSound("pause");
             setDisplayMode(DisplayMode::InMenu);
             setPage(Page::GameMode);

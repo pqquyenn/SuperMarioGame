@@ -6,6 +6,7 @@
 #include "Entities/Enemies/RedKoopa.h"
 #include "Entities/Enemies/GreenParatroopa.h"
 #include "Entities/Enemies/RedParatroopa.h"
+#include "Entities/Enemies/DragonLugia.h"
 #include "Entities/Items/Coin.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/OneUpMushroom.h"
@@ -50,6 +51,11 @@ void EntityFactory::registerDefaultEntities() {
     registerType("PiranhaPlant", [](const sf::Vector2f& pos) {
         auto entity = std::make_unique<PiranhaPlant>(pos.x, pos.y);
         entity->setTexture(AssetManager::getInstance().getTexture("PiranhaPlant_1"));
+        return entity;
+    });
+    registerType("DragonLugia", [](const sf::Vector2f& pos) {
+        auto entity = std::make_unique<DragonLugia>(pos.x, pos.y);
+        entity->setTexture(AssetManager::getInstance().getTexture("DragonLugia"));
         return entity;
     });
     registerType("Coin", [](const sf::Vector2f& pos) {
