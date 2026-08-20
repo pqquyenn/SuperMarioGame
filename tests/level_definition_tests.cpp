@@ -1,8 +1,10 @@
 #include "Level/EntitySymbolCatalog.h"
 #include "Level/LevelDefinitionLoader.h"
+#include "PvP/PvPCombatResolver.h"
 
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -148,6 +150,73 @@ void testTxtCompatibilityResolution() {
            "legacy txt request loads the level manifest");
 }
 
+void testPvPContactClassification() {
+    const PvPBodyFrame target{
+        {10.f, 20.f, 16.f, 16.f},
+        {10.f, 20.f, 16.f, 16.f},
+        {0.f, 0.f}};
+    const PvPBodyFrame trueStomp{
+        {10.f, 2.f, 16.f, 16.f},
+        {10.f, 8.f, 16.f, 16.f},
+        {0.f, 120.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(trueStomp, target) ==
+               PvPContactOutcome::PlayerOneStomps,
+           "a downward top crossing is a P1 stomp");
+
+    const PvPBodyFrame sideContact{
+        {0.f, 20.f, 16.f, 16.f},
+        {4.f, 20.f, 16.f, 16.f},
+        {120.f, 0.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(sideContact, target) ==
+               PvPContactOutcome::PushApart,
+           "side contact is pushback, not a stomp");
+
+    const PvPBodyFrame merelyHigher{
+        {10.f, 2.f, 16.f, 16.f},
+        {10.f, 8.f, 16.f, 16.f},
+        {0.f, -40.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(merelyHigher, target) ==
+               PvPContactOutcome::PushApart,
+           "being higher without falling is not a stomp");
+
+    const PvPBodyFrame separate{
+        {100.f, 0.f, 16.f, 16.f},
+        {100.f, 0.f, 16.f, 16.f},
+        {0.f, 0.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(separate, target) ==
+               PvPContactOutcome::None,
+           "separate players have no contact outcome");
+}
+
+void testPvPFireSpawnAnchorsAreOpen() {
+    LevelDefinition definition;
+    std::vector<std::string> errors;
+    LevelDefinitionLoader loader;
+    expect(loader.load("pvp/super-arena.level", definition, errors),
+           "PvP Super arena loads for anchor validation");
+
+    std::ifstream terrain{definition.terrainPath};
+    std::vector<std::string> rows;
+    for (std::string row; std::getline(terrain, row);) {
+        rows.push_back(row);
+    }
+
+    std::size_t fireSpawnCount = 0;
+    for (const auto& anchor : definition.anchors) {
+        if (anchor.id.find("fire_spawn_") != 0) {
+            continue;
+        }
+        ++fireSpawnCount;
+        const auto column = static_cast<std::size_t>(anchor.tilePosition.x);
+        const auto row = static_cast<std::size_t>(anchor.tilePosition.y);
+        expect(row < rows.size() && column < rows[row].size() &&
+                   rows[row][column] == '-',
+               anchor.id + " occupies an open terrain cell");
+    }
+    expect(fireSpawnCount >= 3,
+           "PvP Super arena has multiple Fire Flower spawn choices");
+}
+
 } // namespace
 
 int main() {
@@ -156,10 +225,14 @@ int main() {
     testStage("1.2/1-2.level", 18, 4, 1, "1.3/1-3.level");
     testStage("1.3/1-3.level", 8, 4, 0, "1.4/1-4.level");
     testStage("1.4/1-4.level", 1, 0, 1, "");
+    testStage("pvp/small-arena.level", 0, 0, 0, "");
+    testStage("pvp/super-arena.level", 3, 0, 0, "");
     testInvalidManifest();
     testMalformedManifest();
     testMissingFiles();
     testTxtCompatibilityResolution();
+    testPvPContactClassification();
+    testPvPFireSpawnAnchorsAreOpen();
     std::cout << "SOLID-03 level definition tests passed\n";
     return 0;
 }

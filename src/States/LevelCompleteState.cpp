@@ -1,4 +1,5 @@
 #include "States/LevelCompleteState.h"
+#include "Core/AchievementSystem.h"
 #include "States/PlayState.h"
 #include "States/MenuState.h"
 #include <iostream>
@@ -29,6 +30,7 @@ void LevelCompleteState::onEnter() {
     std::cout << "[LevelCompleteState] onEnter - Level " << levelId
               << " Completed! Score: " << finalScore << " Coins: " << coinsCollected
               << " TimeBonus: " << timeBonus << std::endl;
+    AchievementSystem::getInstance().recordScore(finalScore);
 
     // --- Load font ---
     const std::string fontPaths[] = {

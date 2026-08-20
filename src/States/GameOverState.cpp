@@ -1,4 +1,5 @@
 #include "States/GameOverState.h"
+#include "Core/AchievementSystem.h"
 #include "States/PlayState.h"
 #include "States/MenuState.h"
 #include <iostream>
@@ -10,6 +11,7 @@ GameOverState::GameOverState(int score, const std::string& mapPath)
 
 void GameOverState::onEnter() {
     std::cout << "[GameOverState] onEnter - GAME OVER (Score: " << finalScore << ")" << std::endl;
+    AchievementSystem::getInstance().recordScore(finalScore);
 
     // --- Load font ---
     const std::string fontPaths[] = {

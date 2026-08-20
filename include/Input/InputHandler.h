@@ -34,11 +34,13 @@ private:
 
     bool jumpWasHeld{false};
     bool actionWasHeld{false};
+    bool actionAlsoRuns{true};
     InputBindings bindings;
 
 public:
     explicit InputHandler(
-        const InputBindings& inputBindings = InputBindings{}
+        const InputBindings& inputBindings = InputBindings{},
+        bool actionCanRun = true
     );
 
     void handleInput(Character& character, float dt);

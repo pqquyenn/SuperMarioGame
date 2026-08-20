@@ -47,8 +47,12 @@ bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
       const bool touchingTop = std::abs(feetY - trigger.top) <=
                                contactTolerance;
       if (centered && touchingTop) {
-        return level.tryActivatePortal(
+        const bool activated = level.tryActivatePortal(
             character, trigger, PortalActivation::Down);
+        if (activated) {
+          character.setGrounded(false);
+        }
+        return activated;
       }
     }
     return false;
@@ -74,6 +78,7 @@ bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
       !level.getIsInBonusRoom() &&
       standsOnEntrance({912.f, 144.f, 32.f, 16.f})) {
     level.warpToUnderground(&character);
+    character.setGrounded(false);
     return true;
   }
 
@@ -82,6 +87,7 @@ bool CollisionManager::tryEnterDownWarp(Character &character, Level &level) {
       !level.getIsInBonusRoom() &&
       standsOnEntrance({1856.f, 400.f, 32.f, 16.f})) {
     level.warpPipeB_Entry(&character);
+    character.setGrounded(false);
     return true;
   }
 
@@ -186,12 +192,12 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
       return;
   }
 
+  Character *character = dynamic_cast<Character *>(&entity);
   sf::FloatRect bounds = entity.getBounds();
 
   // Grounded is contact state, not a persistent movement state. Clear the
   // previous frame's result before testing the current position; landing on a
   // tile (or the later moving-platform pass) will set it back to true.
-  Character *character = dynamic_cast<Character *>(&entity);
   if (character) {
     character->setGrounded(false);
   }
@@ -228,6 +234,10 @@ void CollisionManager::resolveTileCollisions(Entity &entity, TileMap &map,
     const sf::FloatRect tileBounds = tile->getBounds();
 
     if (sf::FloatRect overlap; checkAABB(bounds, tileBounds, overlap)) {
+      if (character && tile->isQuestionBlock()) {
+        character->notify(
+            GameEvent{GameEventType::MYSTERY_BLOCK_TOUCHED});
+      }
       if (overlap.height <= overlap.width) {
         if (bounds.top < tileBounds.top) {
           pos.y -= overlap.height; // Landed on top of the tile (ground)

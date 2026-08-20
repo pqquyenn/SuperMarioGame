@@ -15,8 +15,10 @@ public:
     enum class Page {
         GameMode,
         Solo,
+        PvP,
         Play,
         Character,
+        Achievements,
         Settings,
         KeyBindings
     };
@@ -48,6 +50,7 @@ private:
     sf::Text footerText;
     sf::Text selectorText;
     sf::Text keyBindingsText;
+    sf::Text achievementsText;
     std::vector<sf::Text> entryTexts;
 
     // Visual assets

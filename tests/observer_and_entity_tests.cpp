@@ -17,6 +17,7 @@
 #include "Entities/Mario.h"
 #include "Entities/Luigi.h"
 #include "Commands/CrawlCommand.h"
+#include "AdminControl/DebugMovementTrail.h"
 #include "PlayerStates/SmallState.h"
 #include "PlayerStates/SuperState.h"
 #include "PlayerStates/FireState.h"
@@ -603,6 +604,92 @@ void testCrawlUsesFinalGroundContact(TestRunner& runner) {
                   "Walking off a platform restores standing in open air");
 }
 
+void testRulesetMovementScale(TestRunner& runner) {
+    Mario solo;
+    solo.setGrounded(true);
+    solo.moveRight(1.f);
+
+    Mario pvp;
+    pvp.setHorizontalMovementScale(0.82f);
+    pvp.setGrounded(true);
+    pvp.moveRight(1.f);
+
+    runner.expect(std::abs(solo.getVelocity().x - 150.f) < 0.01f,
+                  "RulesetMovementScale",
+                  "solo keeps Mario's normal walk speed");
+    runner.expect(std::abs(pvp.getVelocity().x - 123.f) < 0.01f,
+                  "RulesetMovementScale",
+                  "PvP scales speed without replacing the character profile");
+    runner.expect(std::abs(pvp.getHorizontalMovementScale() - 0.82f) < 0.001f,
+                  "RulesetMovementScale",
+                  "the selected ruleset scale is observable");
+}
+
+void testMarioCanReachPvPSuperPlatform(TestRunner& runner) {
+    Mario mario;
+    mario.setPosition(0.f, 192.f);
+    mario.receivePowerUp(std::make_unique<SuperState>());
+    mario.setGrounded(true);
+
+    const float startingFeet =
+        mario.getBounds().top + mario.getBounds().height;
+    float highestFeet = startingFeet;
+    mario.setJumpHeld(true);
+    mario.jump();
+
+    constexpr float frameTime = 1.f / 60.f;
+    for (int frame = 0; frame < 120; ++frame) {
+        mario.setJumpHeld(true);
+        mario.update(frameTime);
+        highestFeet = std::min(
+            highestFeet,
+            mario.getBounds().top + mario.getBounds().height);
+        if (frame > 0 && mario.getVelocity().y >= 0.f) {
+            break;
+        }
+    }
+
+    constexpr float ArenaPlatformRise = 64.f;
+    runner.expect(startingFeet - highestFeet >= ArenaPlatformRise,
+                  "PvPSuperPlatformReach",
+                  "Super Mario can reach the lowered PvP ledge");
+}
+
+void testDebugMovementTrailEvents(TestRunner& runner) {
+    TestPlayer player;
+    player.setGrounded(true);
+
+    DebugMovementTrail trail;
+    trail.start(player);
+    player.setPosition(2.f, -2.f);
+    player.setVelocity(100.f, -120.f);
+    player.setGrounded(false);
+    trail.update(player, 1.f / 60.f);
+
+    player.setPosition(4.f, -4.f);
+    player.setVelocity(0.f, -80.f);
+    trail.update(player, 1.f / 60.f);
+
+    player.setPosition(4.f, 0.f);
+    player.setVelocity(0.f, 0.f);
+    player.setGrounded(true);
+    trail.update(player, 1.f / 60.f);
+
+    runner.expect(trail.getEventCount(DebugTrailEvent::Takeoff) == 1,
+                  "DebugMovementTrail",
+                  "trail marks the grounded-to-airborne transition");
+    runner.expect(trail.getEventCount(DebugTrailEvent::WallImpact) == 1,
+                  "DebugMovementTrail",
+                  "trail marks horizontal stopping while airborne");
+    runner.expect(trail.getEventCount(DebugTrailEvent::Landing) == 1,
+                  "DebugMovementTrail",
+                  "trail marks the airborne-to-grounded transition");
+
+    trail.update(player, 9.f);
+    runner.expect(!trail.isActive(), "DebugMovementTrail",
+                  "trail automatically expires after its debug window");
+}
+
 void testStarItemBounceAndCollect(TestRunner& runner) {
     StarItem star(100.f, 100.f);
     star.notifyGrounded(); // Triggers bounceForce
@@ -858,6 +945,9 @@ int main() {
     testPoweredCharacterCrouch(runner);
     testCharacterReleaseTiming(runner);
     testCrawlUsesFinalGroundContact(runner);
+    testRulesetMovementScale(runner);
+    testMarioCanReachPvPSuperPlatform(runner);
+    testDebugMovementTrailEvents(runner);
     testStarItemBounceAndCollect(runner);
     testOneUpMushroomCollect(runner);
     runner.report("Suite 4: Item Collection & States");

@@ -59,6 +59,7 @@ add_executable(solid03_tests
     tests/level_definition_tests.cpp
     src/Level/EntitySymbolCatalog.cpp
     src/Level/LevelDefinitionLoader.cpp
+    src/PvP/PvPCombatResolver.cpp
 )
 
 target_include_directories(solid03_tests
@@ -84,6 +85,7 @@ set_tests_properties(
 
 add_executable(solid11_tests
     tests/observer_and_entity_tests.cpp
+    src/AdminControl/DebugMovementTrail.cpp
     src/Observer/Subject.cpp
     src/UI/HUD.cpp
     src/Entities/Entity.cpp

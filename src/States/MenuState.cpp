@@ -1,10 +1,12 @@
 #include "States/MenuState.h"
 
+#include "Core/AchievementSystem.h"
 #include "Core/GameSettings.h"
 #include "Core/SoundManager.h"
 #include "Core/AssetManager.h"
 #include "States/GameStateManager.h"
 #include "States/PlayState.h"
+#include "States/PvPState.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -30,6 +32,11 @@ void centerText(sf::Text& text, float x, float y) {
 
 const char* characterName(CharacterChoice choice) {
     return choice == CharacterChoice::Luigi ? "LUIGI" : "MARIO";
+}
+
+const char* achievementStatus(const AchievementSystem& achievements,
+                              AchievementId id) {
+    return achievements.isUnlocked(id) ? "[UNLOCKED]" : "[LOCKED]";
 }
 }
 
@@ -104,10 +111,17 @@ void MenuState::onEnter() {
         "MOVE LEFT     : A / LEFT ARROW\n"
         "MOVE RIGHT    : D / RIGHT ARROW\n"
         "JUMP          : SPACE / W / UP ARROW\n"
+        "CROUCH / PIPE : S / DOWN ARROW\n"
         "ACTION / RUN  : Z / J / Q\n"
         "RUN (SPRINT)  : LEFT SHIFT / RIGHT SHIFT\n\n"
         "[KEY REMAPPING COMING SOON]");
     keyBindingsText.setPosition(180.f, 250.f);
+
+    achievementsText.setFont(cleanFont);
+    achievementsText.setCharacterSize(14);
+    achievementsText.setFillColor(sf::Color::White);
+    achievementsText.setLineSpacing(1.35f);
+    achievementsText.setPosition(190.f, 235.f);
 
     // 4. Menu Card Container
     menuCard.setSize({520.f, 320.f});
@@ -358,11 +372,15 @@ void MenuState::rebuildEntries() {
     switch (page) {
         case Page::GameMode:
             pageTitleText.setString("GAME MODE");
-            entries = {{"SOLO"}, {"DUO  [COMING SOON]", false}, {"PVP  [COMING SOON]", false}, {"SETTINGS"}, {"BACK TO TITLE"}};
+            entries = {{"SOLO"}, {"DUO  [COMING SOON]", false}, {"PVP"}, {"SETTINGS"}, {"BACK TO TITLE"}};
             break;
         case Page::Solo:
             pageTitleText.setString("SOLO");
-            entries = {{"PLAY"}, {"CHARACTER"}, {"ACHIEVEMENTS  [COMING SOON]", false}, {"BACK"}};
+            entries = {{"PLAY"}, {"CHARACTER"}, {"ACHIEVEMENTS"}, {"BACK"}};
+            break;
+        case Page::PvP:
+            pageTitleText.setString("PVP MATCH-UP");
+            entries = {{"SMALL MATCH"}, {"SUPER MATCH"}, {"BACK"}};
             break;
         case Page::Play:
             pageTitleText.setString("SELECT WORLD");
@@ -370,6 +388,30 @@ void MenuState::rebuildEntries() {
             break;
         case Page::Character:
             break;
+        case Page::Achievements: {
+            pageTitleText.setString("ACHIEVEMENTS");
+            const AchievementSystem& achievements =
+                AchievementSystem::getInstance();
+            achievementsText.setString(
+                "HIGHEST SCORE       " +
+                std::to_string(achievements.getHighestScore()) + "\n\n" +
+                "CLEAR WORLD 1-1     " +
+                achievementStatus(achievements, AchievementId::ClearWorld11) + "\n" +
+                "CLEAR WORLD 1-2     " +
+                achievementStatus(achievements, AchievementId::ClearWorld12) + "\n" +
+                "CLEAR WORLD 1-3     " +
+                achievementStatus(achievements, AchievementId::ClearWorld13) + "\n" +
+                "SMALL IS ENOUGH     " +
+                achievementStatus(achievements, AchievementId::SmallIsEnough) + "\n" +
+                "HARDCORE            " +
+                achievementStatus(achievements, AchievementId::Hardcore) + "\n" +
+                "FRIENDLY            " +
+                achievementStatus(achievements, AchievementId::Friendly) + "\n" +
+                "I HATE MYSTERY      " +
+                achievementStatus(achievements, AchievementId::IHateMystery));
+            entries = {{"BACK"}};
+            break;
+        }
         case Page::Settings: {
             pageTitleText.setString("SETTINGS");
             const int volume = static_cast<int>(std::round(SoundManager::getInstance().getMasterVolume()));
@@ -441,7 +483,9 @@ void MenuState::updateVisuals() {
 
     centerText(pageTitleText, UiWidth / 2.f, 203.f);
     for (std::size_t i = 0; i < entryTexts.size(); ++i) {
-        const float firstEntryY = page == Page::KeyBindings ? 440.f : EntryStartY;
+        const float firstEntryY =
+            page == Page::KeyBindings ? 440.f :
+            page == Page::Achievements ? 490.f : EntryStartY;
         const float y = firstEntryY + static_cast<float>(i) * EntrySpacing;
         centerText(entryTexts[i], UiWidth / 2.f, y);
         if (!entries[i].enabled) {
@@ -479,12 +523,25 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
     switch (page) {
         case Page::GameMode:
             if (selectedIndex == 0) setPage(Page::Solo);
+            else if (selectedIndex == 2) setPage(Page::PvP);
             else if (selectedIndex == 3) setPage(Page::Settings);
             else if (selectedIndex == 4) setDisplayMode(DisplayMode::TitleScreen);
+            break;
+        case Page::PvP:
+            if (selectedIndex == 2) {
+                setPage(Page::GameMode);
+            } else if (stateManager) {
+                const PvPMatchType type = selectedIndex == 0
+                    ? PvPMatchType::Small
+                    : PvPMatchType::Super;
+                stateManager->clearAndPushState(
+                    std::make_unique<PvPState>(type));
+            }
             break;
         case Page::Solo:
             if (selectedIndex == 0) setPage(Page::Play);
             else if (selectedIndex == 1) setPage(Page::Character);
+            else if (selectedIndex == 2) setPage(Page::Achievements);
             else if (selectedIndex == 3) setPage(Page::GameMode);
             break;
         case Page::Play: {
@@ -496,6 +553,9 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
             break;
         }
         case Page::Character: break;
+        case Page::Achievements:
+            setPage(Page::Solo);
+            break;
         case Page::Settings:
             if (selectedIndex == 0) setPage(Page::KeyBindings);
             else if (selectedIndex == 1) adjustVolume(10.f);
@@ -519,8 +579,10 @@ void MenuState::goBack() {
     switch (page) {
         case Page::GameMode: setDisplayMode(DisplayMode::TitleScreen); break;
         case Page::Solo: setPage(Page::GameMode); break;
+        case Page::PvP: setPage(Page::GameMode); break;
         case Page::Play:
         case Page::Character: setPage(Page::Solo); break;
+        case Page::Achievements: setPage(Page::Solo); break;
         case Page::Settings: setPage(Page::GameMode); break;
         case Page::KeyBindings: setPage(Page::Settings); break;
     }
@@ -768,6 +830,7 @@ void MenuState::render(sf::RenderWindow& window) {
         }
         for (const auto& text : entryTexts) window.draw(text);
         if (page == Page::KeyBindings) window.draw(keyBindingsText);
+        if (page == Page::Achievements) window.draw(achievementsText);
         window.draw(statusText);
         window.draw(footerText);
         if (showSelector && !entryTexts.empty()) window.draw(selectorText);
