@@ -21,3 +21,7 @@ void Item::onCollision(Entity& other, const sf::FloatRect& overlap) {
         tryCollect(*character);
     }
 }
+
+void Item::onWallCollision() {
+    reverseDirection();
+}

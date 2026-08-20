@@ -104,7 +104,14 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   if (event.type == sf::Event::KeyPressed) {
     if ((event.key.code == sf::Keyboard::Down ||
          event.key.code == sf::Keyboard::S) &&
-        player && CollisionManager::tryEnterDownWarp(*player, level)) {
+        player &&
+            level.tryActivatePortalForInput(*player, PortalActivation::Down)) {
+      return;
+    } else if ((event.key.code == sf::Keyboard::Right ||
+                event.key.code == sf::Keyboard::D) &&
+               player &&
+               level.tryActivatePortalForInput(
+                   *player, PortalActivation::Right)) {
       return;
     } else if (event.key.code == sf::Keyboard::T) {
       adminDebugView.toggle();
@@ -319,8 +326,7 @@ void PlayState::update(float dt) {
       continue;
 
     fireball->update(dt);
-    CollisionManager::resolveTileCollisions(*fireball, level.getTileMap(),
-                                            &level);
+    CollisionManager::resolveTileCollisions(*fireball, level.getTileMap());
     if (!fireball->isActive())
       continue;
 

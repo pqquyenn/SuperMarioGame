@@ -4,6 +4,7 @@
 #include "Level/Camera.h"
 #include "Level/LevelDefinition.h"
 #include "Entities/MovingPlatform.h"
+#include "Physics/TileCollisionHandler.h"
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -25,7 +26,7 @@ struct WarpZoneInfo {
     std::string label;
 };
 
-class Level {
+class Level : public TileCollisionHandler {
 private:
     int levelId = 1;
     TileMap map;
@@ -74,6 +75,21 @@ public:
         Character& character,
         const sf::FloatRect& contact,
         PortalActivation activation);
+    bool tryActivatePortalForInput(
+        Character& character,
+        PortalActivation activation);
+    void onTileCeilingContact(
+        Entity& entity,
+        TileMap& map,
+        Tile& tile,
+        const TileHandle& handle,
+        const CollisionContact& contact) override;
+    void onTileOverlap(
+        Entity& entity,
+        TileMap& map,
+        Tile& tile,
+        const TileHandle& handle,
+        const CollisionContact& contact) override;
     void updateCameraFor(const sf::Vector2f& playerPosition);
     bool usesDarkBackground() const;
     float getKillPlaneY() const;

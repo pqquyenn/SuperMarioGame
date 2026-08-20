@@ -95,6 +95,9 @@ public:
 
     void update(float dt) override;
     void render(sf::RenderWindow& window) const override;
+    void onCollision(Entity& other, const sf::FloatRect& overlap) override;
+    void beginTileCollision() override;
+    void onLanded() override;
 
     virtual void moveLeft(float dt);
     virtual void moveRight(float dt);

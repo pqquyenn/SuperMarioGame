@@ -3,7 +3,9 @@
 
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -75,7 +77,71 @@ void testStage(
             foundPiranha = foundPiranha || entity.resolvedType == "PiranhaPlant";
         }
         expect(foundPiranha, "E7 resolves to PiranhaPlant");
+
+        bool foundStarBrick = false;
+        for (const auto& block : definition.blockContents) {
+            if (block.area == "underground" &&
+                block.tilePosition.x == 40 &&
+                block.tilePosition.y == 19 &&
+                block.content == "StarItem") {
+                foundStarBrick = true;
+                break;
+            }
+        }
+        expect(foundStarBrick, "1-2 star brick resolves to StarItem");
     }
+
+    if (path == "1.1/1-1.level") {
+        const CameraZoneDefinition* bonusCamera = nullptr;
+        for (const auto& camera : definition.cameraZones) {
+            if (camera.id == "bonus_camera") {
+                bonusCamera = &camera;
+                break;
+            }
+        }
+        expect(bonusCamera != nullptr, "1-1 bonus camera exists");
+        expect(!bonusCamera->followX, "1-1 bonus camera does not follow X");
+        expect(!bonusCamera->followY, "1-1 bonus camera does not follow Y");
+        expect(std::abs(bonusCamera->centerYTiles - 8.f) < 0.01f,
+               "1-1 bonus camera is vertically centered");
+    }
+}
+
+void testOneTwoTerrainAndBackground() {
+    std::ifstream terrain("assets/maps/1.2/1-2.txt");
+    expect(terrain.is_open(), "1-2 terrain opens");
+
+    std::string line;
+    std::string targetRow;
+    for (int row = 0; row <= 19 && std::getline(terrain, line); ++row) {
+        if (row == 19) {
+            targetRow = line;
+        }
+    }
+    expect(targetRow.size() > 40 && targetRow[40] == 'r',
+           "1-2 tile (40,19) is an underground brick");
+
+    std::ifstream background("assets/maps/1.2/background.txt");
+    expect(background.is_open(), "1-2 background opens");
+
+    bool hasCloud = false;
+    bool hasHill = false;
+    bool hasDarkRow = false;
+    int row = 0;
+    while (std::getline(background, line)) {
+        std::istringstream tokens(line);
+        std::string token;
+        while (tokens >> token) {
+            hasCloud = hasCloud || token == "cl1" || token == "Cl1" ||
+                       token == "cL1";
+            hasHill = hasHill || token == "h1" || token == "H1";
+            hasDarkRow = hasDarkRow || (row >= 15 && token == "*");
+        }
+        ++row;
+    }
+    expect(hasCloud, "1-2 background contains clouds");
+    expect(hasHill, "1-2 background contains hills");
+    expect(hasDarkRow, "1-2 background keeps dark lower rows");
 }
 
 void testInvalidManifest() {
@@ -153,8 +219,9 @@ void testTxtCompatibilityResolution() {
 int main() {
     testCatalog();
     testStage("1.1/1-1.level", 17, 0, 6, "1.2/1-2.level");
-    testStage("1.2/1-2.level", 18, 4, 1, "1.3/1-3.level");
+    testStage("1.2/1-2.level", 18, 4, 2, "1.3/1-3.level");
     testStage("1.3/1-3.level", 8, 4, 0, "");
+    testOneTwoTerrainAndBackground();
     testInvalidManifest();
     testMalformedManifest();
     testMissingFiles();

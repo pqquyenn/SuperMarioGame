@@ -12,6 +12,7 @@
 #include "Level/LevelDefinitionLoader.h"
 #include "Level/LevelWorldBuilder.h"
 #include "Physics/CollisionManager.h"
+#include "PlayerStates/PlayerState.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -304,6 +305,123 @@ bool Level::tryActivatePortal(
     updateCameraFor(character.getPosition());
     std::cout << "[Level] Activated portal " << portal.id << " -> "
               << anchor->id << std::endl;
+    return true;
+  }
+
+  return false;
+}
+
+bool Level::tryActivatePortalForInput(
+    Character& character,
+    PortalActivation activation) {
+  if (!character.isActive() || character.isDying()) {
+    return false;
+  }
+
+  if (hasDefinition) {
+    const sf::FloatRect bounds = character.getBounds();
+    const float centerX = bounds.left + bounds.width * 0.5f;
+    const float feetY = bounds.top + bounds.height;
+    const float tileSize = definition.tileSize;
+    constexpr float contactTolerance = 3.f;
+
+    for (const auto& portal : definition.portals) {
+      if (portal.sourceArea != currentArea ||
+          portal.activation != activation) {
+        continue;
+      }
+
+      const sf::FloatRect trigger{
+          portal.triggerTiles.left * tileSize,
+          portal.triggerTiles.top * tileSize,
+          portal.triggerTiles.width * tileSize,
+          portal.triggerTiles.height * tileSize};
+
+      bool canActivate = false;
+      if (activation == PortalActivation::Down) {
+        const bool centered = centerX >= trigger.left &&
+                              centerX <= trigger.left + trigger.width;
+        const bool touchingTop =
+            std::abs(feetY - trigger.top) <= contactTolerance;
+        canActivate = centered && touchingTop;
+      } else {
+        canActivate = trigger.intersects(bounds);
+      }
+
+      if (canActivate &&
+          tryActivatePortal(character, trigger, activation)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const sf::FloatRect characterBounds = character.getBounds();
+  const float centerX =
+      characterBounds.left + characterBounds.width * 0.5f;
+  const float feetY = characterBounds.top + characterBounds.height;
+  constexpr float contactTolerance = 3.f;
+  const auto standsOnEntrance =
+      [centerX, feetY, contactTolerance](const sf::FloatRect& entrance) {
+        const bool centered = centerX >= entrance.left &&
+                              centerX <= entrance.left + entrance.width;
+        const bool touchingTop =
+            std::abs(feetY - entrance.top) <= contactTolerance;
+        return centered && touchingTop;
+      };
+
+  if (activation == PortalActivation::Down) {
+    if (levelId == 1 && !isUnderground && !isInBonusRoom &&
+        standsOnEntrance({912.f, 144.f, 32.f, 16.f})) {
+      warpToUnderground(&character);
+      return true;
+    }
+
+    if (levelId == 2 && isUnderground && !isInBonusRoom &&
+        standsOnEntrance({1856.f, 400.f, 32.f, 16.f})) {
+      warpPipeB_Entry(&character);
+      return true;
+    }
+    return false;
+  }
+
+  bool touchingWarpPipe = false;
+  for (const TileHandle& handle : map.getTilesInBounds(characterBounds)) {
+    const Tile* tile = map.getTile(handle);
+    if (!tile || !tile->isWarpPipe()) {
+      continue;
+    }
+
+    sf::FloatRect overlap;
+    if (characterBounds.intersects(tile->getBounds(), overlap)) {
+      touchingWarpPipe = true;
+      break;
+    }
+  }
+
+  if (!touchingWarpPipe) {
+    return false;
+  }
+
+  if (levelId == 1 && isUnderground && character.getPosition().x >= 3720.f) {
+    warpToOverworldExit(&character);
+    return true;
+  }
+
+  if (levelId == 2 && !isUnderground && !isInBonusRoom &&
+      character.getPosition().x < 1000.f) {
+    warpPipeA_Entry(&character);
+    return true;
+  }
+
+  if (levelId == 2 && isInBonusRoom) {
+    warpPipeC1_Exit(&character);
+    return true;
+  }
+
+  if (levelId == 2 && isUnderground && !isInBonusRoom &&
+      character.getPosition().x >= 2900.f) {
+    warpToOverworldExit(&character);
     return true;
   }
 
@@ -634,6 +752,62 @@ std::string Level::getBrickItemType(float x, float y) const {
   return {};
 }
 
+void Level::onTileCeilingContact(
+    Entity& entity,
+    TileMap& tileMap,
+    Tile& tile,
+    const TileHandle& handle,
+    const CollisionContact& contact) {
+  (void)contact;
+  auto* character = dynamic_cast<Character*>(&entity);
+  if (!character || !character->isActive()) {
+    return;
+  }
+
+  const sf::FloatRect tileBounds = tile.getBounds();
+  if (tile.isQuestionBlock()) {
+    tile.startBump();
+    tileMap.hitTile(handle);
+    spawnItemFromBlock(tileBounds.left, tileBounds.top, character);
+    character->notify(GameEvent::coinCollected(Coin::defaultScoreValue()));
+    return;
+  }
+
+  if (!tile.isBrick()) {
+    return;
+  }
+
+  // A brick with an entry in the manifest is an item brick. Ordinary bricks
+  // retain the classic break-or-bump behaviour based on player ability.
+  const bool isItemBrick = !getBrickItemType(
+      tileBounds.left, tileBounds.top).empty();
+  if (isItemBrick) {
+    tile.startBump();
+    tileMap.hitTile(handle);
+    spawnItemFromBlock(tileBounds.left, tileBounds.top, character);
+  } else if (character->hasAbility(PlayerAbility::BreakBricks)) {
+    tileMap.breakBrick(handle);
+  } else {
+    tile.startBump();
+  }
+}
+
+void Level::onTileOverlap(
+    Entity& entity,
+    TileMap& tileMap,
+    Tile& tile,
+    const TileHandle& handle,
+    const CollisionContact& contact) {
+  (void)contact;
+  auto* character = dynamic_cast<Character*>(&entity);
+  if (!character || !character->isActive() || !tile.isCoinTile()) {
+    return;
+  }
+
+  tileMap.removeTile(handle);
+  character->notify(GameEvent::coinCollected(Coin::defaultScoreValue()));
+}
+
 void Level::warpToUnderground(Character *character) {
   std::cout << "[Level] Teleporting to hidden underground map area..."
             << std::endl;
@@ -642,7 +816,12 @@ void Level::warpToUnderground(Character *character) {
     character->setPosition(3736.f, 32.f);
     character->setVelocity(sf::Vector2f(0.f, 0.f));
   }
-  camera.setCenter(3736.f, 120.f);
+  if (hasDefinition) {
+    updateCameraFor(character ? character->getPosition()
+                             : camera.getView().getCenter());
+  } else {
+    camera.setCenter(3736.f, 120.f);
+  }
 }
 
 void Level::warpToUnderground1_2(Character *character) {

@@ -39,6 +39,7 @@ public:
   virtual void onFireball();
   virtual void onFellIntoVoid();
   virtual void reverseDirection();
+  void onWallCollision() override;
 
   int getDirection() const;
   void setDirection(int dir);

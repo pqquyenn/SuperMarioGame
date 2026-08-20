@@ -82,6 +82,32 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(solid04_tests
+    tests/collision_tests.cpp
+    src/Physics/CollisionGeometry.cpp
+)
+
+target_include_directories(solid04_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::System)
+    target_link_libraries(solid04_tests PRIVATE SFML::System)
+elseif(TARGET sfml-system)
+    target_link_libraries(solid04_tests PRIVATE sfml-system)
+endif()
+
+add_test(
+    NAME solid04_collision_tests
+    COMMAND solid04_tests
+)
+set_tests_properties(
+    solid04_collision_tests
+    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 add_executable(solid11_tests
     tests/observer_and_entity_tests.cpp
     src/Observer/Subject.cpp

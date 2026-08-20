@@ -29,6 +29,8 @@ public:
     void explode();
     bool isExploding() const { return exploding; }
     void bounce();
+    void onLanded() override;
+    void onWallCollision() override;
 
 private:
     static constexpr float HorizontalSpeed{240.f};
