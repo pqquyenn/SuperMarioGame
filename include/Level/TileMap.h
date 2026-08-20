@@ -23,6 +23,7 @@ struct BrickDebris {
     float rotationSpeed = 0.f;
     float lifetime = 0.f;
     bool active = true;
+    const sf::Texture* texture = nullptr;
 };
 
 struct TileHandle {

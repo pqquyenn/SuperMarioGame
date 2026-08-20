@@ -59,6 +59,9 @@ PlayerAnimationSet makeAnimationSet(
     };
     set.jumping = staticClip(frameAt(6, rowY, frameHeight));
     set.sliding = staticClip(frameAt(5, rowY, frameHeight));
+    // Frame 1 is the death pose in the Small row, but the dedicated crouch
+    // pose in every powered row. Small characters never select this motion.
+    set.crouching = staticClip(frameAt(1, rowY, frameHeight));
     set.dead = staticClip(deathFrame, 0.15f, false);
     set.shooting = staticClip(frameAt(0, rowY, frameHeight));
     return set;
@@ -81,6 +84,7 @@ PlayerAnimationSet makeFireAnimationSet(const sf::IntRect& deathFrame) {
     };
     set.jumping = staticClip(fireFrameAt(6));
     set.sliding = staticClip(fireFrameAt(5));
+    set.crouching = staticClip(fireFrameAt(1));
     set.dead = staticClip(deathFrame, 0.15f, false);
     return set;
 }
@@ -134,6 +138,7 @@ PlayerAnimationSet makeStarSmallAnimationSet(const sf::IntRect& deathFrame) {
     set.running = starClip;
     set.jumping = starClip;
     set.sliding = starClip;
+    set.crouching = starClip;
     set.dead = staticClip(deathFrame, 0.15f, false);
     set.shooting = starClip;
     return set;
@@ -155,6 +160,7 @@ PlayerAnimationSet makeStarSuperAnimationSet(const sf::IntRect& deathFrame) {
     set.running = starClip;
     set.jumping = starClip;
     set.sliding = starClip;
+    set.crouching = starClip;
     set.dead = staticClip(deathFrame, 0.15f, false);
     set.shooting = starClip;
     return set;
@@ -171,6 +177,8 @@ const AnimationClip* PlayerAnimationSet::findClip(PlayerMotion motion) const {
             return &jumping;
         case PlayerMotion::Sliding:
             return &sliding;
+        case PlayerMotion::Crouching:
+            return &crouching;
         case PlayerMotion::Dead:
             return &dead;
         case PlayerMotion::Shooting:

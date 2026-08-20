@@ -6,7 +6,12 @@
 #include <vector>
 
 class MenuState : public GameState {
-private:
+public:
+    enum class DisplayMode {
+        TitleScreen,
+        InMenu
+    };
+
     enum class Page {
         GameMode,
         Solo,
@@ -16,15 +21,28 @@ private:
         KeyBindings
     };
 
+private:
     struct MenuEntry {
         std::string label;
         bool enabled{true};
     };
 
-    sf::Font font;
-    bool fontLoaded{false};
+    struct CloudData {
+        sf::Vector2f position;
+        float speed{10.f};
+        float scale{1.f};
+        int textureIndex{1};
+    };
 
-    sf::Text titleText;
+    sf::Font fontRetro;
+    sf::Font fontClean;
+    bool fontRetroLoaded{false};
+    bool fontCleanLoaded{false};
+
+    // Text elements
+    sf::Text promptText;
+    sf::Text copyrightText;
+    sf::Text versionText;
     sf::Text pageTitleText;
     sf::Text statusText;
     sf::Text footerText;
@@ -32,19 +50,72 @@ private:
     sf::Text keyBindingsText;
     std::vector<sf::Text> entryTexts;
 
+    // Visual assets
     sf::Texture bgTexture;
     sf::Sprite bgSprite;
     bool bgLoaded{false};
-    sf::RectangleShape groundBlock;
-    sf::RectangleShape panel;
 
+    sf::Texture logoTexture;
+    sf::Sprite logoSprite;
+    bool logoLoaded{false};
+    float baseLogoScale{1.f};
+
+    sf::Texture charTexture;
+    sf::Sprite charSprite;
+    bool charLoaded{false};
+    float baseCharScale{1.f};
+
+    // Character Selection Cards
+    sf::Texture marioCardTexture;
+    sf::Sprite marioCardSprite;
+    bool marioCardLoaded{false};
+    float baseMarioCardScale{1.f};
+
+    sf::Texture luigiCardTexture;
+    sf::Sprite luigiCardSprite;
+    bool luigiCardLoaded{false};
+    float baseLuigiCardScale{1.f};
+
+    float marioCurrentScale{1.f};
+    float luigiCurrentScale{1.f};
+    int characterCardSelection{0}; // 0 = Mario, 1 = Luigi
+
+    sf::Text charChooseTitle;
+    sf::Text charChoosePrompt;
+    sf::Text marioCardBadge;
+    sf::Text luigiCardBadge;
+    sf::RectangleShape marioCardGlow;
+    sf::RectangleShape luigiCardGlow;
+    sf::ConvexShape arrowLeft;
+    sf::ConvexShape arrowRight;
+
+    // Background clouds
+    std::vector<CloudData> clouds;
+    sf::Sprite cloudSprite1;
+    sf::Sprite cloudSprite2;
+    sf::Sprite cloudSprite3;
+    bool cloudsLoaded{false};
+
+    // Menu Card styling
+    sf::RectangleShape menuCard;
+    sf::RectangleShape menuCardHeader;
+    sf::RectangleShape selectionGlow;
+
+    DisplayMode displayMode{DisplayMode::TitleScreen};
     Page page{Page::GameMode};
     std::vector<MenuEntry> entries;
     int selectedIndex{0};
 
+    // Timers & Animations
+    float globalTime{0.f};
     float blinkTimer{0.f};
     bool showSelector{true};
 
+    bool isCharacterConfirming{false};
+    float characterConfirmTimer{0.f};
+    float characterFlashTimer{0.f};
+
+    void setDisplayMode(DisplayMode newMode);
     void setPage(Page newPage);
     void rebuildEntries();
     void updateVisuals();
@@ -52,7 +123,10 @@ private:
     void activateSelection(sf::RenderWindow& window);
     void goBack();
     void adjustVolume(float delta);
-    bool loadBackground();
+    bool loadTextures();
+    void loadFonts();
+    void initClouds();
+    void renderCharacterSelect(sf::RenderWindow& window);
 
 public:
     MenuState() = default;

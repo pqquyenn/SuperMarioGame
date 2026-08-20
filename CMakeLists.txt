@@ -114,6 +114,8 @@ add_executable(solid11_tests
     src/UI/HUD.cpp
     src/Entities/Entity.cpp
     src/Entities/Character.cpp
+    src/Entities/Mario.cpp
+    src/Entities/Luigi.cpp
     src/Entities/PlayerAnimation.cpp
     src/Animation/SpriteAnimator.cpp
     src/PlayerStates/PlayerState.cpp
@@ -124,6 +126,7 @@ add_executable(solid11_tests
     src/PlayerEffects/DamageInvincibilityEffect.cpp
     src/PlayerEffects/StarEffect.cpp
     src/PlayerEffects/ShieldEffect.cpp
+    src/Commands/CrawlCommand.cpp
     src/Entities/Enemies/Enemy.cpp
     src/Entities/Enemies/Goomba.cpp
     src/Entities/Enemies/Koopa.cpp

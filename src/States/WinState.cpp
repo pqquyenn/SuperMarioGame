@@ -54,7 +54,7 @@ void WinState::initSequence() {
         flagPos = *fp;
         hasFlag = true;
     } else {
-        flagPos = sf::Vector2f(flagpoleBounds.left - 16.f, flagpoleBounds.top);
+        flagPos = sf::Vector2f(flagpoleBounds.left - 8.f, flagpoleBounds.top + 16.f);
         hasFlag = true;
     }
 
@@ -71,10 +71,12 @@ void WinState::initSequence() {
 
     // Position player on the left side of the flagpole
     if (player) {
+        player->setCrouchRequested(false);
         player->setVelocity(0.f, 0.f);
         player->setGrounded(false);
         // Place Mario grabbing the flagpole
         player->setPosition(flagpoleBounds.left - 6.f, player->getPosition().y);
+        CollisionManager::tryStandUp(*player, level.getTileMap());
     }
 
     currentPhase = Phase::FlagSlide;
@@ -118,7 +120,7 @@ void WinState::updateFlagSlide(float dt) {
     const float playerHeight = player->getBounds().height;
     const float targetPlayerY = flagpoleBottomY - playerHeight;
 
-    // Slide Mario down
+    // Slide Mario down until reaching bottom of pole
     if (player->getPosition().y < targetPlayerY) {
         player->move(0.f, slideSpeed * dt);
         if (player->getPosition().y > targetPlayerY) {
@@ -126,7 +128,7 @@ void WinState::updateFlagSlide(float dt) {
         }
     }
 
-    // Slide Flag down concurrently
+    // Slide Flag down concurrently until reaching bottom of pole
     if (hasFlag && flagPos.y < flagBottomY) {
         flagPos.y += slideSpeed * dt;
         if (flagPos.y > flagBottomY) {
@@ -135,10 +137,14 @@ void WinState::updateFlagSlide(float dt) {
         flagSprite.setPosition(flagPos);
     }
 
-    // Check if reached bottom
-    if (player->getPosition().y >= targetPlayerY) {
+    // Wait until BOTH Mario and Flag have reached the bottom
+    const bool marioAtBottom = (player->getPosition().y >= targetPlayerY);
+    const bool flagAtBottom = (!hasFlag || flagPos.y >= flagBottomY);
+
+    if (marioAtBottom && flagAtBottom) {
         phaseTimer += dt;
-        if (phaseTimer >= 0.35f) {
+        // Hang on the flagpole for a moment (~0.4s) after flag hits bottom before walking to castle
+        if (phaseTimer >= 0.4f) {
             // Mario flips to the right side of the flagpole and starts walking to castle
             player->setPosition(flagpoleBounds.left + 12.f, targetPlayerY);
             player->setGrounded(true);
@@ -164,6 +170,7 @@ void WinState::updateAutoWalk(float dt) {
 
     // Resolve floor collisions so Mario stays on ground while walking
     CollisionManager::resolveTileCollisions(*player, level.getTileMap(), &level);
+    CollisionManager::tryStandUp(*player, level.getTileMap());
 
     // Keep camera following or centered
     float camX = std::max(200.f, player->getPosition().x);

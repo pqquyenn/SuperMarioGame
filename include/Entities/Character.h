@@ -36,8 +36,10 @@ struct ProjectileRequest {
 struct CharacterProfile {
     float moveAcceleration{900.f};
     float walkSpeed{150.f};
+    float crawlSpeed{70.f};
     float runSpeed{230.f};
     float groundDeceleration{1000.f};
+    float crawlDeceleration{1000.f};
 
     float gravity{980.f};
     float maxFallSpeed{900.f};
@@ -72,6 +74,7 @@ protected:
     bool horizontalInputThisFrame{false}; // Prevents friction while movement input is active.
     bool jumpHeldThisFrame{false};        // True when jump input was received this frame.
     float shootTimer{0.f};                // Timer for shoot pose animation.
+    float releaseDeceleration{1000.f};    // Braking rate selected by the last movement mode.
 
     void applyHorizontalDeceleration(float dt);
     void applyGravity(float dt);
@@ -123,6 +126,19 @@ public:
     void setRunning(bool status);
     bool isRunning() const;
 
+    // Powered forms can crouch while grounded. Crouching keeps the feet fixed,
+    // uses the Small-height collision body, and remains active until gameplay
+    // confirms that the additional standing headroom is clear.
+    void setCrouchRequested(bool status);
+    bool isCrouchRequested() const;
+    bool isCrouching() const;
+    sf::FloatRect getStandingBounds() const;
+    sf::FloatRect getStandingHeadroomBounds() const;
+    // Called after all ground contacts are known for the frame. The physics
+    // layer supplies only whether terrain blocks the standing headroom.
+    void resolveCrouchState(bool headroomBlocked);
+    void standUp();
+
     void setGrounded(bool status);
     bool isGrounded() const;
 
@@ -144,6 +160,8 @@ private:
     float deathTimer{0.f};
     bool deathHopStarted{false};
     float starColorTimer{0.f};
+    bool crouchRequested{false};
+    bool crouching{false};
 
     std::unique_ptr<PlayerState> currentState;
     std::vector<std::unique_ptr<PlayerEffect>> activeEffects;

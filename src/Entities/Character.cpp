@@ -26,6 +26,7 @@ Character::Character(
 )
     : Entity{x, y},
       profile{characterProfile},
+      releaseDeceleration{characterProfile.groundDeceleration},
       animationProfile{std::move(playerAnimationProfile)},
       collisionSize{
           characterProfile.bodyWidth,
@@ -94,7 +95,13 @@ void Character::render(sf::RenderWindow& window) const {
         }
     }
 
-    Entity::render(window);
+    sf::Sprite displaySprite = sprite;
+    if (crouching && currentState) {
+        const float standingHeight =
+            profile.smallBodyHeight * currentState->getHeightMultiplier();
+        displaySprite.move(0.f, -(standingHeight - collisionSize.y));
+    }
+    window.draw(displaySprite);
 }
 
 void Character::onCollision(
@@ -152,8 +159,13 @@ void Character::moveLeft(float dt) {
     horizontalInputThisFrame = true;
     facingRight = false;
 
-    const float baseSpeed = running ? profile.runSpeed : profile.walkSpeed;
+    const float baseSpeed = crouching
+        ? profile.crawlSpeed
+        : (running ? profile.runSpeed : profile.walkSpeed);
     const float maximumSpeed = baseSpeed * getMoveSpeedMultiplier();
+    releaseDeceleration = crouching
+        ? profile.crawlDeceleration
+        : profile.groundDeceleration;
 
     velocity.x = std::max(
         velocity.x - profile.moveAcceleration * dt,
@@ -165,8 +177,13 @@ void Character::moveRight(float dt) {
     horizontalInputThisFrame = true;
     facingRight = true;
 
-    const float baseSpeed = running ? profile.runSpeed : profile.walkSpeed;
+    const float baseSpeed = crouching
+        ? profile.crawlSpeed
+        : (running ? profile.runSpeed : profile.walkSpeed);
     const float maximumSpeed = baseSpeed * getMoveSpeedMultiplier();
+    releaseDeceleration = crouching
+        ? profile.crawlDeceleration
+        : profile.groundDeceleration;
 
     velocity.x = std::min(
         velocity.x + profile.moveAcceleration * dt,
@@ -175,7 +192,7 @@ void Character::moveRight(float dt) {
 }
 
 void Character::jump() {
-    if (!profile.canJump || !grounded) {
+    if (!profile.canJump || !grounded || crouching) {
         return;
     }
 
@@ -189,7 +206,7 @@ void Character::setJumpHeld(bool status) {
 }
 
 void Character::shootFireball() {
-    if (!hasAbility(PlayerAbility::ShootFireballs)) {
+    if (crouching || !hasAbility(PlayerAbility::ShootFireballs)) {
         return;
     }
 
@@ -208,7 +225,7 @@ void Character::useSpecialAbility() {
 }
 
 void Character::applyHorizontalDeceleration(float dt) {
-    const float deceleration = profile.groundDeceleration * dt;
+    const float deceleration = releaseDeceleration * dt;
 
     if (velocity.x > 0.f) {
         velocity.x = std::max(0.f, velocity.x - deceleration);
@@ -270,6 +287,10 @@ PlayerMotion Character::choosePlayerMotion() const {
 
     if (!isActive() || dying) {
         return PlayerMotion::Dead;
+    }
+
+    if (crouching) {
+        return PlayerMotion::Crouching;
     }
 
     if (shootTimer > 0.f) {
@@ -583,11 +604,91 @@ float Character::getJumpForceMultiplier() const {
 }
 
 void Character::setRunning(bool status) {
-    running = profile.canRun && status;
+    running = profile.canRun && !crouching && status;
 }
 
 bool Character::isRunning() const {
     return running;
+}
+
+void Character::setCrouchRequested(bool status) {
+    crouchRequested = status;
+
+    if (!status || crouching || !isActive() || dying || !grounded ||
+        !currentState || currentState->getFormTier() != FormTier::Powered) {
+        return;
+    }
+
+    const float oldBottom = position.y + collisionSize.y;
+    collisionSize.y = profile.smallBodyHeight;
+    position.y = oldBottom - collisionSize.y;
+    crouching = true;
+    running = false;
+    jumpHeldThisFrame = false;
+    syncSpritePosition();
+    updatePlayerAnimation(0.f);
+}
+
+bool Character::isCrouchRequested() const {
+    return crouchRequested;
+}
+
+bool Character::isCrouching() const {
+    return crouching;
+}
+
+sf::FloatRect Character::getStandingBounds() const {
+    if (!currentState) {
+        return getBounds();
+    }
+
+    const float standingHeight =
+        profile.smallBodyHeight * currentState->getHeightMultiplier();
+    const float bottom = position.y + collisionSize.y;
+    return sf::FloatRect{
+        position.x,
+        bottom - standingHeight,
+        profile.bodyWidth,
+        standingHeight
+    };
+}
+
+sf::FloatRect Character::getStandingHeadroomBounds() const {
+    if (!crouching) {
+        return sf::FloatRect{position.x, position.y, collisionSize.x, 0.f};
+    }
+
+    const sf::FloatRect standingBounds = getStandingBounds();
+    const float addedHeight = std::max(0.f, position.y - standingBounds.top);
+    return sf::FloatRect{
+        standingBounds.left,
+        standingBounds.top,
+        standingBounds.width,
+        addedHeight
+    };
+}
+
+void Character::resolveCrouchState(bool headroomBlocked) {
+    if (!crouching || headroomBlocked || (crouchRequested && grounded)) {
+        return;
+    }
+
+    standUp();
+}
+
+void Character::standUp() {
+    if (!crouching || !currentState) {
+        return;
+    }
+
+    const float oldBottom = position.y + collisionSize.y;
+    collisionSize.x = profile.bodyWidth;
+    collisionSize.y =
+        profile.smallBodyHeight * currentState->getHeightMultiplier();
+    position.y = oldBottom - collisionSize.y;
+    crouching = false;
+    syncSpritePosition();
+    updatePlayerAnimation(0.f);
 }
 
 void Character::setGrounded(bool status) {
@@ -630,8 +731,12 @@ void Character::applyForm(
     const float oldBottom = position.y + collisionSize.y;
     const float safeMultiplier = std::max(0.1f, heightMultiplier);
 
+    const bool remainsCrouched = crouching && safeMultiplier > 1.f;
     collisionSize.x = profile.bodyWidth;
-    collisionSize.y = profile.smallBodyHeight * safeMultiplier;
+    collisionSize.y = remainsCrouched
+        ? profile.smallBodyHeight
+        : profile.smallBodyHeight * safeMultiplier;
+    crouching = remainsCrouched;
     currentFormName = std::string{formName};
 
     position.y = oldBottom - collisionSize.y;
