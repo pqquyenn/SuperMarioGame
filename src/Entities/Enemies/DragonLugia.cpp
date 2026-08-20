@@ -71,6 +71,16 @@ void DragonLugia::setTexture(const sf::Texture& texture, bool resetRect) {
     if (auto* frame = animator.getCurrentFrame()) {
         sprite.setTextureRect(frame->textureRect);
     }
+
+    auto& assets = AssetManager::getInstance();
+    if (assets.getTexture("DragonFlameProjectile").getSize().x > 0) {
+        flameSprite.setTexture(assets.getTexture("DragonFlameProjectile"));
+        auto bounds = flameSprite.getLocalBounds();
+        flameSprite.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
+    }
+    if (assets.getTexture("DragonFlameBurstSheet").getSize().x > 0) {
+        burstSprite.setTexture(assets.getTexture("DragonFlameBurstSheet"));
+    }
 }
 
 void DragonLugia::changeBossState(State newState) {
@@ -287,14 +297,24 @@ void DragonLugia::updateWithPlayer(float dt, Character* player, const TileMap* t
             const sf::FloatRect pBounds = player->getBounds();
             for (auto& flame : flames) {
                 if (!flame.active) continue;
-                sf::FloatRect fBounds(flame.position.x - 7.f, flame.position.y - 7.f, 14.f, 14.f);
+                sf::FloatRect fBounds(flame.position.x - 8.f, flame.position.y - 8.f, 16.f, 16.f);
                 if (pBounds.intersects(fBounds)) {
                     player->takeDamage();
+                    triggerFlameImpact(flame.position);
                     flame.active = false;
                 }
             }
         }
     }
+}
+
+void DragonLugia::triggerFlameImpact(sf::Vector2f pos) {
+    DragonFlameImpact impact;
+    impact.position = pos;
+    impact.timer = 0.f;
+    impact.maxDuration = 0.32f;
+    impact.active = true;
+    impacts.push_back(impact);
 }
 
 void DragonLugia::shootFlameAtTarget(sf::Vector2f targetPos, float flameSpeed) {
@@ -327,7 +347,17 @@ void DragonLugia::updateFlames(float dt, const TileMap* tileMap) {
         flame.lifetime -= dt;
         flame.animTimer += dt;
 
+        // Trigger impact when flame touches the ground
+        if (flame.position.y >= groundY - 2.f) {
+            triggerFlameImpact(sf::Vector2f(flame.position.x, groundY));
+            flame.active = false;
+            continue;
+        }
+
         if (flame.lifetime <= 0.f || flame.position.x < 16.f || flame.position.x > 384.f || flame.position.y > 210.f) {
+            if (flame.position.y > 170.f) {
+                triggerFlameImpact(sf::Vector2f(flame.position.x, std::min(flame.position.y, groundY)));
+            }
             flame.active = false;
         }
     }
@@ -335,6 +365,20 @@ void DragonLugia::updateFlames(float dt, const TileMap* tileMap) {
     flames.erase(
         std::remove_if(flames.begin(), flames.end(), [](const DragonFlame& f) { return !f.active; }),
         flames.end()
+    );
+
+    // Update impact burst animations
+    for (auto& impact : impacts) {
+        if (!impact.active) continue;
+        impact.timer += dt;
+        if (impact.timer >= impact.maxDuration) {
+            impact.active = false;
+        }
+    }
+
+    impacts.erase(
+        std::remove_if(impacts.begin(), impacts.end(), [](const DragonFlameImpact& imp) { return !imp.active; }),
+        impacts.end()
     );
 }
 
@@ -381,13 +425,41 @@ sf::FloatRect DragonLugia::getBounds() const {
 void DragonLugia::render(sf::RenderWindow& window) const {
     if (state == State::Defeated) return;
 
-    // Draw flames
+    // Draw active flying flame projectiles
+    bool hasFlameTexture = (flameSprite.getTexture() != nullptr);
     for (const auto& flame : flames) {
         if (!flame.active) continue;
-        flameShape.setPosition(flame.position);
-        float pulse = 1.0f + 0.2f * std::sin(flame.animTimer * 15.f);
-        flameShape.setScale(pulse, pulse);
-        window.draw(flameShape);
+        if (hasFlameTexture) {
+            flameSprite.setPosition(flame.position);
+            float pulse = 0.22f * (1.0f + 0.12f * std::sin(flame.animTimer * 18.f));
+            flameSprite.setScale(pulse, pulse);
+
+            // Orient the flame towards movement direction
+            float angle = std::atan2(flame.velocity.y, flame.velocity.x) * 180.f / 3.14159265f;
+            flameSprite.setRotation(angle - 90.f);
+
+            window.draw(flameSprite);
+        } else {
+            flameShape.setPosition(flame.position);
+            float pulse = 1.0f + 0.2f * std::sin(flame.animTimer * 15.f);
+            flameShape.setScale(pulse, pulse);
+            window.draw(flameShape);
+        }
+    }
+
+    // Draw flame ground impact bursts
+    bool hasBurstTexture = (burstSprite.getTexture() != nullptr);
+    for (const auto& impact : impacts) {
+        if (!impact.active) continue;
+        if (hasBurstTexture) {
+            float progress = std::clamp(impact.timer / impact.maxDuration, 0.f, 0.999f);
+            int frameIdx = std::clamp(static_cast<int>(progress * 5.0f), 0, 4);
+            burstSprite.setTextureRect(sf::IntRect(frameIdx * 64, 0, 64, 48));
+            burstSprite.setOrigin(32.f, 44.f);
+            burstSprite.setPosition(impact.position);
+            burstSprite.setScale(0.55f, 0.55f);
+            window.draw(burstSprite);
+        }
     }
 
     // Draw Boss Dragon Sprite

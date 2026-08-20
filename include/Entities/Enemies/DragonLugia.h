@@ -18,6 +18,13 @@ struct DragonFlame {
     float animTimer{0.f};
 };
 
+struct DragonFlameImpact {
+    sf::Vector2f position;
+    float timer{0.f};
+    float maxDuration{0.35f};
+    bool active{true};
+};
+
 class DragonLugia : public Enemy {
 public:
     enum class State {
@@ -62,8 +69,11 @@ private:
     AnimationClip animDeath;
     SpriteAnimator animator;
 
-    // Projectiles
+    // Projectiles & Impact Effects
     std::vector<DragonFlame> flames;
+    std::vector<DragonFlameImpact> impacts;
+    mutable sf::Sprite flameSprite;
+    mutable sf::Sprite burstSprite;
     mutable sf::CircleShape flameShape;
 
     // UI Health bar
@@ -73,6 +83,7 @@ private:
     void initAnimations();
     void shootFlameAtTarget(sf::Vector2f targetPos, float speed);
     void updateFlames(float dt, const TileMap* tileMap);
+    void triggerFlameImpact(sf::Vector2f pos);
     void changeBossState(State newState);
 
 public:
