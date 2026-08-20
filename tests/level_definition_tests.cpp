@@ -66,6 +66,12 @@ void testStage(
            path + " block content count is preserved");
     expect(definition.nextStage == expectedNext,
            path + " next stage is loaded from the manifest");
+    if (!expectedNext.empty()) {
+        expect(expectedNext.find(".level") != std::string::npos,
+               path + " transitions to a level manifest");
+        expect(!LevelDefinitionLoader::findManifest(expectedNext).empty(),
+               path + " next-stage manifest exists");
+    }
     expect(definition.terrainPath.find(".txt") != std::string::npos,
            path + " resolves a TXT terrain file");
     expect(definition.terrainPath.find("assets/maps") != std::string::npos,
@@ -205,13 +211,50 @@ void testMissingFiles() {
 }
 
 void testTxtCompatibilityResolution() {
+    const std::string manifest =
+        LevelDefinitionLoader::findManifestForLegacyTerrain("1.1/1-1.txt");
+    expect(!manifest.empty(),
+           "explicit legacy adapter resolves a terrain request");
+    expect(manifest.find("1-1.level") != std::string::npos,
+           "legacy adapter resolves the related level manifest");
+
     LevelDefinition definition;
     std::vector<std::string> errors;
     LevelDefinitionLoader loader;
-    expect(loader.load("1.1/1-1.txt", definition, errors),
-           "legacy txt request resolves its level manifest");
+    expect(loader.load(manifest, definition, errors),
+           "resolved legacy manifest remains loadable");
     expect(definition.sourcePath.find("1-1.level") != std::string::npos,
-           "legacy txt request loads the level manifest");
+           "legacy adapter never loads raw terrain as a stage");
+
+    errors.clear();
+    expect(!loader.load("1.1/1-1.txt", definition, errors),
+           "normal manifest loader rejects txt stage entry");
+}
+
+void testNavigationValidation() {
+    LevelDefinition definition;
+    std::vector<std::string> errors;
+    LevelDefinitionLoader loader;
+    expect(!loader.load(
+               "tests/fixtures/invalid-navigation.level",
+               definition,
+               errors),
+           "invalid navigation manifest fails");
+
+    const auto contains = [&errors](const std::string& needle) {
+        for (const std::string& error : errors) {
+            if (error.find(needle) != std::string::npos) {
+                return true;
+            }
+        }
+        return false;
+    };
+    expect(contains("next_stage manifest does not exist"),
+           "missing next-stage manifest is reported");
+    expect(contains("initial_area references an area without a camera zone"),
+           "initial area without camera is reported");
+    expect(contains("anchor orphan_anchor references an area without a camera zone"),
+           "anchor area without camera is reported");
 }
 
 } // namespace
@@ -219,13 +262,14 @@ void testTxtCompatibilityResolution() {
 int main() {
     testCatalog();
     testStage("1.1/1-1.level", 17, 0, 6, "1.2/1-2.level");
-    testStage("1.2/1-2.level", 18, 4, 1, "1.3/1-3.level");
+    testStage("1.2/1-2.level", 18, 4, 2, "1.3/1-3.level");
     testStage("1.3/1-3.level", 8, 4, 0, "1.4/1-4.level");
     testStage("1.4/1-4.level", 1, 0, 1, "");
     testInvalidManifest();
     testMalformedManifest();
     testMissingFiles();
     testTxtCompatibilityResolution();
+    testNavigationValidation();
     std::cout << "SOLID-03 level definition tests passed\n";
     return 0;
 }

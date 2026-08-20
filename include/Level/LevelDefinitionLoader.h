@@ -17,6 +17,8 @@ public:
         std::vector<std::string>& errors) const;
 
     static std::string findManifest(const std::string& requestedPath);
+    static std::string findManifestForLegacyTerrain(
+        const std::string& terrainPath);
 
 private:
     std::string entityCatalogPath;

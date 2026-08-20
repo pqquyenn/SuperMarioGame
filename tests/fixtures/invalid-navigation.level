@@ -1,0 +1,33 @@
+[stage]
+version=1
+id=invalid-navigation
+name=INVALID NAVIGATION
+terrain=../../assets/maps/1.1/1-1.txt
+background=../../assets/maps/1.1/background.txt
+next_stage=missing/missing.level
+initial_area=missing-area
+time_limit=400
+tile_size=16
+
+[rules]
+kill_plane_tile=20
+left_boundary_tile=0
+right_boundary_tile=-1
+enemy_void_margin_tiles=4
+
+[entities]
+
+[items]
+
+[platforms]
+
+[blocks]
+
+[anchors]
+anchor id=orphan_anchor area=missing-area tile=10,10 velocity=0,0
+
+[portals]
+portal id=orphan_portal area=overworld activation=right trigger=10,10,1,1 target=orphan_anchor
+
+[camera_zones]
+camera id=main_camera area=overworld bounds=0,0,248,16 follow_x=true follow_y=false center_y=7 dark=false

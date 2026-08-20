@@ -28,12 +28,9 @@ struct WarpZoneInfo {
 
 class Level : public TileCollisionHandler {
 private:
-    int levelId = 1;
     TileMap map;
     TileMap bgMap;
     Camera camera;
-    bool isUnderground = false;
-    bool isInBonusRoom = false;    // true while the player is in the hidden vault
     bool hasDefinition = false;
     LevelDefinition definition;
     std::string currentArea{"overworld"};
@@ -45,20 +42,21 @@ private:
     std::size_t removedEnemyCount{0};
 
     bool spawnEntitiesFromMap();
-    bool loadInternal(const std::string& filename, bool isUnderground);
-    bool loadLegacyMap(const std::string& filename, bool isUnderground);
+    bool loadManifest(const std::string& filename);
     void setCurrentArea(const std::string& area);
+    const AnchorDefinition* findAnchor(const std::string& anchorId) const;
+    bool activatePortal(
+        Character& character,
+        const PortalDefinition& portal);
     sf::Vector2f findGroundedSpawn(
         const sf::Vector2f& requestedPosition,
         const sf::Vector2f& characterSize
     ) const;
 
 public:
-    Level(int id = 1);
+    Level();
     ~Level();
     bool loadLevel(const std::string& levelFile);
-    bool loadHiddenMap(const std::string& hiddenFile = "underground.txt");
-    bool loadMap(const std::string& mapFile);
     void update(float dt);
     void render(sf::RenderWindow& window);
     void spawnItemFromBlock(float x, float y);
@@ -78,6 +76,8 @@ public:
     bool tryActivatePortalForInput(
         Character& character,
         PortalActivation activation);
+    bool tryActivateFirstPortalFromCurrentArea(Character& character);
+    void resetToInitialArea();
     void onTileCeilingContact(
         Entity& entity,
         TileMap& map,
@@ -96,26 +96,11 @@ public:
     float getLeftBoundaryX() const;
     float getRightBoundaryX(float entityWidth = 0.f) const;
 
-    void warpToUnderground(Character* character = nullptr);
-    void warpToUnderground1_2(Character* character = nullptr);
-    void warpToOverworldExit(Character* character = nullptr);
-
-    // World 1-2 warp methods
-    void warpPipeA_Entry(Character* character = nullptr);   // Overworld intro pipe → underground
-    void warpPipeB_Entry(Character* character = nullptr);   // Underground → bonus room vault
-    void warpPipeC1_Exit(Character* character = nullptr);   // Bonus room → underground Pipe C2
-
     TileMap& getTileMap() { return map; }
     const TileMap& getTileMap() const { return map; }
     TileMap& getBgMap() { return bgMap; }
     Camera& getCamera() { return camera; }
     const Camera& getCamera() const { return camera; }
-    int  getLevelId() const { return levelId; }
-    void setLevelId(int id) { levelId = id; }
-    bool getIsUnderground() const { return isUnderground; }
-    bool getIsInBonusRoom() const { return isInBonusRoom; }
-    void setIsUnderground(bool v);
-    void setIsInBonusRoom(bool v);
     const std::string& getCurrentArea() const { return currentArea; }
     const LevelDefinition& getDefinition() const { return definition; }
     bool isDataDriven() const { return hasDefinition; }
