@@ -37,6 +37,8 @@ void Enemy::applyPhysics(float dt) {
 
 void Enemy::reverseDirection() { direction = -direction; }
 
+void Enemy::onWallCollision() { reverseDirection(); }
+
 void Enemy::onFireball() {
     active = false;
     isAlive = false;

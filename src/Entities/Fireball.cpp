@@ -137,3 +137,11 @@ void Fireball::bounce() {
         velocity.y = BounceVelocity;
     }
 }
+
+void Fireball::onLanded() {
+    bounce();
+}
+
+void Fireball::onWallCollision() {
+    explode();
+}

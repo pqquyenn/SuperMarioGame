@@ -107,7 +107,14 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   if (event.type == sf::Event::KeyPressed) {
     if ((event.key.code == sf::Keyboard::Down ||
          event.key.code == sf::Keyboard::S) &&
-        player && CollisionManager::tryEnterDownWarp(*player, level)) {
+        player &&
+            level.tryActivatePortalForInput(*player, PortalActivation::Down)) {
+      return;
+    } else if ((event.key.code == sf::Keyboard::Right ||
+                event.key.code == sf::Keyboard::D) &&
+               player &&
+               level.tryActivatePortalForInput(
+                   *player, PortalActivation::Right)) {
       return;
     } else if (event.key.code == sf::Keyboard::T) {
       adminDebugView.toggle();
@@ -149,13 +156,12 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
       }
     } else if (event.key.code == sf::Keyboard::U ||
                event.key.code == sf::Keyboard::H) {
-      std::cout << "[PlayState] Load Underground Map..." << std::endl;
-      if (level.loadHiddenMap("underground.txt")) {
-        if (player) {
-          player->setPosition(32.f, 32.f);
-        }
-        level.getCamera().setCenter(160.f, 120.f);
-        level.getTileMap().setNeedsRedraw(true);
+      if (player && level.tryActivateFirstPortalFromCurrentArea(*player)) {
+        std::cout << "[PlayState] Activated the first manifest portal from "
+                  << "the current area." << std::endl;
+      } else {
+        std::cout << "[PlayState] Current area has no manifest portal."
+                  << std::endl;
       }
     } else if (event.key.code == sf::Keyboard::M ||
                event.key.code == sf::Keyboard::Num1) {
@@ -241,10 +247,7 @@ void PlayState::update(float dt) {
 
       if (!player->isActive()) {
         if (hud.getLives() > 0 && hud.getTimeRemaining() > 0.f) {
-          // Reset underground/bonus-room flags so camera follows player
-          // correctly after respawning back on the overworld.
-          level.setIsUnderground(false);
-          level.setIsInBonusRoom(false);
+          level.resetToInitialArea();
           player->respawn(playerSpawnPoint.x, playerSpawnPoint.y);
           centerCameraOnPlayerSpawn();
         } else if (stateManager) {
@@ -286,6 +289,7 @@ void PlayState::update(float dt) {
       CollisionManager::tryStandUp(*player, level.getTileMap());
 
       // 6.5. Kiểm tra chạm Cột Cờ (Win State)
+      DragonLugia* stageBoss = nullptr;
       if (!levelWon && player->isActive() && !player->isDying()) {
         const sf::FloatRect pBounds = player->getBounds();
         for (const TileHandle &h : level.getTileMap().getTilesInBounds(pBounds)) {
@@ -295,7 +299,6 @@ void PlayState::update(float dt) {
             if (stateManager) {
               stateManager->pushState(std::make_unique<WinState>(
                   this,
-                  level.getLevelId(),
                   initialMapPath,
                   level.getNextStage()));
             }
@@ -303,16 +306,16 @@ void PlayState::update(float dt) {
           }
         }
 
-        // Check if boss dragon was defeated in World 1-4
         for (const auto& enemy : level.getEnemies()) {
           if (auto* dragon = dynamic_cast<DragonLugia*>(enemy.get())) {
+            stageBoss = dragon;
             if (dragon->isBossDefeated()) {
               levelWon = true;
               if (stateManager) {
                 stateManager->changeState(std::make_unique<LevelCompleteState>(
-                    4,
+                    level.getDefinition().name,
                     initialMapPath,
-                    "",
+                    level.getNextStage(),
                     hud.getScore(),
                     hud.getCoins(),
                     static_cast<int>(hud.getTimeRemaining() * 50.f)
@@ -324,8 +327,10 @@ void PlayState::update(float dt) {
         }
       }
 
-      // Dynamic Drops in Boss Stage (World 1-4)
-      if (!levelWon && player && player->isActive() && !player->isDying() && level.getLevelId() == 4) {
+      // Boss support drops are enabled by placing DragonLugia in the manifest,
+      // rather than by branching on a numeric stage ID.
+      if (!levelWon && stageBoss && player && player->isActive() &&
+          !player->isDying()) {
         skyDropTimer -= dt;
         if (skyDropTimer <= 0.f) {
           skyDropTimer = 6.5f + static_cast<float>(rand() % 40) / 10.f; // 6.5s - 10.5s
@@ -398,8 +403,7 @@ void PlayState::update(float dt) {
       continue;
 
     fireball->update(dt);
-    CollisionManager::resolveTileCollisions(*fireball, level.getTileMap(),
-                                            &level);
+    CollisionManager::resolveTileCollisions(*fireball, level.getTileMap());
     if (!fireball->isActive())
       continue;
 
@@ -524,10 +528,7 @@ void PlayState::centerCameraOnPlayerSpawn() {
     return;
   }
 
-  const sf::FloatRect playerBounds = player->getBounds();
-  level.getCamera().setCenter(
-      playerSpawnPoint.x + playerBounds.width * 0.5f,
-      playerSpawnPoint.y + playerBounds.height * 0.5f);
+  level.updateCameraFor(player->getPosition());
 }
 
 void PlayState::constrainPlayerHorizontally() {

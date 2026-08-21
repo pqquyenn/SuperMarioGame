@@ -20,7 +20,6 @@ public:
 
 private:
     PlayState* playState = nullptr;
-    int levelId = 1;
     std::string mapPath;
     std::string nextStage;
 
@@ -46,7 +45,6 @@ private:
 public:
     WinState(
         PlayState* play,
-        int id,
         const std::string& path,
         const std::string& nextStage = {});
 
