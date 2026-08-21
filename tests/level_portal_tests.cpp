@@ -1,4 +1,7 @@
 #include "Entities/Character.h"
+#include "Factories/DefaultEntityRegistration.h"
+#include "Factories/EntityAssetProvider.h"
+#include "Factories/EntityFactory.h"
 #include "Level/Level.h"
 
 #include <cmath>
@@ -6,6 +9,16 @@
 #include <string>
 
 namespace {
+
+class NoOpEntityAssetProvider final : public EntityAssetProvider {
+public:
+    const sf::Texture& getTexture(const std::string&) const override {
+        return texture;
+    }
+
+private:
+    sf::Texture texture;
+};
 
 struct TestRunner {
     int total{0};
@@ -219,6 +232,9 @@ void testNextStageRuntimeChain(TestRunner& runner) {
 } // namespace
 
 int main() {
+    NoOpEntityAssetProvider assets;
+    registerDefaultEntityTypes(EntityFactory::getInstance(), assets);
+
     TestRunner runner;
     testRuntimeRequiresManifest(runner);
     testOneOnePortalAndFixedCamera(runner);

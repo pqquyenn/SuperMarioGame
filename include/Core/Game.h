@@ -1,10 +1,15 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include "Factories/EntityAssetProvider.h"
 #include "States/GameStateManager.h"
 
 class Game {
 private:
+    // Must outlive states and the runtime EntityFactory creators that capture
+    // this provider by reference.
+    AssetManagerEntityAssetProvider entityAssetProvider;
+
     // === Window ===
     sf::RenderWindow window;
 

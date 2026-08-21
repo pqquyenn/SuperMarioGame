@@ -25,7 +25,7 @@ Level::~Level() = default;
 
 bool Level::spawnEntitiesFromMap() {
   std::vector<std::string> errors;
-  const bool success = LevelWorldBuilder{}.build(
+  const bool success = LevelWorldBuilder{EntityFactory::getInstance()}.build(
       definition, map, enemies, items, movingPlatforms, errors);
   for (const auto& error : errors) {
     std::cerr << "[Level] " << error << std::endl;
@@ -45,8 +45,6 @@ bool Level::loadManifest(const std::string &filename) {
   hasDefinition = false;
   definition = {};
   currentArea = "overworld";
-
-  EntityFactory::getInstance().registerDefaultEntities();
 
   LevelDefinition loaded;
   std::vector<std::string> errors;

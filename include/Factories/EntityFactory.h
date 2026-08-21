@@ -19,8 +19,11 @@ public:
     // The signature for creation functions (lambdas)
     using CreatorFunc = std::function<std::unique_ptr<Entity>(const sf::Vector2f&)>;
 
-    // Singleton access
+    // Runtime singleton access. Local instances are supported for tests and
+    // isolated composition roots.
     static EntityFactory& getInstance();
+
+    EntityFactory() = default;
 
     // Prevent copying and assignment
     EntityFactory(const EntityFactory&) = delete;
@@ -38,11 +41,6 @@ public:
     void registerType(const std::string& typeName, CreatorFunc creator);
 
     /**
-     * @brief Register default game entities (Goomba, Koopa, etc.)
-     */
-    void registerDefaultEntities();
-
-    /**
      * @brief Create an entity dynamically
      * @param typeName The string ID to lookup in the registry
      * @param position The position to spawn the entity
@@ -51,8 +49,6 @@ public:
     [[nodiscard]] std::unique_ptr<Entity> create(const std::string& typeName, const sf::Vector2f& position);
 
 private:
-    EntityFactory() = default;
-    
     // The Map Registry that holds the creator functions
     std::unordered_map<std::string, CreatorFunc> m_registry;
 };
