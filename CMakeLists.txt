@@ -153,6 +153,7 @@ add_executable(solid04_tile_tests
     src/Entities/Character.cpp
     src/Entities/MovingPlatform.cpp
     src/Entities/PlayerAnimation.cpp
+    src/Entities/PlayerPalette.cpp
     src/Entities/Enemies/Enemy.cpp
     src/Animation/SpriteAnimator.cpp
     src/Observer/Subject.cpp
