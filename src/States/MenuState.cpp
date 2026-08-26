@@ -41,6 +41,9 @@ const char* achievementStatus(const AchievementSystem& achievements,
 }
 }
 
+MenuState::MenuState(Page initialPage)
+    : entryPage{initialPage}, enterMenuDirectly{true} {}
+
 void MenuState::onEnter() {
     std::cout << "[MenuState] Entered main menu (NSMBU Deluxe Style)" << std::endl;
 
@@ -194,8 +197,10 @@ void MenuState::onEnter() {
     arrowRight.setOutlineColor(sf::Color(20, 20, 20));
     arrowRight.setOutlineThickness(2.f);
 
-    setDisplayMode(DisplayMode::TitleScreen);
-    setPage(Page::GameMode);
+    setDisplayMode(enterMenuDirectly
+                       ? DisplayMode::InMenu
+                       : DisplayMode::TitleScreen);
+    setPage(entryPage);
 }
 
 void MenuState::onExit() {
@@ -413,9 +418,21 @@ void MenuState::rebuildEntries() {
         case Page::PvP:
             pageTitleText.setString("PVP MATCH-UP");
             entries = {{"SMALL MATCH"},
-                       {"SUPER MATCH - ARENA 1"},
-                       {"SUPER MATCH - ARENA 2"},
+                       {"SUPER MATCH"},
+                       {"FRIENDLY MATCH"},
                        {"BACK"}};
+            break;
+        case Page::PvPMap:
+            pageTitleText.setString("SELECT PVP MAP");
+            if (pendingPvPMatchType == PvPMatchType::Small) {
+                entries = {{"SMALL ARENA"}, {"BACK"}};
+            } else if (pendingPvPMatchType == PvPMatchType::Super) {
+                entries = {{"SUPER ARENA 1"},
+                           {"SUPER ARENA 2"},
+                           {"BACK"}};
+            } else {
+                entries = {{"FRIENDLY ARENA"}, {"BACK"}};
+            }
             break;
         case Page::PvPCharacter:
             break;
@@ -604,15 +621,36 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
             if (selectedIndex == 3) {
                 setPage(Page::GameMode);
             } else {
-                const PvPMatchType type = selectedIndex == 0
-                    ? PvPMatchType::Small
-                    : PvPMatchType::Super;
-                const std::string mapPath = selectedIndex == 2
-                    ? "pvp/super-arena1.level"
-                    : std::string{};
-                beginPvPCharacterSelection(type, mapPath);
+                static const PvPMatchType matchTypes[] = {
+                    PvPMatchType::Small,
+                    PvPMatchType::Super,
+                    PvPMatchType::Friendly
+                };
+                pendingPvPMatchType = matchTypes[selectedIndex];
+                setPage(Page::PvPMap);
             }
             break;
+        case Page::PvPMap: {
+            const int backIndex = pendingPvPMatchType == PvPMatchType::Super
+                ? 2 : 1;
+            if (selectedIndex == backIndex) {
+                setPage(Page::PvP);
+            } else {
+                std::string mapPath;
+                if (pendingPvPMatchType == PvPMatchType::Small) {
+                    mapPath = "pvp/small-arena.level";
+                } else if (pendingPvPMatchType == PvPMatchType::Super) {
+                    mapPath = selectedIndex == 0
+                        ? "pvp/super-arena.level"
+                        : "pvp/super-arena1.level";
+                } else {
+                    mapPath = "pvp/friendly-arena.level";
+                }
+                beginPvPCharacterSelection(
+                    pendingPvPMatchType, std::move(mapPath));
+            }
+            break;
+        }
         case Page::Solo:
             if (selectedIndex == 0) setPage(Page::Play);
             else if (selectedIndex == 1) setPage(Page::Character);
@@ -656,6 +694,7 @@ void MenuState::goBack() {
         case Page::GameMode: setDisplayMode(DisplayMode::TitleScreen); break;
         case Page::Solo: setPage(Page::GameMode); break;
         case Page::PvP: setPage(Page::GameMode); break;
+        case Page::PvPMap: setPage(Page::PvP); break;
         case Page::PvPCharacter:
             if (pvpSelectionStage == 2) {
                 pvpSelectionStage = 1;

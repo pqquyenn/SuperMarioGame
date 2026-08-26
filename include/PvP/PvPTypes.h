@@ -9,7 +9,8 @@ enum class PlayerId {
 
 enum class PvPMatchType {
     Small,
-    Super
+    Super,
+    Friendly
 };
 
 enum class PvPDamageSource {
@@ -20,5 +21,10 @@ enum class PvPDamageSource {
 };
 
 inline std::string_view pvpMatchName(PvPMatchType type) {
-    return type == PvPMatchType::Small ? "SMALL MATCH" : "SUPER MATCH";
+    switch (type) {
+        case PvPMatchType::Small: return "SMALL MATCH";
+        case PvPMatchType::Super: return "SUPER MATCH";
+        case PvPMatchType::Friendly: return "FRIENDLY MATCH";
+    }
+    return "PVP MATCH";
 }

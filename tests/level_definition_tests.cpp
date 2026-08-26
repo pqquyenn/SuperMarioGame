@@ -403,6 +403,7 @@ int main() {
     testStage("pvp/small-arena.level", 0, 0, 0, "");
     testStage("pvp/super-arena.level", 3, 0, 0, "");
     testStage("pvp/super-arena1.level", 4, 0, 0, "");
+    testStage("pvp/friendly-arena.level", 4, 0, 0, "");
     testInvalidManifest();
     testMalformedManifest();
     testMissingFiles();

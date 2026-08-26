@@ -103,6 +103,13 @@ public:
     const Camera& getCamera() const { return camera; }
     const std::string& getCurrentArea() const { return currentArea; }
     const LevelDefinition& getDefinition() const { return definition; }
+    int getLevelId() const {
+        if (definition.id == "world-1-1") return 1;
+        if (definition.id == "world-1-2") return 2;
+        if (definition.id == "world-1-3") return 3;
+        if (definition.id == "world-1-4") return 4;
+        return 0;
+    }
     bool isDataDriven() const { return hasDefinition; }
     const std::string& getNextStage() const { return definition.nextStage; }
     int getTimeLimit() const { return definition.timeLimit; }

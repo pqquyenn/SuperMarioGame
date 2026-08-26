@@ -161,7 +161,8 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
     } else if (event.key.code == sf::Keyboard::Escape) {
       // Nhan Escape -> push PauseState (PlayState van con trong stack)
       if (stateManager) {
-        stateManager->pushState(std::make_unique<PauseState>());
+        stateManager->pushState(
+            std::make_unique<PauseState>(initialMapPath));
       }
     } else if (event.key.code == sf::Keyboard::U ||
                event.key.code == sf::Keyboard::H) {

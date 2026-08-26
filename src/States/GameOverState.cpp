@@ -130,7 +130,8 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                 } else if (selectedIndex == 1) {
                     // MAIN MENU -> Return to MenuState
                     if (stateManager) {
-                        stateManager->changeState(std::make_unique<MenuState>());
+                        stateManager->changeState(
+                            std::make_unique<MenuState>(MenuState::Page::Play));
                     }
                 }
                 break;

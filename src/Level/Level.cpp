@@ -501,6 +501,10 @@ void Level::update(float dt) {
 void Level::render(sf::RenderWindow &window) {
   bgMap.render(window, camera);
 
+  // Terrain is the world backdrop. Draw gameplay entities afterward so they
+  // cannot disappear behind ordinary solid tiles.
+  map.render(window, camera);
+
   for (const auto &item : items) {
     if (item && item->isActive()) {
       item->render(window);
@@ -519,8 +523,6 @@ void Level::render(sf::RenderWindow &window) {
       enemy->render(window);
     }
   }
-
-  map.render(window, camera);
 
   // Render brick debris on top of everything
   map.renderDebris(window);

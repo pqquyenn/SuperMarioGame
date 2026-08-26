@@ -33,6 +33,7 @@ constexpr float SpawnProtectionDuration = 1.5f;
 constexpr float FireballCooldown = 0.75f;
 constexpr float StompBounceVelocity = -250.f;
 constexpr float ContactPushVelocity = 135.f;
+constexpr float FriendlyRespawnInterval = 15.f;
 constexpr float UiWidth = 800.f;
 constexpr float UiHeight = 600.f;
 
@@ -73,6 +74,15 @@ PvPState::PlayerSlot::PlayerSlot(
     const InputBindings& bindings
 )
     : id{playerId}, characterChoice{choice}, input{bindings, false} {}
+
+void PvPState::PlayerScore::onNotify(const GameEvent& event) {
+    if (event.type == GameEventType::COIN_COLLECTED) {
+        ++coins;
+        score += event.value;
+    } else if (event.type == GameEventType::ENEMY_DEFEATED) {
+        score += event.value;
+    }
+}
 
 InputBindings PvPState::makePlayerOneBindings() {
     InputBindings bindings;
@@ -128,6 +138,15 @@ void PvPState::onEnter() {
     configureArenaCamera();
     loadFont();
 
+    cacheFireFlowerSpawns();
+    matchTimeRemaining = isFriendlyMatch()
+        ? static_cast<float>(level.getTimeLimit())
+        : 0.f;
+    friendlyRespawnTimer = FriendlyRespawnInterval;
+    flowerSpawnTimer = 3.f;
+}
+
+void PvPState::cacheFireFlowerSpawns() {
     fireFlowerSpawns.clear();
     const float tileSize = level.getDefinition().tileSize;
     for (const auto& anchor : level.getDefinition().anchors) {
@@ -136,7 +155,19 @@ void PvPState::onEnter() {
                                         anchor.tilePosition.y * tileSize});
         }
     }
+}
+
+void PvPState::respawnFriendlyArena() {
+    fireballs.clear();
+    fireFlower.reset();
+    if (!level.loadLevel(arenaMapPath)) {
+        arenaLoadFailed = true;
+        return;
+    }
+    configureArenaCamera();
+    cacheFireFlowerSpawns();
     flowerSpawnTimer = 3.f;
+    friendlyRespawnTimer = FriendlyRespawnInterval;
 }
 
 void PvPState::onExit() {
@@ -185,13 +216,17 @@ void PvPState::createPlayers() {
     }
     playerOne.character->setHorizontalMovementScale(PvPMovementScale);
     playerTwo.character->setHorizontalMovementScale(PvPMovementScale);
+    playerOne.scoreConnection = playerOne.character->addObserver(
+        &playerOne.score);
+    playerTwo.scoreConnection = playerTwo.character->addObserver(
+        &playerTwo.score);
 
     playerOne.spawnPoint = findAnchor("p1_spawn", {48.f, 192.f});
     playerTwo.spawnPoint = findAnchor("p2_spawn", {336.f, 192.f});
     playerOne.character->setPosition(playerOne.spawnPoint);
     playerTwo.character->setPosition(playerTwo.spawnPoint);
 
-    if (matchType == PvPMatchType::Super) {
+    if (matchType != PvPMatchType::Small) {
         playerOne.character->receivePowerUp(std::make_unique<SuperState>());
         playerTwo.character->receivePowerUp(std::make_unique<SuperState>());
     }
@@ -262,7 +297,8 @@ void PvPState::handleInput(sf::Event& event, sf::RenderWindow&) {
     }
 
     if (event.key.code == sf::Keyboard::Escape && stateManager) {
-        stateManager->clearAndPushState(std::make_unique<MenuState>());
+        stateManager->clearAndPushState(
+            std::make_unique<MenuState>(MenuState::Page::PvP));
     }
 }
 
@@ -308,7 +344,7 @@ void PvPState::respawnIfReady(PlayerSlot& slot) {
     }
 
     slot.character->respawn(slot.spawnPoint.x, slot.spawnPoint.y);
-    if (matchType == PvPMatchType::Super) {
+    if (matchType != PvPMatchType::Small) {
         slot.character->receivePowerUp(std::make_unique<SuperState>());
     }
     slot.character->addEffect(
@@ -334,7 +370,7 @@ bool PvPState::applyDamage(
         character.die(DeathCause::Void);
     } else {
         character.takeDamage();
-        if (matchType == PvPMatchType::Super &&
+        if (matchType != PvPMatchType::Small &&
             before == "Super" &&
             character.getCurrentFormName() == "Small" &&
             !character.isDying()) {
@@ -343,7 +379,18 @@ bool PvPState::applyDamage(
     }
 
     if (character.isDying()) {
-        slot.lives = std::max(0, slot.lives - 1);
+        if (isFriendlyMatch()) {
+            const int score = slot.score.score;
+            if (score < 100) {
+                slot.score.score = 0;
+            } else if (score <= 1000) {
+                slot.score.score = 5 * (score - 100) / 6;
+            } else {
+                slot.score.score = score - 250;
+            }
+        } else {
+            slot.lives = std::max(0, slot.lives - 1);
+        }
         slot.fireTimeRemaining = 0.f;
         SoundManager::getInstance().playSound("death");
         return true;
@@ -373,6 +420,11 @@ void PvPState::resolvePlayerContact() {
         PvPCombatResolver::classifyPlayerContact(oneFrame, twoFrame);
 
     if (outcome == PvPContactOutcome::None) {
+        return;
+    }
+
+    if (isFriendlyMatch()) {
+        pushPlayersApart();
         return;
     }
 
@@ -469,6 +521,8 @@ void PvPState::resolveEnemyContacts(PlayerSlot& slot) {
             character.setVelocity(character.getVelocity().x,
                                   StompBounceVelocity);
             enemy->onStomped();
+            character.notify(
+                GameEvent::enemyDefeated(enemy->getScoreValue()));
         } else {
             applyDamage(slot, PvPDamageSource::Enemy);
         }
@@ -479,7 +533,7 @@ void PvPState::requestFireball(
     PlayerSlot& owner,
     const ProjectileRequest& request
 ) {
-    if (matchType != PvPMatchType::Super || matchOver ||
+    if (matchType == PvPMatchType::Small || matchOver ||
         request.type != ProjectileType::Fireball ||
         owner.fireCooldown > 0.f ||
         owner.character->getCurrentFormName() != "Fire" ||
@@ -524,7 +578,7 @@ void PvPState::updateProjectiles(float dt) {
         PlayerSlot& target = owned.owner == PlayerId::One
             ? playerTwo : playerOne;
         sf::FloatRect overlap;
-        if (target.character->isActive() &&
+        if (!isFriendlyMatch() && target.character->isActive() &&
             !target.character->isDying() &&
             CollisionManager::checkAABB(fireball.getBounds(),
                                          target.character->getBounds(),
@@ -539,6 +593,10 @@ void PvPState::updateProjectiles(float dt) {
                 CollisionManager::checkAABB(fireball.getBounds(),
                                              enemy->getBounds(), overlap)) {
                 enemy->onFireball();
+                PlayerSlot& owner = owned.owner == PlayerId::One
+                    ? playerOne : playerTwo;
+                owner.character->notify(
+                    GameEvent::enemyDefeated(enemy->getScoreValue()));
                 fireball.explode();
                 break;
             }
@@ -580,7 +638,7 @@ void PvPState::spawnFireFlower() {
 }
 
 void PvPState::updateFireFlower(float dt) {
-    if (matchType != PvPMatchType::Super) {
+    if (matchType == PvPMatchType::Small) {
         return;
     }
 
@@ -645,6 +703,22 @@ void PvPState::constrainToArena(PlayerSlot& slot) {
 }
 
 void PvPState::evaluateWinner() {
+    if (isFriendlyMatch()) {
+        if (matchOver || matchTimeRemaining > 0.f) {
+            return;
+        }
+        matchOver = true;
+        if (playerOne.score.score == playerTwo.score.score) {
+            resultText = "DRAW";
+        } else if (playerOne.score.score > playerTwo.score.score) {
+            resultText = std::string{"PLAYER 1 - "} +
+                         characterName(playerOne.characterChoice) + " WINS";
+        } else {
+            resultText = std::string{"PLAYER 2 - "} +
+                         characterName(playerTwo.characterChoice) + " WINS";
+        }
+        return;
+    }
     if (matchOver || (playerOne.lives > 0 && playerTwo.lives > 0)) {
         return;
     }
@@ -663,13 +737,25 @@ void PvPState::evaluateWinner() {
 void PvPState::update(float dt) {
     if (arenaLoadFailed) {
         if (stateManager) {
-            stateManager->clearAndPushState(std::make_unique<MenuState>());
+            stateManager->clearAndPushState(
+                std::make_unique<MenuState>(MenuState::Page::PvP));
         }
         return;
     }
 
     if (matchOver) {
         return;
+    }
+
+    if (isFriendlyMatch()) {
+        matchTimeRemaining = std::max(0.f, matchTimeRemaining - dt);
+        friendlyRespawnTimer -= dt;
+        if (matchTimeRemaining > 0.f && friendlyRespawnTimer <= 0.f) {
+            respawnFriendlyArena();
+            if (arenaLoadFailed) {
+                return;
+            }
+        }
     }
 
     // Level entities move before contact resolution, while the fixed camera
@@ -680,6 +766,17 @@ void PvPState::update(float dt) {
     resolvePlayerContact();
     resolveEnemyContacts(playerOne);
     resolveEnemyContacts(playerTwo);
+    for (auto& item : level.getItems()) {
+        if (!item || !item->isActive()) {
+            continue;
+        }
+        CollisionManager::resolveEntityCollisions(
+            *playerOne.character, *item);
+        if (item->isActive()) {
+            CollisionManager::resolveEntityCollisions(
+                *playerTwo.character, *item);
+        }
+    }
     updateProjectiles(dt);
     updateFireFlower(dt);
     evaluateWinner();
@@ -714,9 +811,14 @@ void PvPState::renderHud(sf::RenderWindow& window) {
     auto playerLabel = [this](const PlayerSlot& slot,
                               const std::string& name) {
         std::ostringstream text;
-        text << (slot.id == PlayerId::One ? "P1 " : "P2 ")
-             << name << "  x" << slot.lives << "  "
-             << slot.character->getCurrentFormName();
+        text << (slot.id == PlayerId::One ? "P1 " : "P2 ") << name;
+        if (isFriendlyMatch()) {
+            text << "  SCORE " << std::setw(6) << std::setfill('0')
+                 << slot.score.score << "  COIN " << slot.score.coins;
+        } else {
+            text << "  x" << slot.lives << "  "
+                 << slot.character->getCurrentFormName();
+        }
         if (slot.fireTimeRemaining > 0.f) {
             text << "  FIRE " << std::fixed << std::setprecision(1)
                  << slot.fireTimeRemaining << "s";
@@ -741,7 +843,14 @@ void PvPState::renderHud(sf::RenderWindow& window) {
     right.setFillColor(sf::Color{110, 255, 130});
     window.draw(right);
 
-    sf::Text mode{std::string{pvpMatchName(matchType)}, font, 10};
+    std::ostringstream modeLabel;
+    modeLabel << pvpMatchName(matchType);
+    if (isFriendlyMatch()) {
+        modeLabel << "  TIME " << static_cast<int>(std::ceil(matchTimeRemaining))
+                  << "  RESPAWN "
+                  << static_cast<int>(std::ceil(friendlyRespawnTimer));
+    }
+    sf::Text mode{modeLabel.str(), font, 10};
     centerText(mode, UiWidth * 0.5f, 55.f);
     mode.setFillColor(sf::Color::Yellow);
     window.draw(mode);
@@ -766,7 +875,7 @@ void PvPState::renderHud(sf::RenderWindow& window) {
         result.setFillColor(sf::Color::Yellow);
         centerText(result, UiWidth * 0.5f, 270.f);
         window.draw(result);
-        sf::Text prompt{"ENTER: REMATCH     ESC: MENU", font, 10};
+        sf::Text prompt{"ENTER: REMATCH     ESC: PVP MENU", font, 10};
         centerText(prompt, UiWidth * 0.5f, 330.f);
         window.draw(prompt);
     }
@@ -877,9 +986,12 @@ void PvPState::render(sf::RenderWindow& window) {
     }
 
     level.getCamera().applyTo(window);
-    window.clear(level.usesDarkBackground()
-                     ? sf::Color::Black
-                     : sf::Color{92, 148, 252});
+    const sf::Color background = isFriendlyMatch()
+        ? sf::Color{118, 196, 235}
+        : (level.usesDarkBackground()
+               ? sf::Color::Black
+               : sf::Color{92, 148, 252});
+    window.clear(background);
     level.render(window);
     if (fireFlower && fireFlower->isActive()) {
         fireFlower->render(window);

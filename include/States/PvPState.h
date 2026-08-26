@@ -5,6 +5,8 @@
 #include "Entities/PlayerPalette.h"
 #include "Input/InputHandler.h"
 #include "Level/Level.h"
+#include "Observer/Observer.h"
+#include "Observer/Subject.h"
 #include "PvP/PvPTypes.h"
 #include "States/GameState.h"
 
@@ -21,6 +23,12 @@ class Fireball;
 
 class PvPState : public GameState {
 private:
+    struct PlayerScore : Observer {
+        int score{0};
+        int coins{0};
+        void onNotify(const GameEvent& event) override;
+    };
+
     struct PlayerSlot {
         PlayerId id;
         CharacterChoice characterChoice;
@@ -33,6 +41,8 @@ private:
         float spawnProtection{0.f};
         float fireTimeRemaining{0.f};
         float fireCooldown{0.f};
+        PlayerScore score;
+        ObserverConnection scoreConnection;
 
         PlayerSlot(PlayerId playerId,
                    CharacterChoice choice,
@@ -66,6 +76,8 @@ private:
     bool matchOver{false};
     std::string resultText;
     float flowerSpawnTimer{0.f};
+    float matchTimeRemaining{0.f};
+    float friendlyRespawnTimer{0.f};
 
     static InputBindings makePlayerOneBindings();
     static InputBindings makePlayerTwoBindings();
@@ -86,12 +98,17 @@ private:
     std::size_t activeProjectileCount(PlayerId owner) const;
     void updateFireFlower(float dt);
     void spawnFireFlower();
+    void cacheFireFlowerSpawns();
+    void respawnFriendlyArena();
     float randomSeconds(float minimum, float maximum);
     void constrainToArena(PlayerSlot& slot);
     void loadFont();
     void renderHud(sf::RenderWindow& window);
     void renderPlayerMarkers(sf::RenderWindow& window);
     void renderDebug(sf::RenderWindow& window);
+    bool isFriendlyMatch() const {
+        return matchType == PvPMatchType::Friendly;
+    }
 
 public:
     explicit PvPState(

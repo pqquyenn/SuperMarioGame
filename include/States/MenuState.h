@@ -18,6 +18,7 @@ public:
         GameMode,
         Solo,
         PvP,
+        PvPMap,
         PvPCharacter,
         Play,
         Character,
@@ -114,6 +115,8 @@ private:
 
     DisplayMode displayMode{DisplayMode::TitleScreen};
     Page page{Page::GameMode};
+    Page entryPage{Page::GameMode};
+    bool enterMenuDirectly{false};
     std::vector<MenuEntry> entries;
     int selectedIndex{0};
 
@@ -147,6 +150,7 @@ private:
 
 public:
     MenuState() = default;
+    explicit MenuState(Page initialPage);
 
     void onEnter() override;
     void onExit() override;
