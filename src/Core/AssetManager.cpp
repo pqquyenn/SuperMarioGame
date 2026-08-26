@@ -147,6 +147,47 @@ void AssetManager::loadLevelAssets() {
     blackImg.create(16, 16, sf::Color::Black);
     textures["BlackTile"].loadFromImage(blackImg);
   }
+  // Load all sound effect buffers
+  loadSoundAssets();
+}
+
+void AssetManager::loadSoundAssets() {
+  auto tryLoadSound = [this](const std::string &name, const std::string &rel) {
+    if (soundBuffers.find(name) != soundBuffers.end() &&
+        soundBuffers[name].getSampleCount() > 0) {
+      return;
+    }
+    const std::string prefixes[] = {"", "../", "../../", "../../../"};
+    for (const auto &p : prefixes) {
+      std::string path = p + rel;
+      if (std::filesystem::exists(path)) {
+        loadSoundBuffer(name, path);
+        return;
+      }
+    }
+  };
+
+  tryLoadSound("blockbreak",     "assets/audio/effects/blockbreak.wav");
+  tryLoadSound("blockhit",       "assets/audio/effects/blockhit.wav");
+  tryLoadSound("bowserfall",     "assets/audio/effects/bowserfall.wav");
+  tryLoadSound("bowserfire",     "assets/audio/effects/bowserfire.wav");
+  tryLoadSound("cannonfire",     "assets/audio/effects/cannonfire.wav");
+  tryLoadSound("castleclear",    "assets/audio/effects/castleclear.wav");
+  tryLoadSound("coin",           "assets/audio/effects/coin.wav");
+  tryLoadSound("death",          "assets/audio/effects/death.wav");
+  tryLoadSound("fireball",       "assets/audio/effects/fireball.wav");
+  tryLoadSound("flagraise",      "assets/audio/effects/flagraise.wav");
+  tryLoadSound("gameover",       "assets/audio/effects/gameover.wav");
+  tryLoadSound("jump",           "assets/audio/effects/jump.wav");
+  tryLoadSound("kick",           "assets/audio/effects/kick.wav");
+  tryLoadSound("oneup",          "assets/audio/effects/oneup.wav");
+  tryLoadSound("pause",          "assets/audio/effects/pause.wav");
+  tryLoadSound("pipe",           "assets/audio/effects/pipe.wav");
+  tryLoadSound("powerupappear",  "assets/audio/effects/powerupappear.wav");
+  tryLoadSound("powerupcollect", "assets/audio/effects/powerupcollect.wav");
+  tryLoadSound("shrink",         "assets/audio/effects/shrink.wav");
+  tryLoadSound("stomp",          "assets/audio/effects/stomp.wav");
+  tryLoadSound("timertick",      "assets/audio/effects/timertick.wav");
 }
 
 bool AssetManager::loadFont(const std::string &name,

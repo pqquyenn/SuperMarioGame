@@ -96,10 +96,35 @@ void PlayState::onEnter() {
     freeCamText.setOutlineThickness(1.f);
     freeCamText.setString("[MAP VIEWER MODE] WASD/Arrows: Pan | Shift: Fast | V: Exit");
   }
+
+  // Start stage background music
+  bool hasBoss = false;
+  for (const auto& enemy : level.getEnemies()) {
+    if (dynamic_cast<DragonLugia*>(enemy.get())) {
+      hasBoss = true;
+      break;
+    }
+  }
+
+  std::string lowerMap = initialMapPath;
+  for (char &c : lowerMap) c = static_cast<char>(::tolower(c));
+  std::string lowerName = levelName;
+  for (char &c : lowerName) c = static_cast<char>(::tolower(c));
+
+  if (hasBoss || lowerName.find("castle") != std::string::npos || lowerMap.find("castle") != std::string::npos) {
+    SoundManager::getInstance().playBGM("assets/audio/music/castle.wav");
+  } else if (level.usesDarkBackground() || lowerName.find("underground") != std::string::npos || lowerMap.find("underground") != std::string::npos || lowerName.find("1-2") != std::string::npos) {
+    SoundManager::getInstance().playBGM("assets/audio/music/underground.wav");
+  } else if (lowerName.find("underwater") != std::string::npos || lowerMap.find("underwater") != std::string::npos) {
+    SoundManager::getInstance().playBGM("assets/audio/music/underwater.wav");
+  } else {
+    SoundManager::getInstance().playBGM("assets/audio/music/overworld.wav");
+  }
 }
 
 void PlayState::onExit() {
   hudObserverConnection.disconnect();
+  SoundManager::getInstance().stopBGM();
   std::cout << "[PlayState] Leaving gameplay" << std::endl;
 }
 
@@ -116,6 +141,14 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
                level.tryActivatePortalForInput(
                    *player, PortalActivation::Right)) {
       return;
+    } else if ((event.key.code == sf::Keyboard::Enter ||
+                event.key.code == sf::Keyboard::Return ||
+                event.key.code == sf::Keyboard::E) &&
+               player) {
+      if (level.tryActivatePortalForInput(*player, PortalActivation::Down) ||
+          level.tryActivatePortalForInput(*player, PortalActivation::Right)) {
+        return;
+      }
     } else if (event.key.code == sf::Keyboard::T) {
       adminDebugView.toggle();
       std::cout << "[AdminDebugView] "
@@ -157,6 +190,7 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
     } else if (event.key.code == sf::Keyboard::U ||
                event.key.code == sf::Keyboard::H) {
       if (player && level.tryActivateFirstPortalFromCurrentArea(*player)) {
+        SoundManager::getInstance().playSound("pipe");
         std::cout << "[PlayState] Activated the first manifest portal from "
                   << "the current area." << std::endl;
       } else {
@@ -287,6 +321,20 @@ void PlayState::update(float dt) {
       // Finalize stance only after static tiles and moving platforms have both
       // contributed their grounded contact for this frame.
       CollisionManager::tryStandUp(*player, level.getTileMap());
+
+      // Kiem tra vao ong portal lien tuc khi giu Down / S / Crouch hoac Right / D
+      if (player && player->isActive() && !player->isDying()) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
+            player->isCrouching()) {
+          level.tryActivatePortalForInput(*player, PortalActivation::Down);
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
+            player->getVelocity().x > 0.f) {
+          level.tryActivatePortalForInput(*player, PortalActivation::Right);
+        }
+      }
 
       // 6.5. Kiểm tra chạm Cột Cờ (Win State)
       DragonLugia* stageBoss = nullptr;

@@ -12,6 +12,7 @@ private:
 
     // === Luu tru am thanh ===
     sf::Music backgroundMusic;
+    std::string currentBgmPath;
     std::map<std::string, sf::Sound> sounds;
     float masterVolume{100.f};
 
@@ -29,6 +30,7 @@ public:
     // === Background Music ===
     void playBGM(const std::string& filename, bool loop = true);
     void stopBGM();
+    const std::string& getCurrentBGM() const { return currentBgmPath; }
 
     // === Sound Effects ===
     void playSound(const std::string& name);

@@ -1,6 +1,7 @@
 #include "States/GameOverState.h"
 #include "States/PlayState.h"
 #include "States/MenuState.h"
+#include "Core/SoundManager.h"
 #include <iostream>
 #include <memory>
 #include <filesystem>
@@ -10,6 +11,8 @@ GameOverState::GameOverState(int score, const std::string& mapPath)
 
 void GameOverState::onEnter() {
     std::cout << "[GameOverState] onEnter - GAME OVER (Score: " << finalScore << ")" << std::endl;
+    SoundManager::getInstance().stopBGM();
+    SoundManager::getInstance().playSound("gameover");
 
     // --- Load font ---
     const std::string fontPaths[] = {
@@ -106,6 +109,7 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
         switch (event.key.code) {
             case sf::Keyboard::Up:
             case sf::Keyboard::W:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex--;
                 if (selectedIndex < 0) selectedIndex = MENU_ITEMS - 1;
                 updateSelectorPosition();
@@ -113,6 +117,7 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 
             case sf::Keyboard::Down:
             case sf::Keyboard::S:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex++;
                 if (selectedIndex >= MENU_ITEMS) selectedIndex = 0;
                 updateSelectorPosition();
@@ -120,6 +125,7 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 
             case sf::Keyboard::Enter:
             case sf::Keyboard::Space:
+                SoundManager::getInstance().playSound("coin");
                 if (selectedIndex == 0) {
                     // TRY AGAIN -> Restart Game in PlayState with currentMapPath
                     if (stateManager) {

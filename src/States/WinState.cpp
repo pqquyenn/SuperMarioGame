@@ -2,6 +2,7 @@
 #include "States/PlayState.h"
 #include "States/LevelCompleteState.h"
 #include "Core/AssetManager.h"
+#include "Core/SoundManager.h"
 #include "Physics/CollisionManager.h"
 #include <iostream>
 #include <algorithm>
@@ -21,6 +22,9 @@ void WinState::onEnter() {
 
 void WinState::initSequence() {
     if (!playState) return;
+
+    SoundManager::getInstance().stopBGM();
+    SoundManager::getInstance().playSound("flagraise");
 
     Level& level = playState->getLevel();
     Character* player = playState->getPlayer();
@@ -181,6 +185,8 @@ void WinState::updateAutoWalk(float dt) {
         player->setActive(false);
         currentPhase = Phase::ScoreTally;
         phaseTimer = 0.f;
+        tickSoundTimer = 0.f;
+        SoundManager::getInstance().playSound("castleclear");
         std::cout << "[WinState] Mario entered the Castle! Starting score tally." << std::endl;
     }
 }
@@ -200,6 +206,12 @@ void WinState::updateScoreTally(float dt) {
         int points = static_cast<int>(deduct * 50.f);
         hud.addScore(points);
         totalTimeBonus += points;
+
+        tickSoundTimer += dt;
+        if (tickSoundTimer >= 0.08f) {
+            SoundManager::getInstance().playSound("timertick");
+            tickSoundTimer = 0.f;
+        }
     } else {
         hud.setTimeRemaining(0.f);
         phaseTimer += dt;

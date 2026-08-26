@@ -37,6 +37,7 @@ public:
     sf::Font& getFont(const std::string& name);
 
     // === Sound Buffer ===
+    void loadSoundAssets();
     bool loadSoundBuffer(const std::string& name, const std::string& filename);
     sf::SoundBuffer& getSoundBuffer(const std::string& name);
 };

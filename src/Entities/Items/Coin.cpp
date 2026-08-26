@@ -90,6 +90,7 @@ void Coin::render(sf::RenderWindow& window) const {
 // onCollect – Mario thu thập coin
 // ============================================================
 #include "Entities/Character.h"
+#include "Core/SoundManager.h"
 
 void Coin::onCollect() {
     if (!collected) {
@@ -101,6 +102,9 @@ void Coin::onCollect() {
 bool Coin::tryCollect(Character& character) {
     if (!active || collected) return false;
     onCollect();
+    if (!popping) {
+        SoundManager::getInstance().playSound("coin");
+    }
     character.notify(GameEvent::coinCollected(scoreValue));
     return true;
 }

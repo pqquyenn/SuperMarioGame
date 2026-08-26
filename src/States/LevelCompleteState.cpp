@@ -1,6 +1,7 @@
 #include "States/LevelCompleteState.h"
 #include "States/PlayState.h"
 #include "States/MenuState.h"
+#include "Core/SoundManager.h"
 #include <iostream>
 #include <memory>
 #include <filesystem>
@@ -34,6 +35,11 @@ void LevelCompleteState::onEnter() {
     std::cout << "[LevelCompleteState] onEnter - " << completedStageName
               << " Completed! Score: " << finalScore << " Coins: " << coinsCollected
               << " TimeBonus: " << timeBonus << std::endl;
+
+    SoundManager::getInstance().stopBGM();
+    if (isLastLevel) {
+        SoundManager::getInstance().playBGM("assets/audio/music/gamewon.wav", false);
+    }
 
     // --- Load font ---
     const std::string fontPaths[] = {
@@ -159,6 +165,7 @@ void LevelCompleteState::onEnter() {
 }
 
 void LevelCompleteState::onExit() {
+    SoundManager::getInstance().stopBGM();
     std::cout << "[LevelCompleteState] Leaving level complete screen" << std::endl;
 }
 
@@ -167,6 +174,7 @@ void LevelCompleteState::handleInput(sf::Event& event, sf::RenderWindow& window)
         switch (event.key.code) {
             case sf::Keyboard::Up:
             case sf::Keyboard::W:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex--;
                 if (selectedIndex < 0) selectedIndex = MENU_ITEMS - 1;
                 updateSelectorPosition();
@@ -174,6 +182,7 @@ void LevelCompleteState::handleInput(sf::Event& event, sf::RenderWindow& window)
 
             case sf::Keyboard::Down:
             case sf::Keyboard::S:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex++;
                 if (selectedIndex >= MENU_ITEMS) selectedIndex = 0;
                 updateSelectorPosition();
@@ -181,6 +190,7 @@ void LevelCompleteState::handleInput(sf::Event& event, sf::RenderWindow& window)
 
             case sf::Keyboard::Enter:
             case sf::Keyboard::Space:
+                SoundManager::getInstance().playSound("coin");
                 if (selectedIndex == 0) {
                     // NEXT LEVEL (or PLAY AGAIN from 1-1)
                     if (stateManager) {

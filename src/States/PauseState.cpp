@@ -1,10 +1,12 @@
 #include "States/PauseState.h"
 #include "States/MenuState.h"
+#include "Core/SoundManager.h"
 #include <iostream>
 #include <memory>
 
 void PauseState::onEnter() {
     std::cout << "[PauseState] onEnter - Game da tam dung" << std::endl;
+    SoundManager::getInstance().playSound("pause");
 
     // --- Load font ---
     const std::string fontPaths[] = {
@@ -75,6 +77,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
         switch (event.key.code) {
             case sf::Keyboard::Up:
             case sf::Keyboard::W:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex--;
                 if (selectedIndex < 0) selectedIndex = MENU_ITEMS - 1;
                 updateSelectorPosition();
@@ -82,6 +85,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 
             case sf::Keyboard::Down:
             case sf::Keyboard::S:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex++;
                 if (selectedIndex >= MENU_ITEMS) selectedIndex = 0;
                 updateSelectorPosition();
@@ -91,9 +95,11 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                 if (stateManager) {
                     if (selectedIndex == 0) {
                         // RESUME -> pop PauseState, quay ve PlayState
+                        SoundManager::getInstance().playSound("pause");
                         stateManager->popState();
                     } else if (selectedIndex == 1) {
                         // QUIT TO MENU -> thay bang MenuState
+                        SoundManager::getInstance().playSound("coin");
                         stateManager->clearAndPushState(std::make_unique<MenuState>());
                     }
                 }
@@ -101,6 +107,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 
             case sf::Keyboard::Escape:
                 // Phim tat: Escape luon = Resume
+                SoundManager::getInstance().playSound("pause");
                 if (stateManager) {
                     stateManager->popState();
                 }

@@ -1,5 +1,6 @@
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
+#include "Core/SoundManager.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/PlayerEffect.h"
 #include "PlayerStates/PlayerState.h"
@@ -139,6 +140,7 @@ void Character::onCollision(
     if (isStomp) {
         setPosition(position.x, enemyBounds.top - characterBounds.height);
         enemy->onStomped();
+        SoundManager::getInstance().playSound("stomp");
         notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
         setVelocity(sf::Vector2f(velocity.x, -250.f));
         return;
@@ -199,6 +201,7 @@ void Character::jump() {
     velocity.y = -profile.jumpForce * getJumpForceMultiplier();
     grounded = false;
     jumpHoldTime = 0.f;
+    SoundManager::getInstance().playSound("jump");
 }
 
 void Character::setJumpHeld(bool status) {
@@ -211,6 +214,7 @@ void Character::shootFireball() {
     }
 
     shootTimer = 0.15f;
+    SoundManager::getInstance().playSound("fireball");
     requestProjectile(ProjectileType::Fireball);
 }
 
@@ -436,6 +440,7 @@ bool Character::receivePowerUp(std::unique_ptr<PlayerState> newState) {
         changeState(std::move(newState));
     }
 
+    SoundManager::getInstance().playSound("powerupcollect");
     notify(GameEvent::powerupCollected());
     return true;
 }
@@ -473,6 +478,7 @@ void Character::applyDamage(bool ignoreProtection) {
         return;
     }
 
+    SoundManager::getInstance().playSound("shrink");
     changeState(std::move(nextState));
 
     addEffect(std::make_unique<DamageInvincibilityEffect>(
@@ -488,6 +494,9 @@ void Character::die(DeathCause cause) {
     dying = true;
     deathTimer = 0.f;
     deathHopStarted = false;
+
+    SoundManager::getInstance().stopBGM();
+    SoundManager::getInstance().playSound("death");
 
     // Reset to Small Mario form so the death frame uses Small Mario's (18, 9, 16, 16)
     currentFormName = "Small";

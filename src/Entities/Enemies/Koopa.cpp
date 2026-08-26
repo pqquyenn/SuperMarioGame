@@ -1,5 +1,6 @@
 #include "Entities/Enemies/Koopa.h"
 #include "Core/AssetManager.h"
+#include "Core/SoundManager.h"
 
 Koopa::Koopa(float x, float y) : Enemy(x, y) { speed = 50.f; }
 
@@ -33,14 +34,17 @@ void Koopa::onStomped() {
   } else if (!shellSpinning) {
     shellSpinning = true;
     speed = 300.f;
+    SoundManager::getInstance().playSound("kick");
   } else {
     active = false;
+    SoundManager::getInstance().playSound("kick");
   }
 }
 
 void Koopa::onFireball() {
   active = false;
   isAlive = false;
+  SoundManager::getInstance().playSound("kick");
 }
 
 void Koopa::render(sf::RenderWindow &window) const {

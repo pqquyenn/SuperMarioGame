@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include <filesystem>
+
 // === Meyers' Singleton ===
 
 SoundManager& SoundManager::getInstance() {
@@ -13,7 +15,21 @@ SoundManager& SoundManager::getInstance() {
 // === Background Music ===
 
 void SoundManager::playBGM(const std::string& filename, bool loop) {
-    if (backgroundMusic.openFromFile(filename)) {
+    const std::string prefixes[] = {"", "../", "../../", "../../../"};
+    std::string resolvedPath = filename;
+    bool found = false;
+
+    for (const auto& p : prefixes) {
+        std::string testPath = p + filename;
+        if (std::filesystem::exists(testPath)) {
+            resolvedPath = testPath;
+            found = true;
+            break;
+        }
+    }
+
+    if (backgroundMusic.openFromFile(resolvedPath)) {
+        currentBgmPath = filename;
         backgroundMusic.setLoop(loop);
         backgroundMusic.setVolume(masterVolume);
         backgroundMusic.play();
@@ -24,6 +40,7 @@ void SoundManager::playBGM(const std::string& filename, bool loop) {
 
 void SoundManager::stopBGM() {
     backgroundMusic.stop();
+    currentBgmPath.clear();
 }
 
 // === Sound Effects ===
