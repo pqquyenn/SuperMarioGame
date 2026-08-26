@@ -19,7 +19,8 @@ enum class DeathCause {
     NormalDamage,
     Void,
     TimeOut,
-    Crushed
+    Crushed,
+    PvP
 };
 
 enum class ProjectileType {
@@ -75,6 +76,7 @@ protected:
     bool jumpHeldThisFrame{false};        // True when jump input was received this frame.
     float shootTimer{0.f};                // Timer for shoot pose animation.
     float releaseDeceleration{1000.f};    // Braking rate selected by the last movement mode.
+    float horizontalMovementScale{1.f};   // Ruleset multiplier; 1 keeps solo physics unchanged.
 
     void applyHorizontalDeceleration(float dt);
     void applyGravity(float dt);
@@ -125,6 +127,8 @@ public:
 
     void setRunning(bool status);
     bool isRunning() const;
+    void setHorizontalMovementScale(float scale);
+    float getHorizontalMovementScale() const;
 
     // Powered forms can crouch while grounded. Crouching keeps the feet fixed,
     // uses the Small-height collision body, and remains active until gameplay

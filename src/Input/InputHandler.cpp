@@ -24,12 +24,16 @@ bool isHeld(const KeyBinding& binding) {
 }
 }
 
-InputHandler::InputHandler(const InputBindings& inputBindings)
+InputHandler::InputHandler(
+    const InputBindings& inputBindings,
+    bool actionCanRun
+)
     : jumpCommand{std::make_unique<JumpCommand>()},
       moveLeftCommand{std::make_unique<MoveLeftCommand>()},
       moveRightCommand{std::make_unique<MoveRightCommand>()},
       actionCommand{std::make_unique<FireCommand>()},
       crawlCommand{std::make_unique<CrawlCommand>()},
+      actionAlsoRuns{actionCanRun},
       bindings{inputBindings} {}
 
 void InputHandler::handleInput(Character& character, float dt) {
@@ -59,8 +63,9 @@ void InputHandler::handleInput(Character& character, float dt) {
 
     // Movement commands must observe the current frame's running state.
     // The action key follows classic controls: hold to run, press to act.
-    character.setRunning(
-        !character.isCrouching() && (actionHeld || separateRunHeld));
+    character.setRunning(!character.isCrouching() &&
+                         (separateRunHeld ||
+                          (actionAlsoRuns && actionHeld)));
 
     // Opposing horizontal inputs cancel one another.
     if (moveLeftHeld != moveRightHeld) {

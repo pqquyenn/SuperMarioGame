@@ -162,13 +162,14 @@ void Character::moveLeft(float dt) {
     const float baseSpeed = crouching
         ? profile.crawlSpeed
         : (running ? profile.runSpeed : profile.walkSpeed);
-    const float maximumSpeed = baseSpeed * getMoveSpeedMultiplier();
+    const float maximumSpeed =
+        baseSpeed * getMoveSpeedMultiplier() * horizontalMovementScale;
     releaseDeceleration = crouching
         ? profile.crawlDeceleration
         : profile.groundDeceleration;
 
     velocity.x = std::max(
-        velocity.x - profile.moveAcceleration * dt,
+        velocity.x - profile.moveAcceleration * horizontalMovementScale * dt,
         -maximumSpeed
     );
 }
@@ -180,13 +181,14 @@ void Character::moveRight(float dt) {
     const float baseSpeed = crouching
         ? profile.crawlSpeed
         : (running ? profile.runSpeed : profile.walkSpeed);
-    const float maximumSpeed = baseSpeed * getMoveSpeedMultiplier();
+    const float maximumSpeed =
+        baseSpeed * getMoveSpeedMultiplier() * horizontalMovementScale;
     releaseDeceleration = crouching
         ? profile.crawlDeceleration
         : profile.groundDeceleration;
 
     velocity.x = std::min(
-        velocity.x + profile.moveAcceleration * dt,
+        velocity.x + profile.moveAcceleration * horizontalMovementScale * dt,
         maximumSpeed
     );
 }
@@ -225,7 +227,8 @@ void Character::useSpecialAbility() {
 }
 
 void Character::applyHorizontalDeceleration(float dt) {
-    const float deceleration = releaseDeceleration * dt;
+    const float deceleration =
+        releaseDeceleration * horizontalMovementScale * dt;
 
     if (velocity.x > 0.f) {
         velocity.x = std::max(0.f, velocity.x - deceleration);
@@ -609,6 +612,14 @@ void Character::setRunning(bool status) {
 
 bool Character::isRunning() const {
     return running;
+}
+
+void Character::setHorizontalMovementScale(float scale) {
+    horizontalMovementScale = std::max(0.f, scale);
+}
+
+float Character::getHorizontalMovementScale() const {
+    return horizontalMovementScale;
 }
 
 void Character::setCrouchRequested(bool status) {

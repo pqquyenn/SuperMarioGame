@@ -20,6 +20,7 @@ private:
     sf::Vector2f playerSpawnPoint{0.f, 0.f};
     HUD hud;
     ObserverConnection hudObserverConnection;
+    ObserverConnection achievementObserverConnection;
     AdminDebugView adminDebugView;
     std::vector<std::unique_ptr<Fireball>> fireballs;
 

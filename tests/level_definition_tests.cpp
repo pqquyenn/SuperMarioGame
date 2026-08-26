@@ -1,5 +1,6 @@
 #include "Level/EntitySymbolCatalog.h"
 #include "Level/LevelDefinitionLoader.h"
+#include "PvP/PvPCombatResolver.h"
 
 #include <cassert>
 #include <cmath>
@@ -257,6 +258,140 @@ void testNavigationValidation() {
            "anchor area without camera is reported");
 }
 
+void testPvPContactClassification() {
+    const PvPBodyFrame target{
+        {10.f, 20.f, 16.f, 16.f},
+        {10.f, 20.f, 16.f, 16.f},
+        {0.f, 0.f}};
+    const PvPBodyFrame trueStomp{
+        {10.f, 2.f, 16.f, 16.f},
+        {10.f, 8.f, 16.f, 16.f},
+        {0.f, 120.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(trueStomp, target) ==
+               PvPContactOutcome::PlayerOneStomps,
+           "a downward top crossing is a P1 stomp");
+    expect(PvPCombatResolver::classifyPlayerContact(target, trueStomp) ==
+               PvPContactOutcome::PlayerTwoStomps,
+           "the mirrored downward top crossing is a P2 stomp");
+
+    const PvPBodyFrame sideContact{
+        {0.f, 20.f, 16.f, 16.f},
+        {4.f, 20.f, 16.f, 16.f},
+        {120.f, 0.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(sideContact, target) ==
+               PvPContactOutcome::PushApart,
+           "side contact is pushback, not a stomp");
+
+    const PvPBodyFrame merelyHigher{
+        {10.f, 2.f, 16.f, 16.f},
+        {10.f, 8.f, 16.f, 16.f},
+        {0.f, -40.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(merelyHigher, target) ==
+               PvPContactOutcome::None,
+           "being higher without falling is passive contact");
+
+    const PvPBodyFrame passiveUpper{
+        {10.f, 2.f, 16.f, 16.f},
+        {10.f, 2.f, 16.f, 16.f},
+        {80.f, 0.f}};
+    const PvPBodyFrame passiveLower{
+        {10.f, 16.f, 16.f, 16.f},
+        {10.f, 16.f, 16.f, 16.f},
+        {0.f, 0.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(
+               passiveUpper, passiveLower) == PvPContactOutcome::None,
+           "a stationary P1 above P2 is a passive vertical stack");
+    expect(PvPCombatResolver::classifyPlayerContact(
+               passiveLower, passiveUpper) == PvPContactOutcome::None,
+           "a stationary P2 above P1 is a passive vertical stack");
+
+    PvPBodyFrame jumpingLower = passiveLower;
+    jumpingLower.velocity.y = -80.f;
+    expect(PvPCombatResolver::classifyPlayerContact(
+               passiveUpper, jumpingLower) == PvPContactOutcome::PushApart,
+           "a lower player jumping into a stationary upper player causes contact");
+    expect(PvPCombatResolver::classifyPlayerContact(
+               jumpingLower, passiveUpper) == PvPContactOutcome::PushApart,
+           "mirrored lower-player jump contact has the same outcome");
+
+    const PvPBodyFrame separate{
+        {100.f, 0.f, 16.f, 16.f},
+        {100.f, 0.f, 16.f, 16.f},
+        {0.f, 0.f}};
+    expect(PvPCombatResolver::classifyPlayerContact(separate, target) ==
+               PvPContactOutcome::None,
+           "separate players have no contact outcome");
+}
+
+void testPvPPushDistribution() {
+    const PvPBodyFrame fastPlayerOne{
+        {0.f, 0.f, 16.f, 16.f},
+        {6.f, 0.f, 16.f, 16.f},
+        {150.f, 0.f}};
+    const PvPBodyFrame stationaryPlayerTwo{
+        {16.f, 0.f, 16.f, 16.f},
+        {16.f, 0.f, 16.f, 16.f},
+        {0.f, 0.f}};
+    const PvPPushDistribution oneAttacks =
+        PvPCombatResolver::calculatePushDistribution(
+            fastPlayerOne, stationaryPlayerTwo);
+    expect(oneAttacks.playerOneIsLeft,
+           "a right-moving P1 is identified left of P2");
+    expect(oneAttacks.playerOneShare < oneAttacks.playerTwoShare,
+           "a faster P1 attacker receives less recoil than stationary P2");
+
+    PvPBodyFrame stationaryPlayerOne = stationaryPlayerTwo;
+    stationaryPlayerOne.previousBounds.left = 0.f;
+    stationaryPlayerOne.currentBounds.left = 0.f;
+    PvPBodyFrame fastPlayerTwo = fastPlayerOne;
+    fastPlayerTwo.previousBounds.left = 16.f;
+    fastPlayerTwo.currentBounds.left = 10.f;
+    fastPlayerTwo.velocity.x = -150.f;
+    const PvPPushDistribution twoAttacks =
+        PvPCombatResolver::calculatePushDistribution(
+            stationaryPlayerOne, fastPlayerTwo);
+    expect(twoAttacks.playerTwoShare < twoAttacks.playerOneShare,
+           "a faster P2 attacker receives less recoil than stationary P1");
+
+    PvPBodyFrame equalPlayerTwo = stationaryPlayerTwo;
+    equalPlayerTwo.velocity.x = -150.f;
+    const PvPPushDistribution equalImpact =
+        PvPCombatResolver::calculatePushDistribution(
+            fastPlayerOne, equalPlayerTwo);
+    expect(std::abs(equalImpact.playerOneShare - 0.5f) < 0.001f &&
+               std::abs(equalImpact.playerTwoShare - 0.5f) < 0.001f,
+           "equal head-on speeds split pushback evenly");
+}
+
+void testPvPFireSpawnAnchorsAreOpen(const std::string& manifestPath) {
+    LevelDefinition definition;
+    std::vector<std::string> errors;
+    LevelDefinitionLoader loader;
+    expect(loader.load(manifestPath, definition, errors),
+           manifestPath + " loads for anchor validation");
+
+    std::ifstream terrain{definition.terrainPath};
+    std::vector<std::string> rows;
+    for (std::string row; std::getline(terrain, row);) {
+        rows.push_back(row);
+    }
+
+    std::size_t fireSpawnCount = 0;
+    for (const auto& anchor : definition.anchors) {
+        if (anchor.id.find("fire_spawn_") != 0) {
+            continue;
+        }
+        ++fireSpawnCount;
+        const auto column = static_cast<std::size_t>(anchor.tilePosition.x);
+        const auto row = static_cast<std::size_t>(anchor.tilePosition.y);
+        expect(row < rows.size() && column < rows[row].size() &&
+                   rows[row][column] == '-',
+               anchor.id + " occupies an open terrain cell");
+    }
+    expect(fireSpawnCount >= 3,
+           manifestPath + " has multiple Fire Flower spawn choices");
+}
+
 } // namespace
 
 int main() {
@@ -265,10 +400,18 @@ int main() {
     testStage("1.2/1-2.level", 18, 4, 2, "1.3/1-3.level");
     testStage("1.3/1-3.level", 8, 4, 0, "1.4/1-4.level");
     testStage("1.4/1-4.level", 1, 0, 1, "");
+    testStage("pvp/small-arena.level", 0, 0, 0, "");
+    testStage("pvp/super-arena.level", 3, 0, 0, "");
+    testStage("pvp/super-arena1.level", 4, 0, 0, "");
+    testStage("pvp/friendly-arena.level", 4, 0, 0, "");
     testInvalidManifest();
     testMalformedManifest();
     testMissingFiles();
     testTxtCompatibilityResolution();
+    testPvPContactClassification();
+    testPvPPushDistribution();
+    testPvPFireSpawnAnchorsAreOpen("pvp/super-arena.level");
+    testPvPFireSpawnAnchorsAreOpen("pvp/super-arena1.level");
     testNavigationValidation();
     std::cout << "SOLID-03 level definition tests passed\n";
     return 0;

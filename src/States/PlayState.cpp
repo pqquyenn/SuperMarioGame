@@ -1,4 +1,5 @@
 #include "States/PlayState.h"
+#include "Core/AchievementSystem.h"
 #include "Core/AssetManager.h"
 #include "Core/SoundManager.h"
 #include "Entities/Enemies/Enemy.h"
@@ -61,6 +62,9 @@ void PlayState::onEnter() {
   player->setPosition(playerSpawnPoint);
 
   hudObserverConnection = player->addObserver(&hud);
+  achievementObserverConnection =
+      player->addObserver(&AchievementSystem::getInstance());
+  AchievementSystem::getInstance().beginLevel(player->getCurrentFormName());
 
   Camera &cam = level.getCamera();
   cam.setSize(400.f, 225.f);
@@ -122,6 +126,11 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
                 << (adminDebugView.isVisible() ? "ENABLED" : "DISABLED")
                 << std::endl;
     } else if (adminDebugView.isVisible() && player &&
+               event.key.code == sf::Keyboard::Y) {
+      adminDebugView.startMovementTrail(*player);
+      std::cout << "[AdminDebugView] Recording movement trail for 8 seconds"
+                << std::endl;
+    } else if (adminDebugView.isVisible() && player &&
                event.key.code == sf::Keyboard::I) {
       // Apply the same timed invincibility, contact defeat, movement boost,
       // and visual treatment as collecting a Star. Void and timeout deaths
@@ -152,7 +161,8 @@ void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
     } else if (event.key.code == sf::Keyboard::Escape) {
       // Nhan Escape -> push PauseState (PlayState van con trong stack)
       if (stateManager) {
-        stateManager->pushState(std::make_unique<PauseState>());
+        stateManager->pushState(
+            std::make_unique<PauseState>(initialMapPath));
       }
     } else if (event.key.code == sf::Keyboard::U ||
                event.key.code == sf::Keyboard::H) {
@@ -272,6 +282,9 @@ void PlayState::update(float dt) {
         }
       }
 
+      AchievementSystem::getInstance().observeForm(
+          player->getCurrentFormName());
+
       for (auto &item : level.getItems()) {
         if (item && item->isActive()) {
           CollisionManager::resolveEntityCollisions(*player, *item);
@@ -287,6 +300,7 @@ void PlayState::update(float dt) {
       // Finalize stance only after static tiles and moving platforms have both
       // contributed their grounded contact for this frame.
       CollisionManager::tryStandUp(*player, level.getTileMap());
+      adminDebugView.updateMovementTrail(*player, dt);
 
       // 6.5. Kiểm tra chạm Cột Cờ (Win State)
       DragonLugia* stageBoss = nullptr;
@@ -296,6 +310,10 @@ void PlayState::update(float dt) {
           const Tile *tile = level.getTileMap().getTile(h);
           if (tile && tile->isFlagpole()) {
             levelWon = true;
+            AchievementSystem::getInstance().observeForm(
+                player->getCurrentFormName());
+            AchievementSystem::getInstance().completeLevel(
+                level.getLevelId(), hud.getScore());
             if (stateManager) {
               stateManager->pushState(std::make_unique<WinState>(
                   this,
@@ -311,6 +329,10 @@ void PlayState::update(float dt) {
             stageBoss = dragon;
             if (dragon->isBossDefeated()) {
               levelWon = true;
+              AchievementSystem::getInstance().observeForm(
+                  player->getCurrentFormName());
+              AchievementSystem::getInstance().completeLevel(
+                  level.getLevelId(), hud.getScore());
               if (stateManager) {
                 stateManager->changeState(std::make_unique<LevelCompleteState>(
                     level.getDefinition().name,
@@ -422,13 +444,19 @@ void PlayState::update(float dt) {
       }
     }
 
-    // Huỷ fireball nếu bay quá xa khỏi tầm camera
+    // Destroy projectiles only after their complete bounds leave the active
+    // camera area. A fixed world-space Y limit breaks underground and bonus
+    // rooms, whose valid floors are below the overworld's coordinates.
     if (fireball->isActive()) {
       const sf::FloatRect camBounds = level.getCamera().getViewBounds();
-      if (fireball->getPosition().x < camBounds.left - 64.f ||
-          fireball->getPosition().x > camBounds.left + camBounds.width + 64.f ||
-          fireball->getPosition().y < camBounds.top - 64.f ||
-          fireball->getPosition().y > camBounds.top + camBounds.height + 64.f) {
+      constexpr float CleanupMargin = 64.f;
+      const sf::FloatRect activeBounds{
+          camBounds.left - CleanupMargin,
+          camBounds.top - CleanupMargin,
+          camBounds.width + CleanupMargin * 2.f,
+          camBounds.height + CleanupMargin * 2.f};
+
+      if (!fireball->getBounds().intersects(activeBounds)) {
         fireball->explode();
       }
     }
@@ -449,6 +477,7 @@ void PlayState::update(float dt) {
 
   // Cập nhật HUD (thời gian, điểm số...)
   hud.update(dt);
+  AchievementSystem::getInstance().recordScore(hud.getScore());
 }
 
 void PlayState::render(sf::RenderWindow &window) {

@@ -142,7 +142,7 @@ AdminDebugView::AdminDebugView() {
     }
 
     panel.setPosition(8.f, 8.f);
-    panel.setSize({290.f, 108.f});
+    panel.setSize({310.f, 126.f});
     panel.setFillColor(sf::Color(0, 0, 0, 240));
     panel.setOutlineColor(sf::Color(255, 210, 70));
     panel.setOutlineThickness(1.f);
@@ -154,6 +154,17 @@ void AdminDebugView::toggle() {
 
 bool AdminDebugView::isVisible() const {
     return visible;
+}
+
+void AdminDebugView::startMovementTrail(const Character& character) {
+    movementTrail.start(character);
+}
+
+void AdminDebugView::updateMovementTrail(
+    const Character& character,
+    float dt
+) {
+    movementTrail.update(character, dt);
 }
 
 void AdminDebugView::renderWorldAnnotations(
@@ -267,6 +278,13 @@ void AdminDebugView::render(
     std::ostringstream information;
     information << std::fixed << std::setprecision(1)
                 << "ADMIN [T]  I:STAR  K:UP  L:HIT\n"
+                << "TRAIL [Y] ";
+    if (movementTrail.isActive()) {
+        information << movementTrail.getRemainingSeconds() << "s";
+    } else {
+        information << "READY";
+    }
+    information << "  O:TAKEOFF  []:LAND  <>:WALL\n"
                 << "CHAR " << character.getCharacterType() << " | "
                 << (character.isDying()
                         ? std::string_view{"Dying"}
@@ -284,6 +302,9 @@ void AdminDebugView::render(
     informationText.setString(information.str());
 
     const sf::View previousView = window.getView();
+    // Vivid orange remains readable against both the blue overworld sky and
+    // dark underground areas without matching any trail event marker.
+    movementTrail.render(window, sf::Color{255, 105, 25});
     renderWorldAnnotations(window, character, level);
     const sf::Vector2u windowSize = window.getSize();
     if (windowSize.x == 0 || windowSize.y == 0) {

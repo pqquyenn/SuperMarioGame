@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Entities/PlayerPalette.h"
+
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <map>
@@ -30,6 +32,7 @@ public:
     // === Texture ===
     bool loadTexture(const std::string& name, const std::string& filename);
     sf::Texture& getTexture(const std::string& name);
+    sf::Texture& getPlayerTexture(PlayerPalette palette);
     void loadLevelAssets();
 
     // === Font ===

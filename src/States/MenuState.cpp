@@ -1,15 +1,18 @@
 #include "States/MenuState.h"
 
+#include "Core/AchievementSystem.h"
 #include "Core/GameSettings.h"
 #include "Core/SoundManager.h"
 #include "Core/AssetManager.h"
 #include "States/GameStateManager.h"
 #include "States/PlayState.h"
+#include "States/PvPState.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <utility>
 
 namespace {
 constexpr float UiWidth = 800.f;
@@ -31,7 +34,15 @@ void centerText(sf::Text& text, float x, float y) {
 const char* characterName(CharacterChoice choice) {
     return choice == CharacterChoice::Luigi ? "LUIGI" : "MARIO";
 }
+
+const char* achievementStatus(const AchievementSystem& achievements,
+                              AchievementId id) {
+    return achievements.isUnlocked(id) ? "[UNLOCKED]" : "[LOCKED]";
 }
+}
+
+MenuState::MenuState(Page initialPage)
+    : entryPage{initialPage}, enterMenuDirectly{true} {}
 
 void MenuState::onEnter() {
     std::cout << "[MenuState] Entered main menu (NSMBU Deluxe Style)" << std::endl;
@@ -104,10 +115,17 @@ void MenuState::onEnter() {
         "MOVE LEFT     : A / LEFT ARROW\n"
         "MOVE RIGHT    : D / RIGHT ARROW\n"
         "JUMP          : SPACE / W / UP ARROW\n"
+        "CROUCH / PIPE : S / DOWN ARROW\n"
         "ACTION / RUN  : Z / J / Q\n"
         "RUN (SPRINT)  : LEFT SHIFT / RIGHT SHIFT\n\n"
         "[KEY REMAPPING COMING SOON]");
     keyBindingsText.setPosition(180.f, 250.f);
+
+    achievementsText.setFont(cleanFont);
+    achievementsText.setCharacterSize(14);
+    achievementsText.setFillColor(sf::Color::White);
+    achievementsText.setLineSpacing(1.35f);
+    achievementsText.setPosition(190.f, 235.f);
 
     // 4. Menu Card Container
     menuCard.setSize({520.f, 320.f});
@@ -179,8 +197,10 @@ void MenuState::onEnter() {
     arrowRight.setOutlineColor(sf::Color(20, 20, 20));
     arrowRight.setOutlineThickness(2.f);
 
-    setDisplayMode(DisplayMode::TitleScreen);
-    setPage(Page::GameMode);
+    setDisplayMode(enterMenuDirectly
+                       ? DisplayMode::InMenu
+                       : DisplayMode::TitleScreen);
+    setPage(entryPage);
 }
 
 void MenuState::onExit() {
@@ -331,6 +351,32 @@ void MenuState::setDisplayMode(DisplayMode newMode) {
     updateVisuals();
 }
 
+bool MenuState::isCharacterSelectionPage() const {
+    return page == Page::Character || page == Page::PvPCharacter;
+}
+
+void MenuState::beginPvPCharacterSelection(
+    PvPMatchType type,
+    std::string mapPath
+) {
+    pendingPvPMatchType = type;
+    pendingPvPMapPath = std::move(mapPath);
+    pvpSelectionStage = 1;
+    setPage(Page::PvPCharacter);
+}
+
+void MenuState::launchPendingPvPMatch() {
+    if (!stateManager) {
+        return;
+    }
+
+    stateManager->clearAndPushState(std::make_unique<PvPState>(
+        pendingPvPMatchType,
+        pendingPvPMapPath,
+        pvpPlayerOneChoice,
+        pvpPlayerTwoChoice));
+}
+
 void MenuState::setPage(Page newPage) {
     page = newPage;
     selectedIndex = 0;
@@ -340,8 +386,13 @@ void MenuState::setPage(Page newPage) {
     characterConfirmTimer = 0.f;
     characterFlashTimer = 0.f;
 
-    if (page == Page::Character) {
-        characterCardSelection = (GameSettings::getInstance().getCharacterChoice() == CharacterChoice::Luigi) ? 1 : 0;
+    if (isCharacterSelectionPage()) {
+        const CharacterChoice choice = page == Page::Character
+            ? GameSettings::getInstance().getCharacterChoice()
+            : (pvpSelectionStage == 1
+                   ? pvpPlayerOneChoice
+                   : pvpPlayerTwoChoice);
+        characterCardSelection = choice == CharacterChoice::Luigi ? 1 : 0;
         marioCurrentScale = (characterCardSelection == 0) ? (baseMarioCardScale * 1.14f) : (baseMarioCardScale * 0.88f);
         luigiCurrentScale = (characterCardSelection == 1) ? (baseLuigiCardScale * 1.14f) : (baseLuigiCardScale * 0.88f);
     }
@@ -358,11 +409,32 @@ void MenuState::rebuildEntries() {
     switch (page) {
         case Page::GameMode:
             pageTitleText.setString("GAME MODE");
-            entries = {{"SOLO"}, {"DUO  [COMING SOON]", false}, {"PVP  [COMING SOON]", false}, {"SETTINGS"}, {"BACK TO TITLE"}};
+            entries = {{"SOLO"}, {"DUO  [COMING SOON]", false}, {"PVP"}, {"SETTINGS"}, {"BACK TO TITLE"}};
             break;
         case Page::Solo:
             pageTitleText.setString("SOLO");
-            entries = {{"PLAY"}, {"CHARACTER"}, {"ACHIEVEMENTS  [COMING SOON]", false}, {"BACK"}};
+            entries = {{"PLAY"}, {"CHARACTER"}, {"ACHIEVEMENTS"}, {"BACK"}};
+            break;
+        case Page::PvP:
+            pageTitleText.setString("PVP MATCH-UP");
+            entries = {{"SMALL MATCH"},
+                       {"SUPER MATCH"},
+                       {"FRIENDLY MATCH"},
+                       {"BACK"}};
+            break;
+        case Page::PvPMap:
+            pageTitleText.setString("SELECT PVP MAP");
+            if (pendingPvPMatchType == PvPMatchType::Small) {
+                entries = {{"SMALL ARENA"}, {"BACK"}};
+            } else if (pendingPvPMatchType == PvPMatchType::Super) {
+                entries = {{"SUPER ARENA 1"},
+                           {"SUPER ARENA 2"},
+                           {"BACK"}};
+            } else {
+                entries = {{"FRIENDLY ARENA"}, {"BACK"}};
+            }
+            break;
+        case Page::PvPCharacter:
             break;
         case Page::Play:
             pageTitleText.setString("SELECT WORLD");
@@ -370,6 +442,30 @@ void MenuState::rebuildEntries() {
             break;
         case Page::Character:
             break;
+        case Page::Achievements: {
+            pageTitleText.setString("ACHIEVEMENTS");
+            const AchievementSystem& achievements =
+                AchievementSystem::getInstance();
+            achievementsText.setString(
+                "HIGHEST SCORE       " +
+                std::to_string(achievements.getHighestScore()) + "\n\n" +
+                "CLEAR WORLD 1-1     " +
+                achievementStatus(achievements, AchievementId::ClearWorld11) + "\n" +
+                "CLEAR WORLD 1-2     " +
+                achievementStatus(achievements, AchievementId::ClearWorld12) + "\n" +
+                "CLEAR WORLD 1-3     " +
+                achievementStatus(achievements, AchievementId::ClearWorld13) + "\n" +
+                "SMALL IS ENOUGH     " +
+                achievementStatus(achievements, AchievementId::SmallIsEnough) + "\n" +
+                "HARDCORE            " +
+                achievementStatus(achievements, AchievementId::Hardcore) + "\n" +
+                "FRIENDLY            " +
+                achievementStatus(achievements, AchievementId::Friendly) + "\n" +
+                "I HATE MYSTERY      " +
+                achievementStatus(achievements, AchievementId::IHateMystery));
+            entries = {{"BACK"}};
+            break;
+        }
         case Page::Settings: {
             pageTitleText.setString("SETTINGS");
             const int volume = static_cast<int>(std::round(SoundManager::getInstance().getMasterVolume()));
@@ -398,7 +494,7 @@ void MenuState::rebuildEntries() {
 }
 
 void MenuState::moveSelection(int direction) {
-    if (page == Page::Character) {
+    if (isCharacterSelectionPage()) {
         characterCardSelection = (characterCardSelection == 0) ? 1 : 0;
         return;
     }
@@ -414,7 +510,37 @@ void MenuState::moveSelection(int direction) {
 }
 
 void MenuState::updateVisuals() {
-    if (page == Page::Character) {
+    if (isCharacterSelectionPage()) {
+        if (page == Page::PvPCharacter) {
+            const std::string player = pvpSelectionStage == 1
+                ? "PLAYER 1" : "PLAYER 2";
+            charChooseTitle.setString(player + ": Choose a character!");
+            centerText(charChooseTitle, UiWidth / 2.f, 85.f);
+
+            const bool marioSelected = characterCardSelection == 0;
+            marioCardBadge.setString(marioSelected
+                ? "[" + player + ": SELECT]" : "MARIO");
+            luigiCardBadge.setString(!marioSelected
+                ? "[" + player + ": SELECT]" : "LUIGI");
+            marioCardBadge.setFillColor(
+                marioSelected ? AccentGold : sf::Color{230, 230, 230});
+            luigiCardBadge.setFillColor(
+                !marioSelected ? AccentGold : sf::Color{230, 230, 230});
+            marioCardBadge.setOutlineColor(sf::Color{20, 20, 20});
+            luigiCardBadge.setOutlineColor(sf::Color{20, 20, 20});
+            const std::string priorChoice = pvpSelectionStage == 2
+                ? std::string{"P1: "} + characterName(pvpPlayerOneChoice) +
+                      "     "
+                : std::string{};
+            charChoosePrompt.setString(
+                priorChoice +
+                "ARROWS / WASD: CHOOSE     ENTER: CONFIRM     ESC: BACK");
+            centerText(charChoosePrompt, UiWidth / 2.f, 565.f);
+            return;
+        }
+
+        charChooseTitle.setString("Choose a character!");
+        centerText(charChooseTitle, UiWidth / 2.f, 85.f);
         const CharacterChoice activeChoice = GameSettings::getInstance().getCharacterChoice();
         if (activeChoice == CharacterChoice::Mario) {
             marioCardBadge.setString("[ACTIVE]");
@@ -441,7 +567,9 @@ void MenuState::updateVisuals() {
 
     centerText(pageTitleText, UiWidth / 2.f, 203.f);
     for (std::size_t i = 0; i < entryTexts.size(); ++i) {
-        const float firstEntryY = page == Page::KeyBindings ? 440.f : EntryStartY;
+        const float firstEntryY =
+            page == Page::KeyBindings ? 440.f :
+            page == Page::Achievements ? 490.f : EntryStartY;
         const float y = firstEntryY + static_cast<float>(i) * EntrySpacing;
         centerText(entryTexts[i], UiWidth / 2.f, y);
         if (!entries[i].enabled) {
@@ -464,10 +592,16 @@ void MenuState::updateVisuals() {
 }
 
 void MenuState::activateSelection(sf::RenderWindow& window) {
-    if (page == Page::Character) {
+    if (isCharacterSelectionPage()) {
         if (isCharacterConfirming) return;
         CharacterChoice choice = (characterCardSelection == 0) ? CharacterChoice::Mario : CharacterChoice::Luigi;
-        GameSettings::getInstance().setCharacterChoice(choice);
+        if (page == Page::Character) {
+            GameSettings::getInstance().setCharacterChoice(choice);
+        } else if (pvpSelectionStage == 1) {
+            pvpPlayerOneChoice = choice;
+        } else {
+            pvpPlayerTwoChoice = choice;
+        }
         SoundManager::getInstance().playSound("powerupcollect");
         isCharacterConfirming = true;
         characterConfirmTimer = 0.f;
@@ -479,12 +613,48 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
     switch (page) {
         case Page::GameMode:
             if (selectedIndex == 0) setPage(Page::Solo);
+            else if (selectedIndex == 2) setPage(Page::PvP);
             else if (selectedIndex == 3) setPage(Page::Settings);
             else if (selectedIndex == 4) setDisplayMode(DisplayMode::TitleScreen);
             break;
+        case Page::PvP:
+            if (selectedIndex == 3) {
+                setPage(Page::GameMode);
+            } else {
+                static const PvPMatchType matchTypes[] = {
+                    PvPMatchType::Small,
+                    PvPMatchType::Super,
+                    PvPMatchType::Friendly
+                };
+                pendingPvPMatchType = matchTypes[selectedIndex];
+                setPage(Page::PvPMap);
+            }
+            break;
+        case Page::PvPMap: {
+            const int backIndex = pendingPvPMatchType == PvPMatchType::Super
+                ? 2 : 1;
+            if (selectedIndex == backIndex) {
+                setPage(Page::PvP);
+            } else {
+                std::string mapPath;
+                if (pendingPvPMatchType == PvPMatchType::Small) {
+                    mapPath = "pvp/small-arena.level";
+                } else if (pendingPvPMatchType == PvPMatchType::Super) {
+                    mapPath = selectedIndex == 0
+                        ? "pvp/super-arena.level"
+                        : "pvp/super-arena1.level";
+                } else {
+                    mapPath = "pvp/friendly-arena.level";
+                }
+                beginPvPCharacterSelection(
+                    pendingPvPMatchType, std::move(mapPath));
+            }
+            break;
+        }
         case Page::Solo:
             if (selectedIndex == 0) setPage(Page::Play);
             else if (selectedIndex == 1) setPage(Page::Character);
+            else if (selectedIndex == 2) setPage(Page::Achievements);
             else if (selectedIndex == 3) setPage(Page::GameMode);
             break;
         case Page::Play: {
@@ -496,6 +666,10 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
             break;
         }
         case Page::Character: break;
+        case Page::PvPCharacter: break;
+        case Page::Achievements:
+            setPage(Page::Solo);
+            break;
         case Page::Settings:
             if (selectedIndex == 0) setPage(Page::KeyBindings);
             else if (selectedIndex == 1) adjustVolume(10.f);
@@ -519,8 +693,19 @@ void MenuState::goBack() {
     switch (page) {
         case Page::GameMode: setDisplayMode(DisplayMode::TitleScreen); break;
         case Page::Solo: setPage(Page::GameMode); break;
+        case Page::PvP: setPage(Page::GameMode); break;
+        case Page::PvPMap: setPage(Page::PvP); break;
+        case Page::PvPCharacter:
+            if (pvpSelectionStage == 2) {
+                pvpSelectionStage = 1;
+                setPage(Page::PvPCharacter);
+            } else {
+                setPage(Page::PvP);
+            }
+            break;
         case Page::Play:
         case Page::Character: setPage(Page::Solo); break;
+        case Page::Achievements: setPage(Page::Solo); break;
         case Page::Settings: setPage(Page::GameMode); break;
         case Page::KeyBindings: setPage(Page::Settings); break;
     }
@@ -538,7 +723,7 @@ void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
     }
     if (event.type != sf::Event::KeyPressed) return;
 
-    if (page == Page::Character) {
+    if (isCharacterSelectionPage()) {
         if (isCharacterConfirming) return;
         switch (event.key.code) {
             case sf::Keyboard::Left: case sf::Keyboard::A:
@@ -608,18 +793,18 @@ void MenuState::update(float dt) {
         promptText.setFillColor(sf::Color(255, static_cast<sf::Uint8>(215 + pulse * 35), static_cast<sf::Uint8>(40 + pulse * 40)));
         centerText(promptText, UiWidth / 2.f, 345.f);
     } else {
-        if (logoLoaded && page != Page::Character) {
+        if (logoLoaded && !isCharacterSelectionPage()) {
             float logoY = 100.f + std::sin(globalTime * 1.5f) * 3.f;
             float logoScale = baseLogoScale * 0.55f;
             logoSprite.setPosition(UiWidth / 2.f, logoY);
             logoSprite.setScale(logoScale, logoScale);
         }
-        if (charLoaded && page != Page::Character) {
+        if (charLoaded && !isCharacterSelectionPage()) {
             float charBounce = -std::abs(std::sin(globalTime * 4.0f)) * 2.5f;
             charSprite.setPosition(UiWidth / 2.f, 520.f + charBounce);
             charSprite.setScale(baseCharScale * 0.85f, baseCharScale * 0.85f);
         }
-        if (page == Page::Character) {
+        if (isCharacterSelectionPage()) {
             if (isCharacterConfirming) {
                 characterConfirmTimer += dt;
                 characterFlashTimer += dt;
@@ -632,7 +817,14 @@ void MenuState::update(float dt) {
                 if (characterConfirmTimer >= 0.7f) {
                     isCharacterConfirming = false;
                     characterConfirmTimer = 0.f;
-                    setPage(Page::Solo);
+                    if (page == Page::Character) {
+                        setPage(Page::Solo);
+                    } else if (pvpSelectionStage == 1) {
+                        pvpSelectionStage = 2;
+                        setPage(Page::PvPCharacter);
+                    } else {
+                        launchPendingPvPMatch();
+                    }
                 }
             } else {
                 float marioTarget = (characterCardSelection == 0) ? (baseMarioCardScale * 1.15f) : (baseMarioCardScale * 0.88f);
@@ -747,7 +939,7 @@ void MenuState::render(sf::RenderWindow& window) {
         }
     }
 
-    if (charLoaded && page != Page::Character) {
+    if (charLoaded && !isCharacterSelectionPage()) {
         window.draw(charSprite);
     }
 
@@ -756,7 +948,7 @@ void MenuState::render(sf::RenderWindow& window) {
         window.draw(promptText);
         window.draw(copyrightText);
         window.draw(versionText);
-    } else if (page == Page::Character) {
+    } else if (isCharacterSelectionPage()) {
         renderCharacterSelect(window);
     } else {
         if (logoLoaded) window.draw(logoSprite);
@@ -768,6 +960,7 @@ void MenuState::render(sf::RenderWindow& window) {
         }
         for (const auto& text : entryTexts) window.draw(text);
         if (page == Page::KeyBindings) window.draw(keyBindingsText);
+        if (page == Page::Achievements) window.draw(achievementsText);
         window.draw(statusText);
         window.draw(footerText);
         if (showSelector && !entryTexts.empty()) window.draw(selectorText);
