@@ -22,7 +22,7 @@ private:
     sf::Text selectorText;      // ">"
 
     // === Data ===
-    int levelId = 1;
+    std::string completedStageName;
     std::string completedMapPath;
     std::string nextStagePath;
     int finalScore = 0;
@@ -44,7 +44,7 @@ private:
 
 public:
     LevelCompleteState(
-        int levelId,
+        const std::string& stageName,
         const std::string& mapPath,
         const std::string& nextStage,
         int score,

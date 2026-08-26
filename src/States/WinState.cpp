@@ -9,10 +9,9 @@
 
 WinState::WinState(
     PlayState* play,
-    int id,
     const std::string& path,
     const std::string& next)
-    : playState(play), levelId(id), mapPath(path), nextStage(next) {
+    : playState(play), mapPath(path), nextStage(next) {
 }
 
 void WinState::onEnter() {
@@ -209,7 +208,7 @@ void WinState::updateScoreTally(float dt) {
             currentPhase = Phase::Done;
             if (stateManager) {
                 stateManager->changeState(std::make_unique<LevelCompleteState>(
-                    levelId,
+                    playState->getLevel().getDefinition().name,
                     mapPath,
                     nextStage,
                     hud.getScore(),
@@ -229,11 +228,10 @@ void WinState::render(sf::RenderWindow& window) {
     Camera& cam = level.getCamera();
     cam.applyTo(window);
 
-    float camX = cam.getView().getCenter().x;
-    bool isUndergroundArea = level.getIsUnderground() ||
-                             level.getIsInBonusRoom() || camX > 3600.f;
     sf::Color bgColor =
-        isUndergroundArea ? sf::Color::Black : sf::Color(92, 148, 252);
+        level.usesDarkBackground()
+            ? sf::Color::Black
+            : sf::Color(92, 148, 252);
 
     window.clear(bgColor);
     level.render(window);

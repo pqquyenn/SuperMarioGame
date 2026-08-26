@@ -1,4 +1,5 @@
 #include "Entities/Character.h"
+#include "Entities/Enemies/Enemy.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/PlayerEffect.h"
 #include "PlayerStates/PlayerState.h"
@@ -101,6 +102,57 @@ void Character::render(sf::RenderWindow& window) const {
         displaySprite.move(0.f, -(standingHeight - collisionSize.y));
     }
     window.draw(displaySprite);
+}
+
+void Character::onCollision(
+    Entity& other,
+    const sf::FloatRect& overlap) {
+    if (!isActive() || dying) {
+        return;
+    }
+
+    auto* enemy = dynamic_cast<Enemy*>(&other);
+    if (!enemy || !enemy->isActive() || enemy->isSquished()) {
+        return;
+    }
+
+    // Star power is a player-side interaction rule. The generic collision
+    // layer only reports the overlap and does not know this ability.
+    if (defeatsEnemiesOnContact()) {
+        enemy->onFireball();
+        notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
+        return;
+    }
+
+    if (!enemy->canBeStomped()) {
+        takeDamage();
+        return;
+    }
+
+    const sf::FloatRect characterBounds = getBounds();
+    const sf::FloatRect enemyBounds = enemy->getBounds();
+    const bool isStomp =
+        velocity.y > 0.f &&
+        (characterBounds.top + characterBounds.height - overlap.height <=
+         enemyBounds.top + 8.f);
+
+    if (isStomp) {
+        setPosition(position.x, enemyBounds.top - characterBounds.height);
+        enemy->onStomped();
+        notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
+        setVelocity(sf::Vector2f(velocity.x, -250.f));
+        return;
+    }
+
+    takeDamage();
+}
+
+void Character::beginTileCollision() {
+    setGrounded(false);
+}
+
+void Character::onLanded() {
+    setGrounded(true);
 }
 
 void Character::moveLeft(float dt) {

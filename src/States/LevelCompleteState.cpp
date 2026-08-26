@@ -7,13 +7,13 @@
 #include <filesystem>
 
 LevelCompleteState::LevelCompleteState(
-    int id,
+    const std::string& stageName,
     const std::string& mapPath,
     const std::string& nextStage,
     int score,
     int coins,
     int bonus)
-    : levelId(id),
+    : completedStageName(stageName),
       completedMapPath(mapPath),
       nextStagePath(nextStage),
       finalScore(score),
@@ -27,7 +27,12 @@ std::string LevelCompleteState::getNextLevelPath() const {
 }
 
 void LevelCompleteState::onEnter() {
-    std::cout << "[LevelCompleteState] onEnter - Level " << levelId
+    if (completedStageName.empty()) {
+        completedStageName = std::filesystem::path(completedMapPath)
+                                 .stem()
+                                 .string();
+    }
+    std::cout << "[LevelCompleteState] onEnter - " << completedStageName
               << " Completed! Score: " << finalScore << " Coins: " << coinsCollected
               << " TimeBonus: " << timeBonus << std::endl;
     AchievementSystem::getInstance().recordScore(finalScore);
@@ -63,8 +68,7 @@ void LevelCompleteState::onEnter() {
         clearTitleText.setCharacterSize(24);
         clearTitleText.setFillColor(sf::Color(255, 215, 0)); // Gold
     } else {
-        std::string worldName = (levelId == 1 ? "1-1" : (levelId == 2 ? "1-2" : "1-3"));
-        clearTitleText.setString("WORLD " + worldName + " CLEAR!");
+        clearTitleText.setString(completedStageName + " CLEAR!");
         clearTitleText.setCharacterSize(28);
         clearTitleText.setFillColor(sf::Color(92, 228, 50)); // Bright Green
     }

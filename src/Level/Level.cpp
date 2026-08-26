@@ -12,6 +12,7 @@
 #include "Level/LevelDefinitionLoader.h"
 #include "Level/LevelWorldBuilder.h"
 #include "Physics/CollisionManager.h"
+#include "PlayerStates/PlayerState.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -19,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-Level::Level(int id) : levelId(id) {}
+Level::Level() = default;
 Level::~Level() = default;
 
 bool Level::spawnEntitiesFromMap() {
@@ -34,11 +35,9 @@ bool Level::spawnEntitiesFromMap() {
 
 void Level::setCurrentArea(const std::string& area) {
   currentArea = area.empty() ? "overworld" : area;
-  isInBonusRoom = currentArea == "bonus";
-  isUnderground = isInBonusRoom || currentArea == "underground";
 }
 
-bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
+bool Level::loadManifest(const std::string &filename) {
   enemies.clear();
   items.clear();
   movingPlatforms.clear();
@@ -46,25 +45,12 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
   hasDefinition = false;
   definition = {};
   currentArea = "overworld";
-  isUnderground = false;
-  isInBonusRoom = false;
 
   EntityFactory::getInstance().registerDefaultEntities();
-
-  if (isUndergroundFlag) {
-    return loadLegacyMap(filename, true);
-  }
 
   LevelDefinition loaded;
   std::vector<std::string> errors;
   if (!LevelDefinitionLoader{}.load(filename, loaded, errors)) {
-    const std::filesystem::path requested(filename);
-    if (requested.extension() == ".txt" &&
-        LevelDefinitionLoader::findManifest(filename).empty()) {
-      std::cerr << "[Level] No manifest found for " << filename
-                << "; using legacy terrain loader." << std::endl;
-      return loadLegacyMap(filename, false);
-    }
     std::cerr << "[Level] Invalid stage definition: " << filename << std::endl;
     for (const auto& error : errors) {
       std::cerr << "  - " << error << std::endl;
@@ -96,88 +82,17 @@ bool Level::loadInternal(const std::string &filename, bool isUndergroundFlag) {
               << definition.backgroundPath << std::endl;
   }
 
-  // Keep the legacy numeric ID only for existing UI/debug consumers. The
-  // level definition, rather than this ID, owns all gameplay content.
-  if (definition.id == "world-1-1") {
-    levelId = 1;
-  } else if (definition.id == "world-1-2") {
-    levelId = 2;
-  } else if (definition.id == "world-1-3") {
-    levelId = 3;
-  } else if (definition.id == "world-1-4") {
-    levelId = 4;
-  }
-
   return spawnEntitiesFromMap();
 }
 
-bool Level::loadLegacyMap(
-    const std::string& filename,
-    bool isUndergroundFlag) {
-  hasDefinition = false;
-  definition = {};
-  currentArea = "overworld";
-  setCurrentArea(isUndergroundFlag ? "underground" : "overworld");
-
-  const std::filesystem::path requested(filename);
-  const std::string rawFilename = requested.filename().string();
-
-  const std::string candidates[] = {filename,
-                                    "assets/maps/" + filename,
-                                    "../assets/maps/" + filename,
-                                    "../../assets/maps/" + filename,
-                                    "assets/maps/1.1/" + rawFilename,
-                                    "assets/maps/1.2/" + rawFilename,
-                                    "assets/maps/1.3/" + rawFilename,
-                                    "../assets/maps/1.1/" + rawFilename,
-                                    "../assets/maps/1.2/" + rawFilename,
-                                    "../assets/maps/1.3/" + rawFilename,
-                                    "../../assets/maps/1.1/" + rawFilename,
-                                    "../../assets/maps/1.2/" + rawFilename,
-                                    "../../assets/maps/1.3/" + rawFilename,
-                                    "../" + filename,
-                                    "../../" + filename};
-
-  for (const auto &path : candidates) {
-    if (std::filesystem::exists(path)) {
-      if (map.readFromFile(path)) {
-        if (!isUndergroundFlag) {
-          if (const auto& startMarker = map.getStartMarker()) {
-            levelStartHint = *startMarker;
-          } else {
-          std::cerr << "[Level] Map has no '@' player start marker: "
-                    << path << std::endl;
-          }
-        }
-
-        std::filesystem::path bgPath =
-            std::filesystem::path(path).parent_path() / "background.txt";
-        if (std::filesystem::exists(bgPath)) {
-          bgMap.readFromFile(bgPath.string());
-        }
-        return true;
-      }
-    }
-  }
-  std::cerr << "[Level] Failed to find level map file: " << filename
-            << std::endl;
-  return false;
-}
-
 bool Level::loadLevel(const std::string &levelFile) {
-  return loadInternal(levelFile, false);
-}
-
-bool Level::loadHiddenMap(const std::string &hiddenFile) {
-  return loadInternal(hiddenFile, true);
-}
-
-bool Level::loadMap(const std::string &mapFile) {
-  if (mapFile.find("underground") != std::string::npos ||
-      mapFile.find("hidden") != std::string::npos) {
-    return loadHiddenMap(mapFile);
+  const std::filesystem::path requested(levelFile);
+  if (requested.extension() != ".level") {
+    std::cerr << "[Level] Stage entry must be a .level manifest: "
+              << levelFile << std::endl;
+    return false;
   }
-  return loadLevel(mapFile);
+  return loadManifest(levelFile);
 }
 
 sf::Vector2f Level::findGroundedSpawn(const sf::Vector2f &requestedPosition,
@@ -264,6 +179,39 @@ std::vector<WarpZoneInfo> Level::getWarpZones() const {
   return zones;
 }
 
+const AnchorDefinition* Level::findAnchor(
+    const std::string& anchorId) const {
+  const auto anchor = std::find_if(
+      definition.anchors.begin(),
+      definition.anchors.end(),
+      [&anchorId](const AnchorDefinition& candidate) {
+        return candidate.id == anchorId;
+      });
+  return anchor == definition.anchors.end() ? nullptr : &*anchor;
+}
+
+bool Level::activatePortal(
+    Character& character,
+    const PortalDefinition& portal) {
+  const AnchorDefinition* anchor = findAnchor(portal.targetAnchor);
+  if (!anchor) {
+    std::cerr << "[Level] Portal target anchor not found: "
+              << portal.targetAnchor << std::endl;
+    return false;
+  }
+
+  const float tileSize = definition.tileSize;
+  setCurrentArea(anchor->area);
+  character.setPosition(
+      anchor->tilePosition.x * tileSize,
+      anchor->tilePosition.y * tileSize);
+  character.setVelocity(anchor->exitVelocity);
+  updateCameraFor(character.getPosition());
+  std::cout << "[Level] Activated portal " << portal.id << " -> "
+            << anchor->id << std::endl;
+  return true;
+}
+
 bool Level::tryActivatePortal(
     Character& character,
     const sf::FloatRect& contact,
@@ -286,30 +234,79 @@ bool Level::tryActivatePortal(
       continue;
     }
 
-    const auto anchor = std::find_if(
-        definition.anchors.begin(),
-        definition.anchors.end(),
-        [&portal](const AnchorDefinition& candidate) {
-          return candidate.id == portal.targetAnchor;
-        });
-    if (anchor == definition.anchors.end()) {
-      std::cerr << "[Level] Portal target anchor not found: "
-                << portal.targetAnchor << std::endl;
-      return false;
-    }
-
-    setCurrentArea(anchor->area);
-    character.setPosition(
-        anchor->tilePosition.x * tileSize,
-        anchor->tilePosition.y * tileSize);
-    character.setVelocity(anchor->exitVelocity);
-    updateCameraFor(character.getPosition());
-    std::cout << "[Level] Activated portal " << portal.id << " -> "
-              << anchor->id << std::endl;
-    return true;
+    return activatePortal(character, portal);
   }
 
   return false;
+}
+
+bool Level::tryActivatePortalForInput(
+    Character& character,
+    PortalActivation activation) {
+  if (!character.isActive() || character.isDying()) {
+    return false;
+  }
+
+  if (!hasDefinition) {
+    return false;
+  }
+
+  const sf::FloatRect bounds = character.getBounds();
+  const float centerX = bounds.left + bounds.width * 0.5f;
+  const float feetY = bounds.top + bounds.height;
+  const float tileSize = definition.tileSize;
+  constexpr float contactTolerance = 3.f;
+
+  for (const auto& portal : definition.portals) {
+    if (portal.sourceArea != currentArea ||
+        portal.activation != activation) {
+      continue;
+    }
+
+    const sf::FloatRect trigger{
+        portal.triggerTiles.left * tileSize,
+        portal.triggerTiles.top * tileSize,
+        portal.triggerTiles.width * tileSize,
+        portal.triggerTiles.height * tileSize};
+
+    bool canActivate = false;
+    if (activation == PortalActivation::Down) {
+      const bool centered = centerX >= trigger.left &&
+                            centerX <= trigger.left + trigger.width;
+      const bool touchingTop =
+          std::abs(feetY - trigger.top) <= contactTolerance;
+      canActivate = centered && touchingTop;
+    } else {
+      canActivate = trigger.intersects(bounds);
+    }
+
+    if (canActivate && activatePortal(character, portal)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool Level::tryActivateFirstPortalFromCurrentArea(Character& character) {
+  if (!hasDefinition || !character.isActive() || character.isDying()) {
+    return false;
+  }
+
+  const auto portal = std::find_if(
+      definition.portals.begin(),
+      definition.portals.end(),
+      [this](const PortalDefinition& candidate) {
+        return candidate.sourceArea == currentArea;
+      });
+  return portal != definition.portals.end() &&
+         activatePortal(character, *portal);
+}
+
+void Level::resetToInitialArea() {
+  if (hasDefinition) {
+    setCurrentArea(definition.initialArea);
+  }
 }
 
 void Level::updateCameraFor(const sf::Vector2f& playerPosition) {
@@ -350,10 +347,9 @@ void Level::updateCameraFor(const sf::Vector2f& playerPosition) {
       selected->boundsTiles.width * tileSize,
       selected->boundsTiles.height * tileSize};
 
-  float targetX = camera.getView().getCenter().x;
-  if (selected->followX) {
-    targetX = playerPosition.x;
-  }
+  float targetX = selected->followX
+      ? playerPosition.x
+      : bounds.left + bounds.width * 0.5f;
   const float minX = bounds.left + halfWidth;
   const float maxX = bounds.left + bounds.width - halfWidth;
   if (maxX >= minX) {
@@ -378,7 +374,7 @@ void Level::updateCameraFor(const sf::Vector2f& playerPosition) {
 
 bool Level::usesDarkBackground() const {
   if (!hasDefinition) {
-    return isUnderground || isInBonusRoom;
+    return false;
   }
 
   const sf::Vector2f center = camera.getView().getCenter();
@@ -391,7 +387,7 @@ bool Level::usesDarkBackground() const {
       return zone.darkBackground;
     }
   }
-  return isUnderground || isInBonusRoom;
+  return false;
 }
 
 float Level::getKillPlaneY() const {
@@ -420,26 +416,6 @@ float Level::getRightBoundaryX(float entityWidth) const {
       ? definition.rules.rightBoundaryTile
       : static_cast<float>(map.getMapWidth());
   return std::max(getLeftBoundaryX(), rightTile * tileSize - entityWidth);
-}
-
-void Level::setIsUnderground(bool value) {
-  if (value) {
-    setCurrentArea("underground");
-  } else {
-    isUnderground = false;
-    if (!isInBonusRoom) {
-      currentArea = "overworld";
-    }
-  }
-}
-
-void Level::setIsInBonusRoom(bool value) {
-  if (value) {
-    setCurrentArea("bonus");
-  } else {
-    isInBonusRoom = false;
-    currentArea = isUnderground ? "underground" : "overworld";
-  }
 }
 
 void Level::update(float dt) {
@@ -636,86 +612,58 @@ std::string Level::getBrickItemType(float x, float y) const {
   return {};
 }
 
-void Level::warpToUnderground(Character *character) {
-  std::cout << "[Level] Teleporting to hidden underground map area..."
-            << std::endl;
-  setCurrentArea("bonus");
-  if (character) {
-    character->setPosition(3736.f, 32.f);
-    character->setVelocity(sf::Vector2f(0.f, 0.f));
+void Level::onTileCeilingContact(
+    Entity& entity,
+    TileMap& tileMap,
+    Tile& tile,
+    const TileHandle& handle,
+    const CollisionContact& contact) {
+  (void)contact;
+  auto* character = dynamic_cast<Character*>(&entity);
+  if (!character || !character->isActive()) {
+    return;
   }
-  camera.setCenter(3736.f, 120.f);
+
+  const sf::FloatRect tileBounds = tile.getBounds();
+  if (tile.isQuestionBlock()) {
+    tile.startBump();
+    tileMap.hitTile(handle);
+    spawnItemFromBlock(tileBounds.left, tileBounds.top, character);
+    character->notify(GameEvent::coinCollected(Coin::defaultScoreValue()));
+    return;
+  }
+
+  if (!tile.isBrick()) {
+    return;
+  }
+
+  // A brick with an entry in the manifest is an item brick. Ordinary bricks
+  // retain the classic break-or-bump behaviour based on player ability.
+  const bool isItemBrick = !getBrickItemType(
+      tileBounds.left, tileBounds.top).empty();
+  if (isItemBrick) {
+    tile.startBump();
+    tileMap.hitTile(handle);
+    spawnItemFromBlock(tileBounds.left, tileBounds.top, character);
+  } else if (character->hasAbility(PlayerAbility::BreakBricks)) {
+    tileMap.breakBrick(handle);
+  } else {
+    tile.startBump();
+  }
 }
 
-void Level::warpToUnderground1_2(Character *character) {
-  std::cout << "[Level] Teleporting to hidden underground coin room in 1-2..."
-            << std::endl;
-  setCurrentArea("bonus");
-  if (character) {
-    character->setPosition(48.f, 528.f);
-    character->setVelocity(sf::Vector2f(0.f, 0.f));
+void Level::onTileOverlap(
+    Entity& entity,
+    TileMap& tileMap,
+    Tile& tile,
+    const TileHandle& handle,
+    const CollisionContact& contact) {
+  (void)contact;
+  auto* character = dynamic_cast<Character*>(&entity);
+  if (!character || !character->isActive() || !tile.isCoinTile()) {
+    return;
   }
-  camera.setCenter(200.f, 608.f);
-}
 
-// ── World 1-2 Warp Methods ─────────────────────────────────────────────────
-
-// Pipe A: Down-key on overworld Pipe 1 → underground main corridor
-void Level::warpPipeA_Entry(Character *character) {
-  std::cout << "[Level][1-2] Pipe A entered — warping to underground."
-            << std::endl;
-  setCurrentArea("underground");
-  if (character) {
-    // Underground floor tile tops are at y=464 (rows 29-30).
-    // Spawn freely in air
-    character->setPosition(48.f, 256.f);
-    character->setVelocity(sf::Vector2f(30.f, 0.f)); // carry rightward momentum
-  }
-  // Underground corridor: ceiling y=304, floor y=480, midpoint=400
-  camera.setCenter(300.f, 400.f);
-}
-
-// Pipe B: Down-key on underground Pipe 2 → bonus / hidden room (rows 35-43)
-void Level::warpPipeB_Entry(Character *character) {
-  std::cout << "[Level][1-2] Pipe B entered — warping to bonus room."
-            << std::endl;
-  setCurrentArea("bonus");
-  if (character) {
-    // Hidden room occupies rows 35-43 (y=544-704).
-    // Spawn Mario just inside the top-left opening (col 1-3 are empty).
-    character->setPosition(32.f, 560.f);
-    character->setVelocity(sf::Vector2f(0.f, 0.f));
-  }
-  // Camera: initial center matches Mario's Y so there is no abrupt snap
-  camera.setCenter(200.f, 560.f);
-}
-
-// Pipe C1: Right-contact exit from bonus room → resurface in underground
-void Level::warpPipeC1_Exit(Character *character) {
-  std::cout << "[Level][1-2] Pipe C1 exit — returning to underground corridor."
-            << std::endl;
-  setCurrentArea("underground");
-  if (character) {
-    // Return to underground corridor past Pipe 2 so player continues rightward.
-    // y=400 is safely above the underground floor (y≈464).
-    character->setPosition(2000.f, 400.f);
-    character->setVelocity(
-        sf::Vector2f(30.f, -80.f)); // pop upward and drift right
-  }
-  camera.setCenter(2000.f, 400.f);
-}
-
-void Level::warpToOverworldExit(Character *character) {
-  std::cout << "[Level] Teleporting back to Overworld — near-last pipe..."
-            << std::endl;
-  setCurrentArea("overworld");
-  if (character) {
-    // Near-last overworld pipe is at col ~176-177 (x≈2816).
-    // Pop Mario out of the pipe top (pipe top row 10, y=160 → spawn at y=144).
-    character->setPosition(2872.f, 144.f);
-    character->setVelocity(sf::Vector2f(0.f, -100.f)); // pop out of pipe
-  }
-  // Lock camera to overworld band (Y=112 keeps view at y=0..225, above
-  // underground)
-  camera.setCenter(2816.f, 112.f);
+  tileMap.removeTile(handle);
+  character->notify(GameEvent::coinCollected(Coin::defaultScoreValue()));
 }

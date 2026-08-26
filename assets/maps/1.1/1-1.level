@@ -57,4 +57,4 @@ portal id=hidden_tunnel_exit area=bonus activation=right trigger=245,11,3,2 targ
 
 [camera_zones]
 camera id=overworld_camera area=overworld bounds=0,0,248,16 follow_x=true follow_y=false center_y=7 dark=false
-camera id=bonus_camera area=bonus bounds=225,0,23,16 follow_x=true follow_y=true center_y=7.5 dark=true
+camera id=bonus_camera area=bonus bounds=225,0,23,16 follow_x=false follow_y=false center_y=8 dark=true

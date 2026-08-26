@@ -46,6 +46,7 @@ platform id=shaft2_b area=underground tile=170,26 width=3 bounds=20,31 speed=50 
 
 [blocks]
 block area=underground tile=16,25 content=PowerupByForm
+block area=underground tile=40,19 content=I5
 
 [anchors]
 anchor id=underground_entry area=underground tile=3,16 velocity=30,0

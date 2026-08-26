@@ -343,9 +343,19 @@ LevelDefinitionLoader::LevelDefinitionLoader(std::string catalogPath)
 std::string LevelDefinitionLoader::findManifest(
     const std::string& requestedPath) {
     std::filesystem::path requested(requestedPath);
-    if (requested.extension() != ".level") {
-        requested.replace_extension(".level");
+    if (lower(requested.extension().string()) != ".level") {
+        return {};
     }
+    return findExistingPath(requested, "assets/maps");
+}
+
+std::string LevelDefinitionLoader::findManifestForLegacyTerrain(
+    const std::string& terrainPath) {
+    std::filesystem::path requested(terrainPath);
+    if (lower(requested.extension().string()) != ".txt") {
+        return {};
+    }
+    requested.replace_extension(".level");
     return findExistingPath(requested, "assets/maps");
 }
 
@@ -749,6 +759,18 @@ std::vector<std::string> LevelValidator::validate(
         addValidationError(errors, definition,
                            "enemy_void_margin_tiles cannot be negative");
     }
+    if (!definition.nextStage.empty()) {
+        const std::filesystem::path nextStage(definition.nextStage);
+        if (lower(nextStage.extension().string()) != ".level") {
+            addValidationError(errors, definition,
+                               "next_stage must reference a .level manifest");
+        } else if (LevelDefinitionLoader::findManifest(
+                       definition.nextStage).empty()) {
+            addValidationError(errors, definition,
+                               "next_stage manifest does not exist: " +
+                                   definition.nextStage);
+        }
+    }
     if (definition.terrainPath.empty()) {
         addValidationError(errors, definition, "terrain file is required");
         return errors;
@@ -788,6 +810,26 @@ std::vector<std::string> LevelValidator::validate(
     validateUniqueIds(definition.portals, definition, "portal", errors);
     validateUniqueIds(definition.cameraZones, definition, "camera", errors);
 
+    std::unordered_set<std::string> cameraAreas;
+    for (const auto& camera : definition.cameraZones) {
+        if (!camera.area.empty()) {
+            cameraAreas.insert(camera.area);
+        }
+    }
+    const auto validateArea = [&](const std::string& area,
+                                  const std::string& owner) {
+        if (!area.empty() && cameraAreas.find(area) == cameraAreas.end()) {
+            addValidationError(errors, definition,
+                               owner + " references an area without a camera "
+                               "zone: " + area);
+        }
+    };
+    if (definition.initialArea.empty()) {
+        addValidationError(errors, definition, "initial_area cannot be empty");
+    } else {
+        validateArea(definition.initialArea, "initial_area");
+    }
+
     for (const auto& entity : definition.entities) {
         if (entity.resolvedType.empty()) {
             addValidationError(errors, definition,
@@ -818,6 +860,7 @@ std::vector<std::string> LevelValidator::validate(
                 errors, definition,
                 "entity cycle timing cannot be negative: " + entity.id);
         }
+        validateArea(entity.area, "entity " + entity.id);
     }
 
     for (const auto& item : definition.items) {
@@ -834,6 +877,7 @@ std::vector<std::string> LevelValidator::validate(
             addValidationError(errors, definition,
                                "item area cannot be empty: " + item.id);
         }
+        validateArea(item.area, "item " + item.id);
     }
 
     for (const auto& platform : definition.platforms) {
@@ -860,6 +904,7 @@ std::vector<std::string> LevelValidator::validate(
                                "platform area cannot be empty: " +
                                    platform.id);
         }
+        validateArea(platform.area, "platform " + platform.id);
         if (platform.tilePosition.x + platform.widthTiles >
             static_cast<float>(terrain.width)) {
             addValidationError(errors, definition,
@@ -893,6 +938,7 @@ std::vector<std::string> LevelValidator::validate(
             addValidationError(errors, definition,
                                "block area cannot be empty");
         }
+        validateArea(block.area, "block content");
     }
 
     std::unordered_set<std::string> anchorIds;
@@ -906,6 +952,7 @@ std::vector<std::string> LevelValidator::validate(
             addValidationError(errors, definition,
                                "anchor area cannot be empty: " + anchor.id);
         }
+        validateArea(anchor.area, "anchor " + anchor.id);
     }
 
     for (const auto& portal : definition.portals) {
@@ -925,6 +972,7 @@ std::vector<std::string> LevelValidator::validate(
                                "portal source area cannot be empty: " +
                                    portal.id);
         }
+        validateArea(portal.sourceArea, "portal " + portal.id);
     }
 
     for (const auto& camera : definition.cameraZones) {
