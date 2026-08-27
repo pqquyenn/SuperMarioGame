@@ -7,12 +7,15 @@
 #include <vector>
 
 class Enemy;
+class EntityFactory;
 class Item;
 class MovingPlatform;
 class TileMap;
 
 class LevelWorldBuilder {
 public:
+    explicit LevelWorldBuilder(EntityFactory& factory);
+
     bool build(
         const LevelDefinition& definition,
         TileMap& map,
@@ -20,5 +23,8 @@ public:
         std::vector<std::unique_ptr<Item>>& items,
         std::vector<std::unique_ptr<MovingPlatform>>& platforms,
         std::vector<std::string>& errors) const;
+
+private:
+    EntityFactory& factory;
 };
 

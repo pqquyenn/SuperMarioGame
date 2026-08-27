@@ -1,4 +1,7 @@
 #include "Core/Game.h"
+#include "Core/AssetManager.h"
+#include "Factories/DefaultEntityRegistration.h"
+#include "Factories/EntityFactory.h"
 #include "States/MenuState.h"
 #include <iostream>
 #include <thread>   // std::this_thread::sleep_for (dung cho manual FPS capping)
@@ -80,7 +83,10 @@ void Game::render() {
 
 // === Constructor ===
 
-Game::Game() : accumulator(0.0f) {
+Game::Game()
+    : entityAssetProvider(AssetManager::getInstance()), accumulator(0.0f) {
+    registerDefaultEntityTypes(
+        EntityFactory::getInstance(), entityAssetProvider);
     initWindow();
     initStates();
 }

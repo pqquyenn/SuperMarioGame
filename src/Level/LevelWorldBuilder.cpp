@@ -30,6 +30,9 @@ MovingPlatform::Mode toPlatformMode(PlatformMotion motion) {
 
 } // namespace
 
+LevelWorldBuilder::LevelWorldBuilder(EntityFactory& factory)
+    : factory{factory} {}
+
 bool LevelWorldBuilder::build(
     const LevelDefinition& definition,
     TileMap& map,
@@ -38,9 +41,6 @@ bool LevelWorldBuilder::build(
     std::vector<std::unique_ptr<MovingPlatform>>& platforms,
     std::vector<std::string>& errors) const {
     errors.clear();
-
-    EntityFactory& factory = EntityFactory::getInstance();
-    factory.registerDefaultEntities();
 
     for (const auto& specification : definition.entities) {
         const sf::Vector2f position =
