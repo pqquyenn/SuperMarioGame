@@ -1,0 +1,31 @@
+[stage]
+version=1
+id=pvp-small-arena
+name=PVP SMALL ARENA
+terrain=small-arena.txt
+initial_area=overworld
+time_limit=999
+tile_size=16
+
+[rules]
+kill_plane_tile=15
+left_boundary_tile=0
+right_boundary_tile=25
+enemy_void_margin_tiles=2
+
+[entities]
+
+[items]
+
+[platforms]
+
+[blocks]
+
+[anchors]
+anchor id=p1_spawn area=overworld tile=3,12 velocity=0,0
+anchor id=p2_spawn area=overworld tile=21,12 velocity=0,0
+
+[portals]
+
+[camera_zones]
+camera id=arena area=overworld bounds=0,0,25,15 follow_x=false follow_y=false center_y=7 dark=false

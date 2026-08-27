@@ -1,4 +1,5 @@
 #include "States/LevelCompleteState.h"
+#include "Core/AchievementSystem.h"
 #include "States/PlayState.h"
 #include "States/MenuState.h"
 #include "Core/SoundManager.h"
@@ -35,6 +36,7 @@ void LevelCompleteState::onEnter() {
     std::cout << "[LevelCompleteState] onEnter - " << completedStageName
               << " Completed! Score: " << finalScore << " Coins: " << coinsCollected
               << " TimeBonus: " << timeBonus << std::endl;
+    AchievementSystem::getInstance().recordScore(finalScore);
 
     SoundManager::getInstance().stopBGM();
     if (isLastLevel) {
@@ -201,7 +203,8 @@ void LevelCompleteState::handleInput(sf::Event& event, sf::RenderWindow& window)
                 } else if (selectedIndex == 1) {
                     // MAIN MENU -> Return to MenuState
                     if (stateManager) {
-                        stateManager->changeState(std::make_unique<MenuState>());
+                        stateManager->changeState(
+                            std::make_unique<MenuState>(MenuState::Page::Play));
                     }
                 }
                 break;

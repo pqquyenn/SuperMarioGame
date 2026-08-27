@@ -12,9 +12,9 @@ CharacterProfile makeLuigiProfile() {
     profile.groundDeceleration = profile.runSpeed / 0.14f;
     profile.crawlDeceleration = profile.crawlSpeed / 0.05f;
     profile.jumpForce = 400.f;
-    profile.jumpHoldGravityMultiplier = 0.4f;
+    profile.jumpHoldGravityMultiplier = 0.44f;
     profile.jumpReleaseGravityMultiplier = 2.35f;
-    profile.maxJumpHoldTime = 0.22f;
+    profile.maxJumpHoldTime = 0.18f;
     return profile;
 }
 }

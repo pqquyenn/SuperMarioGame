@@ -1,4 +1,5 @@
 #include "States/GameOverState.h"
+#include "Core/AchievementSystem.h"
 #include "States/PlayState.h"
 #include "States/MenuState.h"
 #include "Core/SoundManager.h"
@@ -13,6 +14,7 @@ void GameOverState::onEnter() {
     std::cout << "[GameOverState] onEnter - GAME OVER (Score: " << finalScore << ")" << std::endl;
     SoundManager::getInstance().stopBGM();
     SoundManager::getInstance().playSound("gameover");
+    AchievementSystem::getInstance().recordScore(finalScore);
 
     // --- Load font ---
     const std::string fontPaths[] = {
@@ -134,7 +136,8 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                 } else if (selectedIndex == 1) {
                     // MAIN MENU -> Return to MenuState
                     if (stateManager) {
-                        stateManager->changeState(std::make_unique<MenuState>());
+                        stateManager->changeState(
+                            std::make_unique<MenuState>(MenuState::Page::Play));
                     }
                 }
                 break;

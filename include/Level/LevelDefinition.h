@@ -27,6 +27,9 @@ struct EntitySpawnDefinition {
     sf::Vector2f tilePosition{0.f, 0.f};
     int direction{-1};
     float speed{-1.f};
+    float visibleDuration{-1.f};
+    float hiddenDuration{-1.f};
+    float initialDelay{-1.f};
 };
 
 struct PlatformDefinition {

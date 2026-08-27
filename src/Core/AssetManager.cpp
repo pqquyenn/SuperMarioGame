@@ -17,6 +17,10 @@ bool AssetManager::loadTexture(const std::string &name,
                                const std::string &filename) {
   if (textures[name].loadFromFile(filename)) {
     textures[name].setSmooth(false);
+    if (name == "PlayerSpriteSheet") {
+      // A reloaded source atlas invalidates its lazily generated variant.
+      textures.erase("PlayerSpriteSheetSecondary");
+    }
     return true;
   }
   std::cerr << "AssetManager: Failed to load texture " << filename << std::endl;
@@ -26,6 +30,25 @@ bool AssetManager::loadTexture(const std::string &name,
 
 sf::Texture &AssetManager::getTexture(const std::string &name) {
   return textures[name];
+}
+
+sf::Texture &AssetManager::getPlayerTexture(PlayerPalette palette) {
+  sf::Texture &primary = textures["PlayerSpriteSheet"];
+  if (palette == PlayerPalette::Primary) {
+    return primary;
+  }
+
+  auto secondary = textures.find("PlayerSpriteSheetSecondary");
+  if (secondary != textures.end() && secondary->second.getSize().x > 0) {
+    return secondary->second;
+  }
+
+  sf::Texture &generated = textures["PlayerSpriteSheetSecondary"];
+  if (!loadSecondaryPlayerTexture(primary, generated)) {
+    textures.erase("PlayerSpriteSheetSecondary");
+    return primary;
+  }
+  return generated;
 }
 
 void AssetManager::loadLevelAssets() {

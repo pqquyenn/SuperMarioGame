@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/GameSettings.h"
+#include "PvP/PvPTypes.h"
 #include "States/GameState.h"
 #include <SFML/Graphics.hpp>
 #include <string>
@@ -15,8 +17,12 @@ public:
     enum class Page {
         GameMode,
         Solo,
+        PvP,
+        PvPMap,
+        PvPCharacter,
         Play,
         Character,
+        Achievements,
         Settings,
         KeyBindings
     };
@@ -48,6 +54,7 @@ private:
     sf::Text footerText;
     sf::Text selectorText;
     sf::Text keyBindingsText;
+    sf::Text achievementsText;
     std::vector<sf::Text> entryTexts;
 
     // Visual assets
@@ -79,6 +86,11 @@ private:
     float marioCurrentScale{1.f};
     float luigiCurrentScale{1.f};
     int characterCardSelection{0}; // 0 = Mario, 1 = Luigi
+    int pvpSelectionStage{1};
+    CharacterChoice pvpPlayerOneChoice{CharacterChoice::Mario};
+    CharacterChoice pvpPlayerTwoChoice{CharacterChoice::Luigi};
+    PvPMatchType pendingPvPMatchType{PvPMatchType::Small};
+    std::string pendingPvPMapPath;
 
     sf::Text charChooseTitle;
     sf::Text charChoosePrompt;
@@ -103,6 +115,8 @@ private:
 
     DisplayMode displayMode{DisplayMode::TitleScreen};
     Page page{Page::GameMode};
+    Page entryPage{Page::GameMode};
+    bool enterMenuDirectly{false};
     std::vector<MenuEntry> entries;
     int selectedIndex{0};
 
@@ -123,6 +137,12 @@ private:
     void activateSelection(sf::RenderWindow& window);
     void goBack();
     void adjustVolume(float delta);
+    bool isCharacterSelectionPage() const;
+    void beginPvPCharacterSelection(
+        PvPMatchType type,
+        std::string mapPath
+    );
+    void launchPendingPvPMatch();
     bool loadTextures();
     void loadFonts();
     void initClouds();
@@ -130,6 +150,7 @@ private:
 
 public:
     MenuState() = default;
+    explicit MenuState(Page initialPage);
 
     void onEnter() override;
     void onExit() override;

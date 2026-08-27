@@ -1,0 +1,38 @@
+[stage]
+version=1
+id=pvp-friendly-arena
+name=PVP FRIENDLY ARENA
+terrain=friendly-arena.txt
+initial_area=overworld
+time_limit=120
+tile_size=16
+
+[rules]
+kill_plane_tile=18
+left_boundary_tile=0
+right_boundary_tile=30
+enemy_void_margin_tiles=2
+
+[entities]
+entity id=goomba_lower_left symbol=E1 area=overworld tile=6,12 direction=1 speed=26
+entity id=goomba_lower_right symbol=E1 area=overworld tile=23,12 direction=-1 speed=26
+entity id=goomba_upper_left symbol=E1 area=overworld tile=11,8 direction=1 speed=22
+entity id=goomba_upper_right symbol=E1 area=overworld tile=18,8 direction=-1 speed=22
+
+[items]
+
+[platforms]
+
+[blocks]
+
+[anchors]
+anchor id=p1_spawn area=overworld tile=3,12 velocity=0,0
+anchor id=p2_spawn area=overworld tile=26,12 velocity=0,0
+anchor id=fire_spawn_left area=overworld tile=7,5 velocity=0,0
+anchor id=fire_spawn_center area=overworld tile=14,8 velocity=0,0
+anchor id=fire_spawn_right area=overworld tile=22,5 velocity=0,0
+
+[portals]
+
+[camera_zones]
+camera id=arena area=overworld bounds=0,0,30,16 follow_x=false follow_y=false center_y=8 dark=false

@@ -1,8 +1,12 @@
 #include "States/PauseState.h"
 #include "States/MenuState.h"
+#include "States/PlayState.h"
 #include "Core/SoundManager.h"
 #include <iostream>
 #include <memory>
+
+PauseState::PauseState(const std::string& mapPath)
+    : currentMapPath(mapPath) {}
 
 void PauseState::onEnter() {
     std::cout << "[PauseState] onEnter - Game da tam dung" << std::endl;
@@ -48,6 +52,15 @@ void PauseState::onEnter() {
         resumeText.setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
         resumeText.setPosition(400.f, 320.f);
 
+        // --- "RESTART STAGE" ---
+        restartText.setFont(font);
+        restartText.setString("RESTART");
+        restartText.setCharacterSize(16);
+        restartText.setFillColor(sf::Color::White);
+        b = restartText.getLocalBounds();
+        restartText.setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
+        restartText.setPosition(400.f, 370.f);
+
         // --- "QUIT TO MENU" ---
         quitText.setFont(font);
         quitText.setString("QUIT TO MENU");
@@ -55,7 +68,7 @@ void PauseState::onEnter() {
         quitText.setFillColor(sf::Color::White);
         b = quitText.getLocalBounds();
         quitText.setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
-        quitText.setPosition(400.f, 370.f);
+        quitText.setPosition(400.f, 420.f);
 
         // --- Selector ">" ---
         selectorText.setFont(font);
@@ -98,9 +111,15 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                         SoundManager::getInstance().playSound("pause");
                         stateManager->popState();
                     } else if (selectedIndex == 1) {
-                        // QUIT TO MENU -> thay bang MenuState
+                        // RESTART STAGE -> tao PlayState moi tu map hien tai
                         SoundManager::getInstance().playSound("coin");
-                        stateManager->clearAndPushState(std::make_unique<MenuState>());
+                        stateManager->clearAndPushState(
+                            std::make_unique<PlayState>(currentMapPath));
+                    } else if (selectedIndex == 2) {
+                        // QUIT TO MENU -> quay ve trang chon map Solo
+                        SoundManager::getInstance().playSound("coin");
+                        stateManager->clearAndPushState(
+                            std::make_unique<MenuState>(MenuState::Page::Play));
                     }
                 }
                 break;
@@ -145,6 +164,7 @@ void PauseState::render(sf::RenderWindow& window) {
     // 2. Ve texts
     window.draw(pausedText);
     window.draw(resumeText);
+    window.draw(restartText);
     window.draw(quitText);
 
     // 3. Ve selector nhap nhay
@@ -156,10 +176,11 @@ void PauseState::render(sf::RenderWindow& window) {
 }
 
 void PauseState::updateSelectorPosition() {
-    float yPositions[] = { 320.f, 370.f };  // Y cua RESUME va QUIT TO MENU
+    float yPositions[] = { 320.f, 370.f, 420.f };
     selectorText.setPosition(260.f, yPositions[selectedIndex]);
 
     // Highlight muc dang chon = vang, muc khac = trang
     resumeText.setFillColor(selectedIndex == 0 ? sf::Color(228, 166, 61) : sf::Color::White);
-    quitText.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
+    restartText.setFillColor(selectedIndex == 1 ? sf::Color(228, 166, 61) : sf::Color::White);
+    quitText.setFillColor(selectedIndex == 2 ? sf::Color(228, 166, 61) : sf::Color::White);
 }
