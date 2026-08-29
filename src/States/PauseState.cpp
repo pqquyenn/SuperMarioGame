@@ -1,6 +1,7 @@
 #include "States/PauseState.h"
 #include "States/MenuState.h"
 #include "States/PlayState.h"
+#include "Core/SoundManager.h"
 #include <iostream>
 #include <memory>
 
@@ -9,6 +10,7 @@ PauseState::PauseState(const std::string& mapPath)
 
 void PauseState::onEnter() {
     std::cout << "[PauseState] onEnter - Game da tam dung" << std::endl;
+    SoundManager::getInstance().playSound("pause");
 
     // --- Load font ---
     const std::string fontPaths[] = {
@@ -88,6 +90,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
         switch (event.key.code) {
             case sf::Keyboard::Up:
             case sf::Keyboard::W:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex--;
                 if (selectedIndex < 0) selectedIndex = MENU_ITEMS - 1;
                 updateSelectorPosition();
@@ -95,6 +98,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 
             case sf::Keyboard::Down:
             case sf::Keyboard::S:
+                SoundManager::getInstance().playSound("stomp");
                 selectedIndex++;
                 if (selectedIndex >= MENU_ITEMS) selectedIndex = 0;
                 updateSelectorPosition();
@@ -104,13 +108,16 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                 if (stateManager) {
                     if (selectedIndex == 0) {
                         // RESUME -> pop PauseState, quay ve PlayState
+                        SoundManager::getInstance().playSound("pause");
                         stateManager->popState();
                     } else if (selectedIndex == 1) {
                         // RESTART STAGE -> tao PlayState moi tu map hien tai
+                        SoundManager::getInstance().playSound("coin");
                         stateManager->clearAndPushState(
                             std::make_unique<PlayState>(currentMapPath));
                     } else if (selectedIndex == 2) {
                         // QUIT TO MENU -> quay ve trang chon map Solo
+                        SoundManager::getInstance().playSound("coin");
                         stateManager->clearAndPushState(
                             std::make_unique<MenuState>(MenuState::Page::Play));
                     }
@@ -119,6 +126,7 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
 
             case sf::Keyboard::Escape:
                 // Phim tat: Escape luon = Resume
+                SoundManager::getInstance().playSound("pause");
                 if (stateManager) {
                     stateManager->popState();
                 }

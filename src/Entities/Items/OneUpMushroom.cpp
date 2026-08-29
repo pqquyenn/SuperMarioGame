@@ -1,5 +1,6 @@
 #include "Entities/Items/OneUpMushroom.h"
 #include "Entities/Character.h"
+#include "Core/SoundManager.h"
 #include "Observer/Event.h"
 
 // ============================================================
@@ -17,6 +18,7 @@ bool OneUpMushroom::tryCollect(Character &character) {
     return false;
 
   // Phát sự kiện tăng 1 mạng
+  SoundManager::getInstance().playSound("oneup");
   character.notify(GameEvent::lifeGained(1, 1000));
 
   onCollect();

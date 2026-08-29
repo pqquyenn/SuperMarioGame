@@ -166,6 +166,7 @@ add_executable(solid04_tile_tests
     src/PlayerEffects/StarEffect.cpp
     src/PlayerEffects/ShieldEffect.cpp
     src/Core/AssetManager.cpp
+    src/Core/SoundManager.cpp
 )
 
 target_include_directories(solid04_tile_tests
@@ -256,6 +257,7 @@ add_executable(solid11_tests
     src/Entities/Items/StarItem.cpp
     src/Entities/Items/OneUpMushroom.cpp
     src/Core/AssetManager.cpp
+    src/Core/SoundManager.cpp
 )
 
 target_include_directories(solid11_tests

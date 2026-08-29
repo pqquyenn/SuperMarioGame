@@ -1,6 +1,7 @@
 #include "Entities/Enemies/RedKoopa.h"
 #include "Level/TileMap.h"
 #include "Core/AssetManager.h"
+#include "Core/SoundManager.h"
 
 RedKoopa::RedKoopa(float x, float y, const TileMap* map)
     : Koopa(x, y), tileMapRef(map) {
@@ -63,7 +64,9 @@ void RedKoopa::onStomped() {
         shellSpinning = true;
         speed = 300.f;
         setTexture(assets.getTexture("RedKoopa_Shell1"));
+        SoundManager::getInstance().playSound("kick");
     } else {
         active = false;
+        SoundManager::getInstance().playSound("kick");
     }
 }

@@ -49,6 +49,7 @@ void MenuState::onEnter() {
 
     loadFonts();
     loadTextures();
+    AssetManager::getInstance().loadSoundAssets();
     initClouds();
 
     const sf::Font& retroFont = fontRetroLoaded ? fontRetro : fontClean;

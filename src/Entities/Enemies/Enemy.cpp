@@ -1,4 +1,5 @@
 #include "Entities/Enemies/Enemy.h"
+#include "Core/SoundManager.h"
 
 Enemy::Enemy(float x, float y)
     : Entity(x, y), speed(50.f), direction(-1), isAlive(true), squished(false) {
@@ -42,6 +43,7 @@ void Enemy::onWallCollision() { reverseDirection(); }
 void Enemy::onFireball() {
     active = false;
     isAlive = false;
+    SoundManager::getInstance().playSound("kick");
 }
 
 void Enemy::onFellIntoVoid() {

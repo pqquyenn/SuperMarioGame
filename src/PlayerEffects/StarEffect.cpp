@@ -1,9 +1,27 @@
 #include "PlayerEffects/StarEffect.h"
-
+#include "Core/SoundManager.h"
 #include <algorithm>
 
 StarEffect::StarEffect(float duration)
     : remainingTime{std::max(0.f, duration)} {}
+
+void StarEffect::onApply(Character& character) {
+    (void)character;
+    previousBgm = SoundManager::getInstance().getCurrentBGM();
+    if (previousBgm.empty()) {
+        previousBgm = "assets/audio/music/overworld.wav";
+    }
+    SoundManager::getInstance().playBGM("assets/audio/music/superstar.wav");
+}
+
+void StarEffect::onRemove(Character& character) {
+    (void)character;
+    if (!previousBgm.empty()) {
+        SoundManager::getInstance().playBGM(previousBgm);
+    } else {
+        SoundManager::getInstance().playBGM("assets/audio/music/overworld.wav");
+    }
+}
 
 void StarEffect::update(Character&, float dt) {
     remainingTime = std::max(0.f, remainingTime - dt);

@@ -1,4 +1,5 @@
 #include "Level/Level.h"
+#include "Core/SoundManager.h"
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
 #include "Entities/Items/Coin.h"
@@ -199,12 +200,23 @@ bool Level::activatePortal(
   }
 
   const float tileSize = definition.tileSize;
+  const std::string oldArea = currentArea;
   setCurrentArea(anchor->area);
   character.setPosition(
       anchor->tilePosition.x * tileSize,
       anchor->tilePosition.y * tileSize);
   character.setVelocity(anchor->exitVelocity);
   updateCameraFor(character.getPosition());
+  SoundManager::getInstance().playSound("pipe");
+
+  if (oldArea != currentArea && !character.isStarInvincible()) {
+    if (usesDarkBackground() || anchor->area == "bonus" || anchor->area == "underground") {
+      SoundManager::getInstance().playBGM("assets/audio/music/underground.wav");
+    } else {
+      SoundManager::getInstance().playBGM("assets/audio/music/overworld.wav");
+    }
+  }
+
   std::cout << "[Level] Activated portal " << portal.id << " -> "
             << anchor->id << std::endl;
   return true;
@@ -253,7 +265,7 @@ bool Level::tryActivatePortalForInput(
   const float centerX = bounds.left + bounds.width * 0.5f;
   const float feetY = bounds.top + bounds.height;
   const float tileSize = definition.tileSize;
-  constexpr float contactTolerance = 3.f;
+  constexpr float contactTolerance = 6.f;
 
   for (const auto& portal : definition.portals) {
     if (portal.sourceArea != currentArea ||
@@ -269,11 +281,19 @@ bool Level::tryActivatePortalForInput(
 
     bool canActivate = false;
     if (activation == PortalActivation::Down) {
-      const bool centered = centerX >= trigger.left &&
-                            centerX <= trigger.left + trigger.width;
+      const bool centered = centerX >= (trigger.left - 4.f) &&
+                            centerX <= (trigger.left + trigger.width + 4.f);
       const bool touchingTop =
           std::abs(feetY - trigger.top) <= contactTolerance;
       canActivate = centered && touchingTop;
+    } else if (activation == PortalActivation::Right) {
+      const bool touchingLeft =
+          std::abs((bounds.left + bounds.width) - trigger.left) <= contactTolerance ||
+          ((bounds.left + bounds.width >= trigger.left - contactTolerance) &&
+           (bounds.left <= trigger.left + trigger.width));
+      const bool verticalOverlap =
+          (feetY > trigger.top) && (bounds.top < trigger.top + trigger.height + 4.f);
+      canActivate = (touchingLeft && verticalOverlap) || trigger.intersects(bounds);
     } else {
       canActivate = trigger.intersects(bounds);
     }
@@ -543,6 +563,7 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
         entity.release();
         coin->startPop();
         items.push_back(std::unique_ptr<Item>(coin));
+        SoundManager::getInstance().playSound("coin");
       }
     } else {
       if (auto *item = dynamic_cast<Item *>(entity.get())) {
@@ -555,6 +576,7 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
         }
         entity.release();
         items.push_back(std::unique_ptr<Item>(item));
+        SoundManager::getInstance().playSound("powerupappear");
       }
     }
   }
@@ -647,8 +669,10 @@ void Level::onTileCeilingContact(
     spawnItemFromBlock(tileBounds.left, tileBounds.top, character);
   } else if (character->hasAbility(PlayerAbility::BreakBricks)) {
     tileMap.breakBrick(handle);
+    SoundManager::getInstance().playSound("blockbreak");
   } else {
     tile.startBump();
+    SoundManager::getInstance().playSound("blockhit");
   }
 }
 
@@ -665,5 +689,6 @@ void Level::onTileOverlap(
   }
 
   tileMap.removeTile(handle);
+  SoundManager::getInstance().playSound("coin");
   character->notify(GameEvent::coinCollected(Coin::defaultScoreValue()));
 }

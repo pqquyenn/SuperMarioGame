@@ -36,6 +36,7 @@ private:
 
     sf::Sprite flagSprite;
     int totalTimeBonus = 0;
+    float tickSoundTimer = 0.f;
 
     void initSequence();
     void updateFlagSlide(float dt);
