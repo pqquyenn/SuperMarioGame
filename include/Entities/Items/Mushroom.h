@@ -30,7 +30,7 @@ public:
 
     // Bắt đầu animation nhô lên từ gạch
     void startEmerge();
-    bool isEmerging() const;
+    bool isEmerging() const override;
     bool shouldSkipTileCollision() const override { return emerging; }
 
     // Đảo chiều di chuyển (khi chạm tường)

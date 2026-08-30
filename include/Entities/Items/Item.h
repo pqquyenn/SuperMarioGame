@@ -24,6 +24,7 @@ public:
     // Xử lý va chạm và hành vi đa hình
     bool shouldSkipTileCollision() const override { return false; }
     virtual void reverseDirection() {}
+    virtual bool isEmerging() const { return false; }
 
     // Collision box dựa trên size
     sf::FloatRect getBounds() const override;

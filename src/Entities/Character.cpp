@@ -436,7 +436,9 @@ bool Character::receivePowerUp(std::unique_ptr<PlayerState> newState) {
         return false;
     }
 
-    if (currentState->getFormTier() == FormTier::Small &&
+    if (currentState->getName() == "Fire" && newState->getName() == "Super") {
+        // Keep Fire form when collecting a Super Mushroom
+    } else if (currentState->getFormTier() == FormTier::Small &&
         newState->getFormTier() == FormTier::Powered) {
         changeState(std::make_unique<SuperState>());
     } else {
