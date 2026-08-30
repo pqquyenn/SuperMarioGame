@@ -140,11 +140,13 @@ void DragonLugia::update(float dt) {
         sprite.setColor(sf::Color::White);
     }
 
-    // Always face Mario
+    // Always face Mario, but prevent direction flipping when clamped against an arena wall.
+    // Without this guard the direction oscillates every frame when the player is beyond the wall,
+    // which causes the flame spawn offset to push outside the arena and makes the dragon freeze.
     if (state != State::Dying && state != State::Defeated) {
-        if (targetPlayerPos.x < position.x - 10.f) {
+        if (targetPlayerPos.x < position.x - 10.f && position.x > arenaMinX + 1.f) {
             direction = -1;
-        } else if (targetPlayerPos.x > position.x + 10.f) {
+        } else if (targetPlayerPos.x > position.x + 10.f && position.x < arenaMaxX - 1.f) {
             direction = 1;
         }
     }
@@ -165,10 +167,11 @@ void DragonLugia::update(float dt) {
 
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
 
-            if (stateTimer >= 2.2f || std::abs(dx) < 80.f) {
-                static int cycle = 0;
-                cycle++;
-                if (cycle % 2 == 0) {
+            // Require a minimum walk time (0.8s) before allowing distance-based transition.
+            // This prevents rapid state cycling when the dragon is clamped at a wall boundary.
+            if (stateTimer >= 2.2f || (stateTimer >= 0.8f && std::abs(dx) < 80.f)) {
+                walkCycle++;
+                if (walkCycle % 2 == 0) {
                     changeBossState(State::Takeoff);
                 } else {
                     changeBossState(State::GroundedFire);
@@ -181,7 +184,7 @@ void DragonLugia::update(float dt) {
             position.y = groundY;
             if (!hasFiredInAttack && stateTimer >= 0.35f) {
                 hasFiredInAttack = true;
-                shootFlameAtTarget(targetPlayerPos, 160.f);
+                shootFlameAtTarget(targetPlayerPos, 100.f);
             }
             if (animator.isFinished() || stateTimer >= 0.8f) {
                 changeBossState(State::Takeoff);
@@ -205,7 +208,9 @@ void DragonLugia::update(float dt) {
 
         case State::SwoopTowardsPlayer: {
             hoverTime += dt;
-            float targetX = targetPlayerPos.x;
+            // Clamp target within arena bounds so the dragon doesn't perpetually
+            // chase a position it can never reach (e.g. player against a wall).
+            float targetX = std::clamp(targetPlayerPos.x, arenaMinX, arenaMaxX);
             float targetY = std::clamp(targetPlayerPos.y - 45.f, 45.f, 125.f);
 
             float dx = targetX - position.x;
@@ -221,8 +226,11 @@ void DragonLugia::update(float dt) {
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
             position.y = std::clamp(position.y, 40.f, groundY - 20.f);
 
+            // Recalculate distance after clamping for accurate transition check
+            float clampedDist = std::hypot(targetX - position.x, targetY - position.y);
+
             // Once close or after swooping, unleash aerial fire
-            if (dist < 65.f || stateTimer >= 2.0f) {
+            if (clampedDist < 65.f || stateTimer >= 2.0f) {
                 changeBossState(State::AerialFire);
             }
             break;
@@ -231,9 +239,9 @@ void DragonLugia::update(float dt) {
         case State::AerialFire: {
             if (!hasFiredInAttack && stateTimer >= 0.35f) {
                 hasFiredInAttack = true;
-                // Shoot targeted flame blast at Mario's position
-                shootFlameAtTarget(targetPlayerPos, 175.f);
-                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(static_cast<float>(direction) * 25.f, -10.f), 155.f);
+                // Shoot targeted flame blast at Mario's position with balanced speed
+                shootFlameAtTarget(targetPlayerPos, 110.f);
+                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(static_cast<float>(direction) * 25.f, -10.f), 95.f);
             }
             if (animator.isFinished() || stateTimer >= 0.8f) {
                 changeBossState(State::Landing);
@@ -300,7 +308,6 @@ void DragonLugia::updateWithPlayer(float dt, Character* player, const TileMap* t
                 sf::FloatRect fBounds(flame.position.x - 8.f, flame.position.y - 8.f, 16.f, 16.f);
                 if (pBounds.intersects(fBounds)) {
                     player->takeDamage();
-                    triggerFlameImpact(flame.position);
                     flame.active = false;
                 }
             }
@@ -318,10 +325,16 @@ void DragonLugia::triggerFlameImpact(sf::Vector2f pos) {
 }
 
 void DragonLugia::shootFlameAtTarget(sf::Vector2f targetPos, float flameSpeed) {
+    // Determine flame spawn offset toward the target, not just based on facing direction,
+    // so flames aren't spawned outside arena walls when the dragon is near a wall.
+    float dirToTarget = (targetPos.x >= position.x) ? 1.f : -1.f;
     sf::Vector2f spawnPos(
-        position.x + static_cast<float>(direction) * 26.f,
+        position.x + dirToTarget * 26.f,
         position.y - 30.f
     );
+
+    // Clamp spawn position inside the arena walls to prevent instant despawn
+    spawnPos.x = std::clamp(spawnPos.x, 18.f, 382.f);
 
     sf::Vector2f dir = targetPos - spawnPos;
     float length = std::hypot(dir.x, dir.y);
@@ -329,7 +342,7 @@ void DragonLugia::shootFlameAtTarget(sf::Vector2f targetPos, float flameSpeed) {
         dir.x /= length;
         dir.y /= length;
     } else {
-        dir = sf::Vector2f(static_cast<float>(direction), 0.f);
+        dir = sf::Vector2f(dirToTarget, 0.f);
     }
 
     DragonFlame flame;
@@ -347,17 +360,31 @@ void DragonLugia::updateFlames(float dt, const TileMap* tileMap) {
         flame.lifetime -= dt;
         flame.animTimer += dt;
 
-        // Trigger impact when flame touches the ground
-        if (flame.position.y >= groundY - 2.f) {
-            triggerFlameImpact(sf::Vector2f(flame.position.x, groundY));
+        // 1. Chạm đất màu nâu ở sàn dưới -> Kích hoạt hiệu ứng nổ tại mặt đất
+        // Uses flameGroundY (actual brown floor at row 13) instead of groundY (dragon walk height)
+        // so flames pass through blue castle blocks and only explode on the brown ground.
+        if (flame.position.y >= flameGroundY - 2.f) {
+            triggerFlameImpact(sf::Vector2f(flame.position.x, flameGroundY));
             flame.active = false;
             continue;
         }
 
-        if (flame.lifetime <= 0.f || flame.position.x < 16.f || flame.position.x > 384.f || flame.position.y > 210.f) {
-            if (flame.position.y > 170.f) {
-                triggerFlameImpact(sf::Vector2f(flame.position.x, std::min(flame.position.y, groundY)));
-            }
+        // 2. Chạm tường màu nâu bên trái -> Kích hoạt hiệu ứng nổ tại tường trái
+        if (flame.position.x <= 16.f) {
+            triggerFlameImpact(sf::Vector2f(16.f, std::min(flame.position.y, flameGroundY)));
+            flame.active = false;
+            continue;
+        }
+
+        // 3. Chạm tường màu nâu bên phải -> Kích hoạt hiệu ứng nổ tại tường phải
+        if (flame.position.x >= 384.f) {
+            triggerFlameImpact(sf::Vector2f(384.f, std::min(flame.position.y, flameGroundY)));
+            flame.active = false;
+            continue;
+        }
+
+        // 4. Hết thời gian tồn tại hoặc bay ra ngoài biên màn hình (phía trên / dưới quá mức)
+        if (flame.lifetime <= 0.f || flame.position.y < 0.f || flame.position.y > flameGroundY + 20.f) {
             flame.active = false;
         }
     }
@@ -383,21 +410,11 @@ void DragonLugia::updateFlames(float dt, const TileMap* tileMap) {
 }
 
 void DragonLugia::onStomped() {
-    if (hurtTimer > 0.f || state == State::Dying || state == State::Defeated) return;
-
-    currentHp--;
-    SoundManager::getInstance().playSound("stomp");
-    std::cout << "[DragonLugia] Stomped! HP: " << currentHp << "/" << maxHp << std::endl;
-
-    if (currentHp <= 0) {
-        changeBossState(State::Dying);
-    } else {
-        changeBossState(State::Hurt);
-    }
+    // DragonLugia boss cannot be stomped
 }
 
 bool DragonLugia::canBeStomped() const {
-    return (hurtTimer <= 0.f && state != State::Dying && state != State::Defeated);
+    return false;
 }
 
 void DragonLugia::onFireball() {

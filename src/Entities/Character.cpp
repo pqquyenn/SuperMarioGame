@@ -1,5 +1,6 @@
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
+#include "Entities/Enemies/DragonLugia.h"
 #include "Core/SoundManager.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/PlayerEffect.h"
@@ -125,17 +126,29 @@ void Character::onCollision(
         return;
     }
 
-    if (!enemy->canBeStomped()) {
-        takeDamage();
-        return;
-    }
-
     const sf::FloatRect characterBounds = getBounds();
     const sf::FloatRect enemyBounds = enemy->getBounds();
     const bool isStomp =
         velocity.y > 0.f &&
         (characterBounds.top + characterBounds.height - overlap.height <=
          enemyBounds.top + 8.f);
+
+    auto* dragon = dynamic_cast<DragonLugia*>(enemy);
+    if (dragon) {
+        if (isStomp) {
+            // Khi Mario nhảy lên đầu boss: Mario nảy lên an toàn, không bị mất máu và boss không bị stomp
+            setPosition(position.x, enemyBounds.top - characterBounds.height);
+            setVelocity(sf::Vector2f(velocity.x, -250.f));
+            return;
+        }
+        takeDamage();
+        return;
+    }
+
+    if (!enemy->canBeStomped()) {
+        takeDamage();
+        return;
+    }
 
     if (isStomp) {
         setPosition(position.x, enemyBounds.top - characterBounds.height);
