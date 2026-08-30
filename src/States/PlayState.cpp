@@ -417,9 +417,9 @@ void PlayState::update(float dt) {
                 {80.f, 192.f},   // Ground Left
                 {200.f, 192.f},  // Ground Center
                 {310.f, 192.f},  // Ground Right
-                {88.f, 144.f},   // Left Blue Platform (row 10)
-                {184.f, 96.f},   // Middle Blue Platform (row 7)
-                {300.f, 128.f}   // Right Blue Platform (row 9)
+                {88.f, 128.f},   // Left Blue Platform (row 9)
+                {184.f, 80.f},   // Middle Blue Platform (row 6)
+                {300.f, 112.f}   // Right Blue Platform (row 8)
             };
             int spotIdx = rand() % 6;
             sf::Vector2f spawnPos(surfaces[spotIdx].x + static_cast<float>(rand() % 16 - 8), surfaces[spotIdx].y);
