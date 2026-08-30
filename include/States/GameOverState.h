@@ -2,6 +2,7 @@
 
 #include "States/GameState.h"
 #include "States/GameStateManager.h"
+#include "Duo/DuoTypes.h"
 #include <SFML/Graphics.hpp>
 #include <string>
 
@@ -21,6 +22,8 @@ private:
     // === Data ===
     int finalScore = 0;
     std::string currentMapPath = "1.1/1-1.level";
+    bool duoMode{false};
+    DuoSessionConfig duoSession;
 
     // === Menu Navigation ===
     int selectedIndex = 0;      // 0 = TRY AGAIN, 1 = MAIN MENU
@@ -36,6 +39,7 @@ private:
 public:
     GameOverState() = default;
     explicit GameOverState(int score, const std::string& mapPath = "1.1/1-1.level");
+    GameOverState(int score, const DuoSessionConfig& config);
 
     void onEnter() override;
     void onExit() override;

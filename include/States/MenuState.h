@@ -17,6 +17,9 @@ public:
     enum class Page {
         GameMode,
         Solo,
+        Duo,
+        DuoPlay,
+        DuoCharacter,
         PvP,
         PvPMap,
         PvPCharacter,
@@ -91,6 +94,10 @@ private:
     CharacterChoice pvpPlayerTwoChoice{CharacterChoice::Luigi};
     PvPMatchType pendingPvPMatchType{PvPMatchType::Small};
     std::string pendingPvPMapPath;
+    int duoSelectionStage{1};
+    CharacterChoice duoPlayerOneChoice{CharacterChoice::Mario};
+    CharacterChoice duoPlayerTwoChoice{CharacterChoice::Luigi};
+    std::string pendingDuoMapPath{"1.1/1-1.level"};
 
     sf::Text charChooseTitle;
     sf::Text charChoosePrompt;
@@ -143,6 +150,8 @@ private:
         std::string mapPath
     );
     void launchPendingPvPMatch();
+    void beginDuoCharacterSelection(std::string mapPath);
+    void launchPendingDuoGame();
     bool loadTextures();
     void loadFonts();
     void initClouds();

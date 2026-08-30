@@ -287,22 +287,58 @@ void DragonLugia::update(float dt) {
 }
 
 void DragonLugia::updateWithPlayer(float dt, Character* player, const TileMap* tileMap) {
-    if (player && player->isActive() && !player->isDying()) {
-        targetPlayerPos = player->getPosition();
+    updateWithPlayers(dt, {player}, tileMap);
+}
+
+void DragonLugia::updateWithPlayers(
+    float dt,
+    const std::vector<Character*>& players,
+    const TileMap* tileMap) {
+    (void)dt;
+    (void)tileMap;
+
+    Character* nearest = nullptr;
+    float nearestDistanceSquared = 0.f;
+    for (Character* player : players) {
+        if (!player || !player->isActive() || player->isDying()) {
+            continue;
+        }
+        const sf::Vector2f delta = player->getPosition() - position;
+        const float distanceSquared = delta.x * delta.x + delta.y * delta.y;
+        if (!nearest || distanceSquared < nearestDistanceSquared) {
+            nearest = player;
+            nearestDistanceSquared = distanceSquared;
+        }
+    }
+    if (nearest) {
+        targetPlayerPos = nearest->getPosition();
     }
 
-    // Check collision between flames and player
-    if (player && player->isActive() && !player->isDying()) {
-        if (state != State::Dying && state != State::Defeated) {
-            const sf::FloatRect pBounds = player->getBounds();
-            for (auto& flame : flames) {
-                if (!flame.active) continue;
-                sf::FloatRect fBounds(flame.position.x - 8.f, flame.position.y - 8.f, 16.f, 16.f);
-                if (pBounds.intersects(fBounds)) {
-                    player->takeDamage();
-                    triggerFlameImpact(flame.position);
-                    flame.active = false;
-                }
+    if (state == State::Dying || state == State::Defeated) {
+        return;
+    }
+
+    // A flame is consumed by the first player body that it reaches. Looping
+    // over all active players makes the boss fair in local co-op while the
+    // nearest-player selection above keeps its targeting deterministic.
+    for (auto& flame : flames) {
+        if (!flame.active) {
+            continue;
+        }
+        const sf::FloatRect flameBounds(
+            flame.position.x - 8.f,
+            flame.position.y - 8.f,
+            16.f,
+            16.f);
+        for (Character* player : players) {
+            if (!player || !player->isActive() || player->isDying()) {
+                continue;
+            }
+            if (player->getBounds().intersects(flameBounds)) {
+                player->takeDamage();
+                triggerFlameImpact(flame.position);
+                flame.active = false;
+                break;
             }
         }
     }

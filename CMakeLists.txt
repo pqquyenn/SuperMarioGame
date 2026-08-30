@@ -142,6 +142,32 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(duo_rules_tests
+    tests/duo_rules_tests.cpp
+    src/Duo/DuoRules.cpp
+)
+
+target_include_directories(duo_rules_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::System)
+    target_link_libraries(duo_rules_tests PRIVATE SFML::System)
+elseif(TARGET sfml-system)
+    target_link_libraries(duo_rules_tests PRIVATE sfml-system)
+endif()
+
+add_test(
+    NAME duo_rules_tests
+    COMMAND duo_rules_tests
+)
+set_tests_properties(
+    duo_rules_tests
+    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 add_executable(solid04_tile_tests
     tests/tile_collision_tests.cpp
     src/Physics/CollisionManager.cpp

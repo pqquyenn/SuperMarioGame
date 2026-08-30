@@ -1,12 +1,18 @@
 #include "States/PauseState.h"
 #include "States/MenuState.h"
 #include "States/PlayState.h"
+#include "States/DuoState.h"
 #include "Core/SoundManager.h"
 #include <iostream>
 #include <memory>
 
 PauseState::PauseState(const std::string& mapPath)
     : currentMapPath(mapPath) {}
+
+PauseState::PauseState(const DuoSessionConfig& config)
+    : currentMapPath{config.mapPath},
+      duoMode{true},
+      duoSession{config} {}
 
 void PauseState::onEnter() {
     std::cout << "[PauseState] onEnter - Game da tam dung" << std::endl;
@@ -111,15 +117,21 @@ void PauseState::handleInput(sf::Event& event, sf::RenderWindow& window) {
                         SoundManager::getInstance().playSound("pause");
                         stateManager->popState();
                     } else if (selectedIndex == 1) {
-                        // RESTART STAGE -> tao PlayState moi tu map hien tai
                         SoundManager::getInstance().playSound("coin");
-                        stateManager->clearAndPushState(
-                            std::make_unique<PlayState>(currentMapPath));
+                        if (duoMode) {
+                            stateManager->clearAndPushState(
+                                std::make_unique<DuoState>(duoSession));
+                        } else {
+                            stateManager->clearAndPushState(
+                                std::make_unique<PlayState>(currentMapPath));
+                        }
                     } else if (selectedIndex == 2) {
-                        // QUIT TO MENU -> quay ve trang chon map Solo
                         SoundManager::getInstance().playSound("coin");
                         stateManager->clearAndPushState(
-                            std::make_unique<MenuState>(MenuState::Page::Play));
+                            std::make_unique<MenuState>(
+                                duoMode
+                                    ? MenuState::Page::DuoPlay
+                                    : MenuState::Page::Play));
                     }
                 }
                 break;

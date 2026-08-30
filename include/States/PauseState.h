@@ -2,6 +2,7 @@
 
 #include "States/GameState.h"
 #include "States/GameStateManager.h"
+#include "Duo/DuoTypes.h"
 #include <SFML/Graphics.hpp>
 #include <string>
 
@@ -23,6 +24,8 @@ private:
     int selectedIndex = 0;          // 0 = RESUME, 1 = RESTART, 2 = QUIT
     static const int MENU_ITEMS = 3;
     std::string currentMapPath;
+    bool duoMode{false};
+    DuoSessionConfig duoSession;
 
     // === Animation ===
     float blinkTimer = 0.f;
@@ -33,6 +36,7 @@ private:
 
 public:
     explicit PauseState(const std::string& mapPath);
+    explicit PauseState(const DuoSessionConfig& config);
 
     void onEnter() override;
     void onExit() override;

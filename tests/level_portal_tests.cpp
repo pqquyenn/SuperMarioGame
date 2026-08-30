@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -157,6 +158,49 @@ void testInputAndDebugPortalActivation(TestRunner& runner) {
                   "respawn reset uses initial_area from the manifest");
 }
 
+void testDuoPartyPortalSync(TestRunner& runner) {
+    Level level;
+    runner.expect(level.loadLevel("1.1/1-1.level"),
+                  "1-1 loads for Duo party portal test");
+    configureCamera(level);
+
+    TestCharacter playerOne{57.f * 16.f, 128.f};
+    TestCharacter playerTwo{58.f * 16.f, 128.f};
+    const auto transition = level.queryPortalForInput(
+        playerOne, PortalActivation::Down);
+    runner.expect(transition.has_value(),
+                  "Duo portal can be queried before the shared transition");
+    if (!transition) {
+        return;
+    }
+
+    runner.expect(level.activatePortalForParty(
+                      *transition, {&playerOne, &playerTwo}),
+                  "Duo party transition activates once for both players");
+    runner.expect(level.getCurrentArea() == "bonus",
+                  "Duo party arrives in the same target area");
+    expectPosition(runner, playerOne, 3736.f, 32.f,
+                   "portal initiator uses the exact manifest anchor");
+    runner.expect(
+        std::abs(playerOne.getPosition().x - playerTwo.getPosition().x) >=
+            playerOne.getBounds().width,
+        "portal companion receives a separate safe spawn");
+    expectVelocity(runner, playerTwo, 0.f, 0.f,
+                   "portal companion receives the manifest exit velocity");
+}
+
+void testDuoDoublePowerup(TestRunner& runner) {
+    Level level;
+    runner.expect(level.loadLevel("1.1/1-1.level"),
+                  "1-1 loads for Duo power-up test");
+
+    TestCharacter player;
+    const std::size_t before = level.getItems().size();
+    level.spawnItemFromBlock(21.f * 16.f, 9.f * 16.f, &player, 2u);
+    runner.expect(level.getItems().size() == before + 2u,
+                  "Duo question block creates two eligible power-ups");
+}
+
 void testOneTwoPortalChain(TestRunner& runner) {
     Level level;
     runner.expect(level.loadLevel("1.2/1-2.level"),
@@ -239,6 +283,8 @@ int main() {
     testRuntimeRequiresManifest(runner);
     testOneOnePortalAndFixedCamera(runner);
     testInputAndDebugPortalActivation(runner);
+    testDuoPartyPortalSync(runner);
+    testDuoDoublePowerup(runner);
     testOneTwoPortalChain(runner);
     testNextStageRuntimeChain(runner);
 

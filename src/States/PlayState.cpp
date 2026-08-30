@@ -287,6 +287,7 @@ void PlayState::update(float dt) {
 
   if (player) {
     if (player->isDying()) {
+      SoundManager::getInstance().stopBGM();
       player->update(dt);
 
       if (!player->isActive()) {

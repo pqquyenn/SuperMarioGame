@@ -5,6 +5,7 @@
 #include "Level/LevelDefinition.h"
 #include "Entities/MovingPlatform.h"
 #include "Physics/TileCollisionHandler.h"
+#include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -26,6 +27,14 @@ struct WarpZoneInfo {
     std::string label;
 };
 
+struct PortalTransition {
+    std::string portalId;
+    std::string targetAnchor;
+    std::string targetArea;
+    sf::Vector2f targetPosition{0.f, 0.f};
+    sf::Vector2f exitVelocity{0.f, 0.f};
+};
+
 class Level : public TileCollisionHandler {
 private:
     TileMap map;
@@ -40,6 +49,7 @@ private:
     std::vector<std::unique_ptr<Item>> items;
     std::vector<std::unique_ptr<MovingPlatform>> movingPlatforms;
     std::size_t removedEnemyCount{0};
+    unsigned powerupSpawnMultiplier{1};
 
     bool spawnEntitiesFromMap();
     bool loadManifest(const std::string& filename);
@@ -61,6 +71,11 @@ public:
     void render(sf::RenderWindow& window);
     void spawnItemFromBlock(float x, float y);
     void spawnItemFromBlock(float x, float y, Character* character);
+    void spawnItemFromBlock(
+        float x,
+        float y,
+        Character* character,
+        unsigned requestedCopies);
     std::string getBlockItemType(
         float x,
         float y,
@@ -76,6 +91,12 @@ public:
     bool tryActivatePortalForInput(
         Character& character,
         PortalActivation activation);
+    std::optional<PortalTransition> queryPortalForInput(
+        const Character& character,
+        PortalActivation activation) const;
+    bool activatePortalForParty(
+        const PortalTransition& transition,
+        const std::vector<Character*>& characters);
     bool tryActivateFirstPortalFromCurrentArea(Character& character);
     void resetToInitialArea();
     void onTileCeilingContact(
@@ -95,6 +116,15 @@ public:
     float getKillPlaneY() const;
     float getLeftBoundaryX() const;
     float getRightBoundaryX(float entityWidth = 0.f) const;
+    sf::Vector2f findSafeSpawnNear(
+        const sf::Vector2f& requestedPosition,
+        const sf::Vector2f& characterSize) const;
+    void setPowerupSpawnMultiplier(unsigned multiplier) {
+        powerupSpawnMultiplier = std::max(1u, multiplier);
+    }
+    unsigned getPowerupSpawnMultiplier() const {
+        return powerupSpawnMultiplier;
+    }
 
     TileMap& getTileMap() { return map; }
     const TileMap& getTileMap() const { return map; }

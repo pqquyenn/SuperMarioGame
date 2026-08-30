@@ -1,6 +1,7 @@
 #include "States/GameOverState.h"
 #include "Core/AchievementSystem.h"
 #include "States/PlayState.h"
+#include "States/DuoState.h"
 #include "States/MenuState.h"
 #include "Core/SoundManager.h"
 #include <iostream>
@@ -9,6 +10,14 @@
 
 GameOverState::GameOverState(int score, const std::string& mapPath)
     : finalScore(score), currentMapPath(mapPath) {}
+
+GameOverState::GameOverState(
+    int score,
+    const DuoSessionConfig& config)
+    : finalScore{score},
+      currentMapPath{config.mapPath},
+      duoMode{true},
+      duoSession{config} {}
 
 void GameOverState::onEnter() {
     std::cout << "[GameOverState] onEnter - GAME OVER (Score: " << finalScore << ")" << std::endl;
@@ -129,15 +138,22 @@ void GameOverState::handleInput(sf::Event& event, sf::RenderWindow& window) {
             case sf::Keyboard::Space:
                 SoundManager::getInstance().playSound("coin");
                 if (selectedIndex == 0) {
-                    // TRY AGAIN -> Restart Game in PlayState with currentMapPath
                     if (stateManager) {
-                        stateManager->changeState(std::make_unique<PlayState>(currentMapPath));
+                        if (duoMode) {
+                            stateManager->changeState(
+                                std::make_unique<DuoState>(duoSession));
+                        } else {
+                            stateManager->changeState(
+                                std::make_unique<PlayState>(currentMapPath));
+                        }
                     }
                 } else if (selectedIndex == 1) {
-                    // MAIN MENU -> Return to MenuState
                     if (stateManager) {
                         stateManager->changeState(
-                            std::make_unique<MenuState>(MenuState::Page::Play));
+                            std::make_unique<MenuState>(
+                                duoMode
+                                    ? MenuState::Page::DuoPlay
+                                    : MenuState::Page::Play));
                     }
                 }
                 break;
