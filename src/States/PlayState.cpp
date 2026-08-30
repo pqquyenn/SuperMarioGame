@@ -426,7 +426,11 @@ void PlayState::update(float dt) {
 
             static const char* itemTypes[] = {"Mushroom", "FireFlower", "StarItem"};
             int itemIdx = rand() % 3;
-            if (auto itemEnt = EntityFactory::getInstance().create(itemTypes[itemIdx], spawnPos)) {
+            std::string selectedItem = itemTypes[itemIdx];
+            if (selectedItem == "Mushroom" && player->getCurrentFormName() != "Small") {
+              selectedItem = "FireFlower";
+            }
+            if (auto itemEnt = EntityFactory::getInstance().create(selectedItem, spawnPos)) {
               if (auto* item = dynamic_cast<Item*>(itemEnt.get())) {
                 itemEnt.release();
                 level.getItems().push_back(std::unique_ptr<Item>(item));

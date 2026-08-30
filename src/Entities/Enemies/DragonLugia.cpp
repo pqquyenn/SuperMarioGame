@@ -383,21 +383,11 @@ void DragonLugia::updateFlames(float dt, const TileMap* tileMap) {
 }
 
 void DragonLugia::onStomped() {
-    if (hurtTimer > 0.f || state == State::Dying || state == State::Defeated) return;
-
-    currentHp--;
-    SoundManager::getInstance().playSound("stomp");
-    std::cout << "[DragonLugia] Stomped! HP: " << currentHp << "/" << maxHp << std::endl;
-
-    if (currentHp <= 0) {
-        changeBossState(State::Dying);
-    } else {
-        changeBossState(State::Hurt);
-    }
+    // DragonLugia boss cannot be stomped
 }
 
 bool DragonLugia::canBeStomped() const {
-    return (hurtTimer <= 0.f && state != State::Dying && state != State::Defeated);
+    return false;
 }
 
 void DragonLugia::onFireball() {
