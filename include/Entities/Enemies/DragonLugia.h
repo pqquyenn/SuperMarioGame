@@ -48,6 +48,7 @@ private:
     float hurtTimer{0.f};
     float hoverTime{0.f};
     float groundY{192.f};
+    float flameGroundY{208.f};  // Actual brown floor tile top (row 13 * 16), flames only explode here
     float arenaMinX{36.f};
     float arenaMaxX{364.f};
 
@@ -56,6 +57,7 @@ private:
     bool hasFiredInAttack{false};
     bool deathSoundPlayed{false};
     bool bossDefeatedFlag{false};
+    int walkCycle{0};
 
     // Animations
     AnimationClip animIdle;
