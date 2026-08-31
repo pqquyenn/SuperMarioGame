@@ -622,6 +622,16 @@ void testFireFlowerCollectWithPrecondition(TestRunner &runner) {
                 "Player remains Fire Mario after eating Mushroom");
   runner.expect(mushroom2.isCollected(), "FireFlowerTest",
                 "Mushroom marked collected");
+
+  const std::size_t eventsBeforeExpiry = spy.count();
+  runner.expect(player.expireFireForm(), "FireFlowerTest",
+                "Timed rules can explicitly expire Fire form");
+  runner.expect(player.getCurrentFormName() == "Super", "FireFlowerTest",
+                "Expired Fire form returns to Super");
+  runner.expect(spy.count() == eventsBeforeExpiry, "FireFlowerTest",
+                "Fire expiry does not emit a fake collection event");
+  runner.expect(!player.expireFireForm(), "FireFlowerTest",
+                "Expiring a non-Fire form is a no-op");
 }
 
 void testPoweredCharacterCrouch(TestRunner &runner) {

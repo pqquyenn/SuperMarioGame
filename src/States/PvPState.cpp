@@ -14,6 +14,8 @@
 #include "PlayerStates/FireState.h"
 #include "PlayerStates/SuperState.h"
 #include "PvP/PvPCombatResolver.h"
+#include "PvP/PvPCameraPolicy.h"
+#include "PvP/PvPMatchRules.h"
 #include "States/GameStateManager.h"
 #include "States/MenuState.h"
 
@@ -33,7 +35,6 @@ constexpr float SpawnProtectionDuration = 1.5f;
 constexpr float FireballCooldown = 0.75f;
 constexpr float StompBounceVelocity = -250.f;
 constexpr float ContactPushVelocity = 135.f;
-constexpr float FriendlyRespawnInterval = 15.f;
 constexpr float UiWidth = 800.f;
 constexpr float UiHeight = 600.f;
 
@@ -71,18 +72,12 @@ std::unique_ptr<Character> makeCharacter(CharacterChoice choice) {
 PvPState::PlayerSlot::PlayerSlot(
     PlayerId playerId,
     CharacterChoice choice,
-    const InputBindings& bindings
+    const InputBindings& bindings,
+    int startingLives
 )
-    : id{playerId}, characterChoice{choice}, input{bindings, false} {}
-
-void PvPState::PlayerScore::onNotify(const GameEvent& event) {
-    if (event.type == GameEventType::COIN_COLLECTED) {
-        ++coins;
-        score += event.value;
-    } else if (event.type == GameEventType::ENEMY_DEFEATED) {
-        score += event.value;
-    }
-}
+    : characterChoice{choice},
+      input{bindings, false},
+      session{playerId, startingLives} {}
 
 InputBindings PvPState::makePlayerOneBindings() {
     InputBindings bindings;
@@ -113,13 +108,16 @@ PvPState::PvPState(
     CharacterChoice playerTwoChoice
 )
     : matchType{type},
+      ruleset{PvPRuleset::forMatch(type)},
       arenaMapPath{mapPath.empty()
           ? (type == PvPMatchType::Small
                  ? "pvp/small-arena.level"
                  : "pvp/super-arena.level")
           : std::move(mapPath)},
-      playerOne{PlayerId::One, playerOneChoice, makePlayerOneBindings()},
-      playerTwo{PlayerId::Two, playerTwoChoice, makePlayerTwoBindings()},
+      playerOne{PlayerId::One, playerOneChoice, makePlayerOneBindings(),
+                ruleset.startingLives},
+      playerTwo{PlayerId::Two, playerTwoChoice, makePlayerTwoBindings(),
+                ruleset.startingLives},
       randomEngine{std::random_device{}()} {}
 
 PvPState::~PvPState() = default;
@@ -139,11 +137,13 @@ void PvPState::onEnter() {
     loadFont();
 
     cacheFireFlowerSpawns();
-    matchTimeRemaining = isFriendlyMatch()
+    matchTimeRemaining = ruleset.timedMatch
         ? static_cast<float>(level.getTimeLimit())
         : 0.f;
-    friendlyRespawnTimer = FriendlyRespawnInterval;
+    friendlyRespawnTimer = ruleset.arenaRefreshInterval;
     flowerSpawnTimer = 3.f;
+    SoundManager::getInstance().playBGM(
+        "assets/audio/music/overworld.wav");
 }
 
 void PvPState::cacheFireFlowerSpawns() {
@@ -167,12 +167,15 @@ void PvPState::respawnFriendlyArena() {
     configureArenaCamera();
     cacheFireFlowerSpawns();
     flowerSpawnTimer = 3.f;
-    friendlyRespawnTimer = FriendlyRespawnInterval;
+    friendlyRespawnTimer = ruleset.arenaRefreshInterval;
 }
 
 void PvPState::onExit() {
     fireballs.clear();
     fireFlower.reset();
+    playerOne.scoreConnection.disconnect();
+    playerTwo.scoreConnection.disconnect();
+    SoundManager::getInstance().stopBGM();
 }
 
 sf::Vector2f PvPState::findAnchor(
@@ -217,16 +220,16 @@ void PvPState::createPlayers() {
     playerOne.character->setHorizontalMovementScale(PvPMovementScale);
     playerTwo.character->setHorizontalMovementScale(PvPMovementScale);
     playerOne.scoreConnection = playerOne.character->addObserver(
-        &playerOne.score);
+        &playerOne.session);
     playerTwo.scoreConnection = playerTwo.character->addObserver(
-        &playerTwo.score);
+        &playerTwo.session);
 
     playerOne.spawnPoint = findAnchor("p1_spawn", {48.f, 192.f});
     playerTwo.spawnPoint = findAnchor("p2_spawn", {336.f, 192.f});
     playerOne.character->setPosition(playerOne.spawnPoint);
     playerTwo.character->setPosition(playerTwo.spawnPoint);
 
-    if (matchType != PvPMatchType::Small) {
+    if (ruleset.startsPowered) {
         playerOne.character->receivePowerUp(std::make_unique<SuperState>());
         playerTwo.character->receivePowerUp(std::make_unique<SuperState>());
     }
@@ -240,8 +243,8 @@ void PvPState::createPlayers() {
             requestFireball(playerTwo, request);
         });
 
-    playerOne.spawnProtection = SpawnProtectionDuration;
-    playerTwo.spawnProtection = SpawnProtectionDuration;
+    playerOne.session.beginSpawnProtection(SpawnProtectionDuration);
+    playerTwo.session.beginSpawnProtection(SpawnProtectionDuration);
     playerOne.previousBounds = playerOne.character->getBounds();
     playerTwo.previousBounds = playerTwo.character->getBounds();
 }
@@ -261,6 +264,20 @@ void PvPState::configureArenaCamera() {
     camera.setSize(viewWidth, viewHeight);
     camera.setLevelBounds(worldWidth, worldHeight);
     camera.setCenter(viewWidth * 0.5f, viewHeight * 0.5f);
+}
+
+void PvPState::updateArenaViewport(const sf::Vector2u& windowSize) {
+    Camera& camera = level.getCamera();
+    const float tileSize = level.getDefinition().tileSize;
+    const sf::Vector2f worldSize{
+        level.getTileMap().getMapWidth() * tileSize,
+        level.getTileMap().getMapHeight() * tileSize - tileSize};
+    const PvPCameraLayout layout = PvPCameraPolicy::layout(
+        {ArenaViewWidth, ArenaViewHeight}, worldSize, windowSize);
+    camera.setSize(layout.viewSize.x, layout.viewSize.y);
+    camera.setViewport(layout.viewport);
+    camera.setCenter(layout.viewSize.x * 0.5f,
+                     layout.viewSize.y * 0.5f);
 }
 
 void PvPState::handleInput(sf::Event& event, sf::RenderWindow&) {
@@ -305,8 +322,10 @@ void PvPState::handleInput(sf::Event& event, sf::RenderWindow&) {
 void PvPState::updatePlayer(PlayerSlot& slot, float dt) {
     Character& character = *slot.character;
     slot.previousBounds = character.getBounds();
-    slot.spawnProtection = std::max(0.f, slot.spawnProtection - dt);
-    slot.fireCooldown = std::max(0.f, slot.fireCooldown - dt);
+    slot.session.update(dt);
+    if (slot.session.consumeExpiredFirePower()) {
+        character.expireFireForm();
+    }
 
     slot.input.handleInput(character, dt);
     character.update(dt);
@@ -329,7 +348,7 @@ void PvPState::updatePlayer(PlayerSlot& slot, float dt) {
     CollisionManager::tryStandUp(character, level.getTileMap());
     constrainToArena(slot);
 
-    DebugMovementTrail& trail = slot.id == PlayerId::One
+    DebugMovementTrail& trail = slot.session.id() == PlayerId::One
         ? playerOneTrail : playerTwoTrail;
     trail.update(character, dt);
 
@@ -339,19 +358,19 @@ void PvPState::updatePlayer(PlayerSlot& slot, float dt) {
 }
 
 void PvPState::respawnIfReady(PlayerSlot& slot) {
-    if (slot.lives <= 0 || slot.character->isActive()) {
+    if (slot.session.lives() <= 0 || slot.character->isActive()) {
         return;
     }
 
     slot.character->respawn(slot.spawnPoint.x, slot.spawnPoint.y);
-    if (matchType != PvPMatchType::Small) {
+    if (ruleset.startsPowered) {
         slot.character->receivePowerUp(std::make_unique<SuperState>());
     }
     slot.character->addEffect(
         std::make_unique<DamageInvincibilityEffect>(
             SpawnProtectionDuration));
-    slot.spawnProtection = SpawnProtectionDuration;
-    slot.fireTimeRemaining = 0.f;
+    slot.session.beginSpawnProtection(SpawnProtectionDuration);
+    slot.session.clearFirePower();
     slot.previousBounds = slot.character->getBounds();
 }
 
@@ -361,7 +380,7 @@ bool PvPState::applyDamage(
 ) {
     Character& character = *slot.character;
     if (!character.isActive() || character.isDying() ||
-        (source != PvPDamageSource::Void && slot.spawnProtection > 0.f)) {
+        (source != PvPDamageSource::Void && slot.session.isSpawnProtected())) {
         return false;
     }
 
@@ -370,7 +389,7 @@ bool PvPState::applyDamage(
         character.die(DeathCause::Void);
     } else {
         character.takeDamage();
-        if (matchType != PvPMatchType::Small &&
+        if (ruleset.startsPowered &&
             before == "Super" &&
             character.getCurrentFormName() == "Small" &&
             !character.isDying()) {
@@ -380,26 +399,18 @@ bool PvPState::applyDamage(
 
     if (character.isDying()) {
         if (isFriendlyMatch()) {
-            const int score = slot.score.score;
-            if (score < 100) {
-                slot.score.score = 0;
-            } else if (score <= 1000) {
-                slot.score.score = 5 * (score - 100) / 6;
-            } else {
-                slot.score.score = score - 250;
-            }
+            slot.session.applyFriendlyDeathPenalty();
         } else {
-            slot.lives = std::max(0, slot.lives - 1);
+            slot.session.loseLife();
         }
-        slot.fireTimeRemaining = 0.f;
-        SoundManager::getInstance().playSound("death");
+        slot.session.clearFirePower();
         return true;
     }
 
     const bool changed = before != character.getCurrentFormName();
     if (before == "Fire" &&
         character.getCurrentFormName() == "Super") {
-        slot.fireTimeRemaining = 0.f;
+        slot.session.clearFirePower();
     }
     return changed;
 }
@@ -423,7 +434,7 @@ void PvPState::resolvePlayerContact() {
         return;
     }
 
-    if (isFriendlyMatch()) {
+    if (!ruleset.playersCanDamageEachOther) {
         pushPlayersApart();
         return;
     }
@@ -533,22 +544,22 @@ void PvPState::requestFireball(
     PlayerSlot& owner,
     const ProjectileRequest& request
 ) {
-    if (matchType == PvPMatchType::Small || matchOver ||
+    if (!ruleset.fireFlowersEnabled || matchOver ||
         request.type != ProjectileType::Fireball ||
-        owner.fireCooldown > 0.f ||
+        !owner.session.canFire() ||
         owner.character->getCurrentFormName() != "Fire" ||
-        activeProjectileCount(owner.id) >= 1) {
+        activeProjectileCount(owner.session.id()) >= 1) {
         return;
     }
 
     fireballs.push_back(OwnedFireball{
-        owner.id,
+        owner.session.id(),
         std::make_unique<Fireball>(
             request.position.x,
             request.position.y,
             request.facingRight,
             AssetManager::getInstance().getTexture("BlockTileSheet"))});
-    owner.fireCooldown = FireballCooldown;
+    owner.session.beginFireCooldown(FireballCooldown);
     SoundManager::getInstance().playSound("fireball");
 }
 
@@ -578,7 +589,8 @@ void PvPState::updateProjectiles(float dt) {
         PlayerSlot& target = owned.owner == PlayerId::One
             ? playerTwo : playerOne;
         sf::FloatRect overlap;
-        if (!isFriendlyMatch() && target.character->isActive() &&
+        if (ruleset.playersCanDamageEachOther &&
+            target.character->isActive() &&
             !target.character->isDying() &&
             CollisionManager::checkAABB(fireball.getBounds(),
                                          target.character->getBounds(),
@@ -638,24 +650,9 @@ void PvPState::spawnFireFlower() {
 }
 
 void PvPState::updateFireFlower(float dt) {
-    if (matchType == PvPMatchType::Small) {
+    if (!ruleset.fireFlowersEnabled) {
         return;
     }
-
-    auto updateFireTimer = [this, dt](PlayerSlot& slot) {
-        if (slot.fireTimeRemaining <= 0.f ||
-            !slot.character->isActive() || slot.character->isDying()) {
-            return;
-        }
-        slot.fireTimeRemaining =
-            std::max(0.f, slot.fireTimeRemaining - dt);
-        if (slot.fireTimeRemaining <= 0.f &&
-            slot.character->getCurrentFormName() == "Fire") {
-            slot.character->receivePowerUp(std::make_unique<SuperState>());
-        }
-    };
-    updateFireTimer(playerOne);
-    updateFireTimer(playerTwo);
 
     if (!fireFlower) {
         flowerSpawnTimer -= dt;
@@ -676,8 +673,7 @@ void PvPState::updateFireFlower(float dt) {
                                          slot.character->getBounds(),
                                          overlap) &&
             fireFlower->tryCollect(*slot.character)) {
-            slot.fireTimeRemaining = randomSeconds(8.f, 15.f);
-            SoundManager::getInstance().playSound("powerupcollect");
+            slot.session.grantFirePower(randomSeconds(8.f, 15.f));
         }
     };
     tryCollect(playerOne);
@@ -703,29 +699,26 @@ void PvPState::constrainToArena(PlayerSlot& slot) {
 }
 
 void PvPState::evaluateWinner() {
-    if (isFriendlyMatch()) {
-        if (matchOver || matchTimeRemaining > 0.f) {
-            return;
-        }
-        matchOver = true;
-        if (playerOne.score.score == playerTwo.score.score) {
-            resultText = "DRAW";
-        } else if (playerOne.score.score > playerTwo.score.score) {
-            resultText = std::string{"PLAYER 1 - "} +
-                         characterName(playerOne.characterChoice) + " WINS";
-        } else {
-            resultText = std::string{"PLAYER 2 - "} +
-                         characterName(playerTwo.characterChoice) + " WINS";
-        }
+    if (matchOver) {
         return;
     }
-    if (matchOver || (playerOne.lives > 0 && playerTwo.lives > 0)) {
+
+    const PvPWinner winner = PvPMatchRules::determineWinner(
+        matchType,
+        playerOne.session.lives(),
+        playerTwo.session.lives(),
+        playerOne.session.score(),
+        playerTwo.session.score(),
+        matchTimeRemaining);
+    if (winner == PvPWinner::None) {
         return;
     }
+
     matchOver = true;
-    if (playerOne.lives <= 0 && playerTwo.lives <= 0) {
+    SoundManager::getInstance().stopBGM();
+    if (winner == PvPWinner::Draw) {
         resultText = "DRAW";
-    } else if (playerOne.lives <= 0) {
+    } else if (winner == PvPWinner::PlayerTwo) {
         resultText = std::string{"PLAYER 2 - "} +
                      characterName(playerTwo.characterChoice) + " WINS";
     } else {
@@ -747,10 +740,11 @@ void PvPState::update(float dt) {
         return;
     }
 
-    if (isFriendlyMatch()) {
+    if (ruleset.timedMatch) {
         matchTimeRemaining = std::max(0.f, matchTimeRemaining - dt);
         friendlyRespawnTimer -= dt;
-        if (matchTimeRemaining > 0.f && friendlyRespawnTimer <= 0.f) {
+        if (ruleset.refreshArena && matchTimeRemaining > 0.f &&
+            friendlyRespawnTimer <= 0.f) {
             respawnFriendlyArena();
             if (arenaLoadFailed) {
                 return;
@@ -811,17 +805,18 @@ void PvPState::renderHud(sf::RenderWindow& window) {
     auto playerLabel = [this](const PlayerSlot& slot,
                               const std::string& name) {
         std::ostringstream text;
-        text << (slot.id == PlayerId::One ? "P1 " : "P2 ") << name;
+        text << (slot.session.id() == PlayerId::One ? "P1 " : "P2 ")
+             << name;
         if (isFriendlyMatch()) {
             text << "  SCORE " << std::setw(6) << std::setfill('0')
-                 << slot.score.score << "  COIN " << slot.score.coins;
+                 << slot.session.score() << "  COIN " << slot.session.coins();
         } else {
-            text << "  x" << slot.lives << "  "
+            text << "  x" << slot.session.lives() << "  "
                  << slot.character->getCurrentFormName();
         }
-        if (slot.fireTimeRemaining > 0.f) {
+        if (slot.session.fireTime() > 0.f) {
             text << "  FIRE " << std::fixed << std::setprecision(1)
-                 << slot.fireTimeRemaining << "s";
+                 << slot.session.fireTime() << "s";
         }
         return text.str();
     };
@@ -957,7 +952,7 @@ void PvPState::renderDebug(sf::RenderWindow& window) {
              << static_cast<int>(c.getPosition().y) << "  VEL "
              << static_cast<int>(c.getVelocity().x) << ","
              << static_cast<int>(c.getVelocity().y) << "  LIVES "
-             << slot.lives;
+             << slot.session.lives();
         return text.str();
     };
     sf::Text debug{
@@ -985,13 +980,20 @@ void PvPState::render(sf::RenderWindow& window) {
         return;
     }
 
+    updateArenaViewport(window.getSize());
     level.getCamera().applyTo(window);
     const sf::Color background = isFriendlyMatch()
         ? sf::Color{118, 196, 235}
         : (level.usesDarkBackground()
                ? sf::Color::Black
                : sf::Color{92, 148, 252});
-    window.clear(background);
+    window.clear(sf::Color::Black);
+    const sf::FloatRect viewBounds = level.getCamera().getViewBounds();
+    sf::RectangleShape worldBackground{
+        {viewBounds.width, viewBounds.height}};
+    worldBackground.setPosition(viewBounds.left, viewBounds.top);
+    worldBackground.setFillColor(background);
+    window.draw(worldBackground);
     level.render(window);
     if (fireFlower && fireFlower->isActive()) {
         fireFlower->render(window);

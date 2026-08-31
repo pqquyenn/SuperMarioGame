@@ -83,6 +83,35 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(pvp_rules_tests
+    tests/pvp_rules_tests.cpp
+    src/PvP/PvPCameraPolicy.cpp
+    src/PvP/PvPMatchRules.cpp
+    src/PvP/PvPPlayerSession.cpp
+    src/PvP/PvPRuleset.cpp
+)
+
+target_include_directories(pvp_rules_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::System)
+    target_link_libraries(pvp_rules_tests PRIVATE SFML::System)
+elseif(TARGET sfml-system)
+    target_link_libraries(pvp_rules_tests PRIVATE sfml-system)
+endif()
+
+add_test(
+    NAME pvp_rules_tests
+    COMMAND pvp_rules_tests
+)
+set_tests_properties(
+    pvp_rules_tests
+    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 set(SOLID03_RUNTIME_SOURCES ${SOURCES})
 list(FILTER SOLID03_RUNTIME_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 

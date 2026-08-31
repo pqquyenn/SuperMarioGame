@@ -103,6 +103,9 @@ public:
   void useSpecialAbility();
 
   bool receivePowerUp(std::unique_ptr<PlayerState> state);
+  // Timed gameplay rules may explicitly end Fire form without pretending
+  // that the character collected a Super Mushroom.
+  bool expireFireForm();
   bool hasAbility(PlayerAbility ability) const;
   void takeDamage();
   // Applies one damage transition even when a shield or invincibility effect

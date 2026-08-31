@@ -456,6 +456,16 @@ bool Character::receivePowerUp(std::unique_ptr<PlayerState> newState) {
     return true;
 }
 
+bool Character::expireFireForm() {
+    if (!isActive() || dying || !currentState ||
+        currentState->getName() != "Fire") {
+        return false;
+    }
+
+    changeState(std::make_unique<SuperState>());
+    return true;
+}
+
 bool Character::hasAbility(PlayerAbility ability) const {
     return currentState && currentState->hasAbility(ability);
 }

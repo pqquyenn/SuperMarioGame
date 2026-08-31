@@ -8,6 +8,8 @@
 #include "Observer/Observer.h"
 #include "Observer/Subject.h"
 #include "PvP/PvPTypes.h"
+#include "PvP/PvPPlayerSession.h"
+#include "PvP/PvPRuleset.h"
 #include "States/GameState.h"
 
 #include <SFML/Graphics.hpp>
@@ -23,30 +25,20 @@ class Fireball;
 
 class PvPState : public GameState {
 private:
-    struct PlayerScore : Observer {
-        int score{0};
-        int coins{0};
-        void onNotify(const GameEvent& event) override;
-    };
-
     struct PlayerSlot {
-        PlayerId id;
         CharacterChoice characterChoice;
         PlayerPalette palette{PlayerPalette::Primary};
         std::unique_ptr<Character> character;
         InputHandler input;
+        PvPPlayerSession session;
         sf::Vector2f spawnPoint{0.f, 0.f};
         sf::FloatRect previousBounds;
-        int lives{3};
-        float spawnProtection{0.f};
-        float fireTimeRemaining{0.f};
-        float fireCooldown{0.f};
-        PlayerScore score;
         ObserverConnection scoreConnection;
 
         PlayerSlot(PlayerId playerId,
                    CharacterChoice choice,
-                   const InputBindings& bindings);
+                   const InputBindings& bindings,
+                   int startingLives);
     };
 
     struct OwnedFireball {
@@ -55,6 +47,7 @@ private:
     };
 
     PvPMatchType matchType;
+    PvPRuleset ruleset;
     // The ruleset and arena are independent: callers may reuse Small or
     // Super PvP rules with any compatible data-driven level manifest.
     std::string arenaMapPath;
@@ -85,6 +78,7 @@ private:
     sf::Vector2f findAnchor(const std::string& id,
                             sf::Vector2f fallback) const;
     void configureArenaCamera();
+    void updateArenaViewport(const sf::Vector2u& windowSize);
     void updatePlayer(PlayerSlot& slot, float dt);
     void respawnIfReady(PlayerSlot& slot);
     bool applyDamage(PlayerSlot& slot, PvPDamageSource source);

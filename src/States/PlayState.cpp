@@ -287,7 +287,11 @@ void PlayState::update(float dt) {
 
   if (player) {
     if (player->isDying()) {
-      SoundManager::getInstance().stopBGM();
+      // Solo owns its music lifecycle. Character::die() is shared with PvP
+      // and Duo, where one player's death must not stop music for everyone.
+      if (!SoundManager::getInstance().getCurrentBGM().empty()) {
+        SoundManager::getInstance().stopBGM();
+      }
       player->update(dt);
 
       if (!player->isActive()) {
