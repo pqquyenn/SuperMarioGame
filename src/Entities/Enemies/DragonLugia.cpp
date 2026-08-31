@@ -305,6 +305,18 @@ void DragonLugia::updateWithPlayers(
     (void)dt;
     (void)tileMap;
 
+    selectNearestTarget(players);
+
+    if (state != State::Dying && state != State::Defeated) {
+        checkFlamePlayerCollisions(players);
+    }
+}
+
+// ============================================================
+// CO-OP LOGIC: Chọn player gần nhất để boss nhắm bắn
+// mnhat249 sửa ở đây khi thay đổi cách chọn target (co-op)
+// ============================================================
+void DragonLugia::selectNearestTarget(const std::vector<Character*>& players) {
     Character* nearest = nullptr;
     float nearestDistanceSquared = 0.f;
     for (Character* player : players) {
@@ -321,14 +333,13 @@ void DragonLugia::updateWithPlayers(
     if (nearest) {
         targetPlayerPos = nearest->getPosition();
     }
+}
 
-    if (state == State::Dying || state == State::Defeated) {
-        return;
-    }
-
-    // A flame is consumed by the first player body that it reaches. Looping
-    // over all active players makes the boss fair in local co-op while the
-    // nearest-player selection above keeps its targeting deterministic.
+// ============================================================
+// BOSS COMBAT LOGIC: Kiểm tra flame va chạm với player(s)
+// Bạn (pqquyenn) sửa ở đây khi thay đổi flame/damage behavior
+// ============================================================
+void DragonLugia::checkFlamePlayerCollisions(const std::vector<Character*>& players) {
     for (auto& flame : flames) {
         if (!flame.active) {
             continue;

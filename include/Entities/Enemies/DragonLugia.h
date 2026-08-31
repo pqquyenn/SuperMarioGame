@@ -88,6 +88,12 @@ private:
     void triggerFlameImpact(sf::Vector2f pos);
     void changeBossState(State newState);
 
+    // --- Tách riêng để giảm conflict khi làm việc nhóm ---
+    // Co-op: mnhat249 sửa hàm này khi thay đổi cách chọn target
+    void selectNearestTarget(const std::vector<Character*>& players);
+    // Boss combat: bạn sửa hàm này khi thay đổi flame/damage logic
+    void checkFlamePlayerCollisions(const std::vector<Character*>& players);
+
 public:
     DragonLugia(float x = 0.f, float y = 0.f);
 
