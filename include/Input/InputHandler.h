@@ -24,6 +24,18 @@ struct InputBindings {
     KeyBinding run{sf::Keyboard::Key::LShift, sf::Keyboard::Key::RShift};
 };
 
+// A gameplay ruleset can temporarily suppress individual actions without
+// changing the configured keys. Duo mode uses the horizontal flags for its
+// shared-camera tether; existing Solo and PvP callers receive full access.
+struct InputPermissions {
+    bool allowMoveLeft{true};
+    bool allowMoveRight{true};
+    bool allowJump{true};
+    bool allowCrouch{true};
+    bool allowAction{true};
+    bool allowRun{true};
+};
+
 class InputHandler {
 private:
     std::unique_ptr<Command> jumpCommand;
@@ -43,7 +55,11 @@ public:
         bool actionCanRun = true
     );
 
-    void handleInput(Character& character, float dt);
+    void handleInput(
+        Character& character,
+        float dt,
+        const InputPermissions& permissions = InputPermissions{}
+    );
     void setBindings(const InputBindings& inputBindings);
     const InputBindings& getBindings() const;
 };

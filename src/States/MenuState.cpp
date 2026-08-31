@@ -7,6 +7,7 @@
 #include "States/GameStateManager.h"
 #include "States/PlayState.h"
 #include "States/PvPState.h"
+#include "States/DuoState.h"
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -113,14 +114,13 @@ void MenuState::onEnter() {
     keyBindingsText.setFillColor(sf::Color::White);
     keyBindingsText.setLineSpacing(1.4f);
     keyBindingsText.setString(
-        "MOVE LEFT     : A / LEFT ARROW\n"
-        "MOVE RIGHT    : D / RIGHT ARROW\n"
-        "JUMP          : SPACE / W / UP ARROW\n"
-        "CROUCH / PIPE : S / DOWN ARROW\n"
-        "ACTION / RUN  : Z / J / Q\n"
-        "RUN (SPRINT)  : LEFT SHIFT / RIGHT SHIFT\n\n"
+        "SOLO          : WASD / ARROWS, SPACE, Z, SHIFT\n\n"
+        "DUO P1        : A/D MOVE, W/SPACE JUMP, S CROUCH\n"
+        "                Z ACTION, LEFT SHIFT RUN\n"
+        "DUO P2        : ARROWS MOVE/JUMP/CROUCH\n"
+        "                NUM1 ACTION, NUM0/ENTER RUN\n\n"
         "[KEY REMAPPING COMING SOON]");
-    keyBindingsText.setPosition(180.f, 250.f);
+    keyBindingsText.setPosition(145.f, 245.f);
 
     achievementsText.setFont(cleanFont);
     achievementsText.setCharacterSize(14);
@@ -353,7 +353,8 @@ void MenuState::setDisplayMode(DisplayMode newMode) {
 }
 
 bool MenuState::isCharacterSelectionPage() const {
-    return page == Page::Character || page == Page::PvPCharacter;
+    return page == Page::Character || page == Page::PvPCharacter ||
+           page == Page::DuoCharacter;
 }
 
 void MenuState::beginPvPCharacterSelection(
@@ -378,6 +379,24 @@ void MenuState::launchPendingPvPMatch() {
         pvpPlayerTwoChoice));
 }
 
+void MenuState::beginDuoCharacterSelection(std::string mapPath) {
+    pendingDuoMapPath = std::move(mapPath);
+    duoSelectionStage = 1;
+    setPage(Page::DuoCharacter);
+}
+
+void MenuState::launchPendingDuoGame() {
+    if (!stateManager) {
+        return;
+    }
+    DuoSessionConfig config;
+    config.mapPath = pendingDuoMapPath;
+    config.playerOneChoice = duoPlayerOneChoice;
+    config.playerTwoChoice = duoPlayerTwoChoice;
+    stateManager->clearAndPushState(
+        std::make_unique<DuoState>(std::move(config)));
+}
+
 void MenuState::setPage(Page newPage) {
     page = newPage;
     selectedIndex = 0;
@@ -388,11 +407,17 @@ void MenuState::setPage(Page newPage) {
     characterFlashTimer = 0.f;
 
     if (isCharacterSelectionPage()) {
-        const CharacterChoice choice = page == Page::Character
-            ? GameSettings::getInstance().getCharacterChoice()
-            : (pvpSelectionStage == 1
-                   ? pvpPlayerOneChoice
-                   : pvpPlayerTwoChoice);
+        CharacterChoice choice =
+            GameSettings::getInstance().getCharacterChoice();
+        if (page == Page::PvPCharacter) {
+            choice = pvpSelectionStage == 1
+                ? pvpPlayerOneChoice
+                : pvpPlayerTwoChoice;
+        } else if (page == Page::DuoCharacter) {
+            choice = duoSelectionStage == 1
+                ? duoPlayerOneChoice
+                : duoPlayerTwoChoice;
+        }
         characterCardSelection = choice == CharacterChoice::Luigi ? 1 : 0;
         marioCurrentScale = (characterCardSelection == 0) ? (baseMarioCardScale * 1.14f) : (baseMarioCardScale * 0.88f);
         luigiCurrentScale = (characterCardSelection == 1) ? (baseLuigiCardScale * 1.14f) : (baseLuigiCardScale * 0.88f);
@@ -410,11 +435,21 @@ void MenuState::rebuildEntries() {
     switch (page) {
         case Page::GameMode:
             pageTitleText.setString("GAME MODE");
-            entries = {{"SOLO"}, {"DUO  [COMING SOON]", false}, {"PVP"}, {"SETTINGS"}, {"BACK TO TITLE"}};
+            entries = {{"SOLO"}, {"DUO"}, {"PVP"}, {"SETTINGS"}, {"BACK TO TITLE"}};
             break;
         case Page::Solo:
             pageTitleText.setString("SOLO");
             entries = {{"PLAY"}, {"CHARACTER"}, {"ACHIEVEMENTS"}, {"BACK"}};
+            break;
+        case Page::Duo:
+            pageTitleText.setString("DUO CO-OP");
+            entries = {{"PLAY"}, {"BACK"}};
+            break;
+        case Page::DuoPlay:
+            pageTitleText.setString("DUO - SELECT WORLD");
+            entries = {{"WORLD 1-1"}, {"WORLD 1-2"}, {"WORLD 1-3"}, {"WORLD 1-4"}, {"BACK"}};
+            break;
+        case Page::DuoCharacter:
             break;
         case Page::PvP:
             pageTitleText.setString("PVP MATCH-UP");
@@ -512,8 +547,14 @@ void MenuState::moveSelection(int direction) {
 
 void MenuState::updateVisuals() {
     if (isCharacterSelectionPage()) {
-        if (page == Page::PvPCharacter) {
-            const std::string player = pvpSelectionStage == 1
+        if (page == Page::PvPCharacter || page == Page::DuoCharacter) {
+            const int selectionStage = page == Page::PvPCharacter
+                ? pvpSelectionStage
+                : duoSelectionStage;
+            const CharacterChoice firstChoice = page == Page::PvPCharacter
+                ? pvpPlayerOneChoice
+                : duoPlayerOneChoice;
+            const std::string player = selectionStage == 1
                 ? "PLAYER 1" : "PLAYER 2";
             charChooseTitle.setString(player + ": Choose a character!");
             centerText(charChooseTitle, UiWidth / 2.f, 85.f);
@@ -529,8 +570,8 @@ void MenuState::updateVisuals() {
                 !marioSelected ? AccentGold : sf::Color{230, 230, 230});
             marioCardBadge.setOutlineColor(sf::Color{20, 20, 20});
             luigiCardBadge.setOutlineColor(sf::Color{20, 20, 20});
-            const std::string priorChoice = pvpSelectionStage == 2
-                ? std::string{"P1: "} + characterName(pvpPlayerOneChoice) +
+            const std::string priorChoice = selectionStage == 2
+                ? std::string{"P1: "} + characterName(firstChoice) +
                       "     "
                 : std::string{};
             charChoosePrompt.setString(
@@ -598,10 +639,16 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
         CharacterChoice choice = (characterCardSelection == 0) ? CharacterChoice::Mario : CharacterChoice::Luigi;
         if (page == Page::Character) {
             GameSettings::getInstance().setCharacterChoice(choice);
-        } else if (pvpSelectionStage == 1) {
-            pvpPlayerOneChoice = choice;
+        } else if (page == Page::PvPCharacter) {
+            if (pvpSelectionStage == 1) {
+                pvpPlayerOneChoice = choice;
+            } else {
+                pvpPlayerTwoChoice = choice;
+            }
+        } else if (duoSelectionStage == 1) {
+            duoPlayerOneChoice = choice;
         } else {
-            pvpPlayerTwoChoice = choice;
+            duoPlayerTwoChoice = choice;
         }
         SoundManager::getInstance().playSound("powerupcollect");
         isCharacterConfirming = true;
@@ -614,9 +661,29 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
     switch (page) {
         case Page::GameMode:
             if (selectedIndex == 0) setPage(Page::Solo);
+            else if (selectedIndex == 1) setPage(Page::Duo);
             else if (selectedIndex == 2) setPage(Page::PvP);
             else if (selectedIndex == 3) setPage(Page::Settings);
             else if (selectedIndex == 4) setDisplayMode(DisplayMode::TitleScreen);
+            break;
+        case Page::Duo:
+            if (selectedIndex == 0) setPage(Page::DuoPlay);
+            else setPage(Page::GameMode);
+            break;
+        case Page::DuoPlay: {
+            if (selectedIndex == 4) {
+                setPage(Page::Duo);
+                break;
+            }
+            static const char* maps[] = {
+                "1.1/1-1.level",
+                "1.2/1-2.level",
+                "1.3/1-3.level",
+                "1.4/1-4.level"};
+            beginDuoCharacterSelection(maps[selectedIndex]);
+            break;
+        }
+        case Page::DuoCharacter:
             break;
         case Page::PvP:
             if (selectedIndex == 3) {
@@ -694,6 +761,16 @@ void MenuState::goBack() {
     switch (page) {
         case Page::GameMode: setDisplayMode(DisplayMode::TitleScreen); break;
         case Page::Solo: setPage(Page::GameMode); break;
+        case Page::Duo: setPage(Page::GameMode); break;
+        case Page::DuoPlay: setPage(Page::Duo); break;
+        case Page::DuoCharacter:
+            if (duoSelectionStage == 2) {
+                duoSelectionStage = 1;
+                setPage(Page::DuoCharacter);
+            } else {
+                setPage(Page::DuoPlay);
+            }
+            break;
         case Page::PvP: setPage(Page::GameMode); break;
         case Page::PvPMap: setPage(Page::PvP); break;
         case Page::PvPCharacter:
@@ -820,11 +897,18 @@ void MenuState::update(float dt) {
                     characterConfirmTimer = 0.f;
                     if (page == Page::Character) {
                         setPage(Page::Solo);
-                    } else if (pvpSelectionStage == 1) {
-                        pvpSelectionStage = 2;
-                        setPage(Page::PvPCharacter);
+                    } else if (page == Page::PvPCharacter) {
+                        if (pvpSelectionStage == 1) {
+                            pvpSelectionStage = 2;
+                            setPage(Page::PvPCharacter);
+                        } else {
+                            launchPendingPvPMatch();
+                        }
+                    } else if (duoSelectionStage == 1) {
+                        duoSelectionStage = 2;
+                        setPage(Page::DuoCharacter);
                     } else {
-                        launchPendingPvPMatch();
+                        launchPendingDuoGame();
                     }
                 }
             } else {

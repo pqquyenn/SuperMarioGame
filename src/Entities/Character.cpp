@@ -513,7 +513,6 @@ void Character::die(DeathCause cause) {
     deathTimer = 0.f;
     deathHopStarted = false;
 
-    SoundManager::getInstance().stopBGM();
     SoundManager::getInstance().playSound("death");
 
     // Reset to Small Mario form so the death frame uses Small Mario's (18, 9, 16, 16)

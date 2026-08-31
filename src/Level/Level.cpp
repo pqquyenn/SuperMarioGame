@@ -167,7 +167,11 @@ std::vector<WarpZoneInfo> Level::getWarpZones() const {
   const float tileSize = definition.tileSize;
   for (const auto& portal : definition.portals) {
     const std::string activation =
-        portal.activation == PortalActivation::Down ? "DOWN" : "RIGHT";
+        portal.activation == PortalActivation::Down
+            ? "DOWN"
+            : (portal.activation == PortalActivation::Right
+                   ? "RIGHT"
+                   : "INTERACT");
     zones.push_back({
         {portal.triggerTiles.left * tileSize,
          portal.triggerTiles.top * tileSize,
@@ -200,26 +204,14 @@ bool Level::activatePortal(
   }
 
   const float tileSize = definition.tileSize;
-  const std::string oldArea = currentArea;
-  setCurrentArea(anchor->area);
-  character.setPosition(
-      anchor->tilePosition.x * tileSize,
-      anchor->tilePosition.y * tileSize);
-  character.setVelocity(anchor->exitVelocity);
-  updateCameraFor(character.getPosition());
-  SoundManager::getInstance().playSound("pipe");
-
-  if (oldArea != currentArea && !character.isStarInvincible()) {
-    if (usesDarkBackground() || anchor->area == "bonus" || anchor->area == "underground") {
-      SoundManager::getInstance().playBGM("assets/audio/music/underground.wav");
-    } else {
-      SoundManager::getInstance().playBGM("assets/audio/music/overworld.wav");
-    }
-  }
-
-  std::cout << "[Level] Activated portal " << portal.id << " -> "
-            << anchor->id << std::endl;
-  return true;
+  const PortalTransition transition{
+      portal.id,
+      anchor->id,
+      anchor->area,
+      {anchor->tilePosition.x * tileSize,
+       anchor->tilePosition.y * tileSize},
+      anchor->exitVelocity};
+  return activatePortalForParty(transition, {&character});
 }
 
 bool Level::tryActivatePortal(
@@ -253,12 +245,15 @@ bool Level::tryActivatePortal(
 bool Level::tryActivatePortalForInput(
     Character& character,
     PortalActivation activation) {
-  if (!character.isActive() || character.isDying()) {
-    return false;
-  }
+  const auto transition = queryPortalForInput(character, activation);
+  return transition && activatePortalForParty(*transition, {&character});
+}
 
-  if (!hasDefinition) {
-    return false;
+std::optional<PortalTransition> Level::queryPortalForInput(
+    const Character& character,
+    PortalActivation activation) const {
+  if (!character.isActive() || character.isDying() || !hasDefinition) {
+    return std::nullopt;
   }
 
   const sf::FloatRect bounds = character.getBounds();
@@ -288,22 +283,94 @@ bool Level::tryActivatePortalForInput(
       canActivate = centered && touchingTop;
     } else if (activation == PortalActivation::Right) {
       const bool touchingLeft =
-          std::abs((bounds.left + bounds.width) - trigger.left) <= contactTolerance ||
+          std::abs((bounds.left + bounds.width) - trigger.left) <=
+              contactTolerance ||
           ((bounds.left + bounds.width >= trigger.left - contactTolerance) &&
            (bounds.left <= trigger.left + trigger.width));
       const bool verticalOverlap =
-          (feetY > trigger.top) && (bounds.top < trigger.top + trigger.height + 4.f);
-      canActivate = (touchingLeft && verticalOverlap) || trigger.intersects(bounds);
+          (feetY > trigger.top) &&
+          (bounds.top < trigger.top + trigger.height + 4.f);
+      canActivate =
+          (touchingLeft && verticalOverlap) || trigger.intersects(bounds);
     } else {
       canActivate = trigger.intersects(bounds);
     }
 
-    if (canActivate && activatePortal(character, portal)) {
-      return true;
+    if (!canActivate) {
+      continue;
+    }
+
+    const AnchorDefinition* anchor = findAnchor(portal.targetAnchor);
+    if (!anchor) {
+      return std::nullopt;
+    }
+    return PortalTransition{
+        portal.id,
+        anchor->id,
+        anchor->area,
+        {anchor->tilePosition.x * tileSize,
+         anchor->tilePosition.y * tileSize},
+        anchor->exitVelocity};
+  }
+  return std::nullopt;
+}
+
+bool Level::activatePortalForParty(
+    const PortalTransition& transition,
+    const std::vector<Character*>& characters) {
+  const auto first = std::find_if(
+      characters.begin(), characters.end(),
+      [](const Character* character) { return character != nullptr; });
+  if (!hasDefinition || first == characters.end() ||
+      transition.targetArea.empty()) {
+    return false;
+  }
+
+  const std::string oldArea = currentArea;
+  setCurrentArea(transition.targetArea);
+
+  std::size_t placed = 0;
+  Character* cameraTarget = nullptr;
+  for (Character* character : characters) {
+    if (!character) {
+      continue;
+    }
+    sf::Vector2f target = transition.targetPosition;
+    if (placed > 0) {
+      const sf::FloatRect bounds = character->getBounds();
+      target = findSafeSpawnNear(
+          transition.targetPosition,
+          {std::max(1.f, bounds.width), std::max(1.f, bounds.height)});
+    }
+    character->setPosition(target);
+    character->setVelocity(transition.exitVelocity);
+    if (!cameraTarget) {
+      cameraTarget = character;
+    }
+    ++placed;
+  }
+
+  if (cameraTarget) {
+    updateCameraFor(cameraTarget->getPosition());
+  }
+  SoundManager::getInstance().playSound("pipe");
+
+  if (oldArea != currentArea && cameraTarget &&
+      !cameraTarget->isStarInvincible()) {
+    if (usesDarkBackground() || transition.targetArea == "bonus" ||
+        transition.targetArea == "underground") {
+      SoundManager::getInstance().playBGM(
+          "assets/audio/music/underground.wav");
+    } else {
+      SoundManager::getInstance().playBGM(
+          "assets/audio/music/overworld.wav");
     }
   }
 
-  return false;
+  std::cout << "[Level] Activated portal " << transition.portalId << " -> "
+            << transition.targetAnchor << " for " << placed
+            << " player(s)" << std::endl;
+  return placed > 0;
 }
 
 bool Level::tryActivateFirstPortalFromCurrentArea(Character& character) {
@@ -436,6 +503,43 @@ float Level::getRightBoundaryX(float entityWidth) const {
   return std::max(getLeftBoundaryX(), rightTile * tileSize - entityWidth);
 }
 
+sf::Vector2f Level::findSafeSpawnNear(
+    const sf::Vector2f& requestedPosition,
+    const sf::Vector2f& characterSize) const {
+  const float width = std::max(1.f, characterSize.x);
+  const float height = std::max(1.f, characterSize.y);
+  const float tileSize = hasDefinition ? definition.tileSize : 16.f;
+  const float worldWidth = map.getMapWidth() * tileSize;
+  const float worldHeight = map.getMapHeight() * tileSize;
+  const float offsets[] = {24.f, -24.f, 40.f, -40.f, 56.f, -56.f};
+
+  for (float offset : offsets) {
+    const sf::Vector2f candidate{
+        std::clamp(requestedPosition.x + offset,
+                   getLeftBoundaryX(),
+                   std::max(getLeftBoundaryX(),
+                            getRightBoundaryX(width))),
+        std::clamp(requestedPosition.y, 0.f,
+                   std::max(0.f, worldHeight - height))};
+    const sf::FloatRect candidateBounds{
+        candidate.x, candidate.y, width, height};
+    bool blocked = false;
+    for (const TileHandle& handle : map.getTilesInBounds(candidateBounds)) {
+      const Tile* tile = map.getTile(handle);
+      if (tile && tile->isSolid() &&
+          tile->getBounds().intersects(candidateBounds)) {
+        blocked = true;
+        break;
+      }
+    }
+    if (!blocked && candidate.x + width <= worldWidth) {
+      return candidate;
+    }
+  }
+
+  return findGroundedSpawn(requestedPosition, {width, height});
+}
+
 void Level::update(float dt) {
   // Update tile animations (question block shimmer, bump effects)
   map.update(dt);
@@ -548,13 +652,37 @@ void Level::spawnItemFromBlock(float x, float y) {
 }
 
 void Level::spawnItemFromBlock(float x, float y, Character *character) {
+  spawnItemFromBlock(x, y, character, 1u);
+}
+
+void Level::spawnItemFromBlock(
+    float x,
+    float y,
+    Character *character,
+    unsigned requestedCopies) {
   const std::string itemType = getBlockItemType(x, y, character);
   const float tileSize = hasDefinition ? definition.tileSize : 16.f;
+  const bool canDuplicate =
+      itemType == "Mushroom" || itemType == "FireFlower";
+  const unsigned copies = canDuplicate
+      ? std::clamp(requestedCopies, 1u, 4u)
+      : 1u;
+  bool spawnedPowerup = false;
 
-  sf::Vector2f spawnPos =
-      (itemType == "Coin") ? sf::Vector2f{x, y - tileSize}
-                            : sf::Vector2f{x, y};
-  if (auto entity = EntityFactory::getInstance().create(itemType, spawnPos)) {
+  for (unsigned index = 0; index < copies; ++index) {
+    float horizontalOffset = 0.f;
+    if (copies > 1) {
+      const float center = (static_cast<float>(copies) - 1.f) * 0.5f;
+      horizontalOffset = (static_cast<float>(index) - center) * 8.f;
+    }
+    sf::Vector2f spawnPos =
+        (itemType == "Coin")
+            ? sf::Vector2f{x, y - tileSize}
+            : sf::Vector2f{x + horizontalOffset, y};
+    auto entity = EntityFactory::getInstance().create(itemType, spawnPos);
+    if (!entity) {
+      continue;
+    }
     if (itemType == "Coin") {
       if (auto *coin = dynamic_cast<Coin *>(entity.get())) {
         entity.release();
@@ -568,6 +696,9 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
     } else {
       if (auto *item = dynamic_cast<Item *>(entity.get())) {
         if (auto *shroom = dynamic_cast<Mushroom *>(item)) {
+          if (copies > 1 && index == 0) {
+            shroom->reverseDirection();
+          }
           shroom->startEmerge();
         } else if (auto *flower = dynamic_cast<FireFlower *>(item)) {
           flower->startEmerge();
@@ -576,9 +707,12 @@ void Level::spawnItemFromBlock(float x, float y, Character *character) {
         }
         entity.release();
         items.push_back(std::unique_ptr<Item>(item));
-        SoundManager::getInstance().playSound("powerupappear");
+        spawnedPowerup = true;
       }
     }
+  }
+  if (spawnedPowerup) {
+    SoundManager::getInstance().playSound("powerupappear");
   }
 }
 
@@ -648,9 +782,19 @@ void Level::onTileCeilingContact(
 
   const sf::FloatRect tileBounds = tile.getBounds();
   if (tile.isQuestionBlock()) {
+    const std::string itemType = getBlockItemType(
+        tileBounds.left, tileBounds.top, character);
     tile.startBump();
     tileMap.hitTile(handle);
-    spawnItemFromBlock(tileBounds.left, tileBounds.top, character);
+    spawnItemFromBlock(
+        tileBounds.left,
+        tileBounds.top,
+        character,
+        powerupSpawnMultiplier);
+    if (itemType == "Coin") {
+      character->notify(
+          GameEvent::coinCollected(Coin::defaultScoreValue()));
+    }
     return;
   }
 

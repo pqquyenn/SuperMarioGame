@@ -36,7 +36,11 @@ InputHandler::InputHandler(
       actionAlsoRuns{actionCanRun},
       bindings{inputBindings} {}
 
-void InputHandler::handleInput(Character& character, float dt) {
+void InputHandler::handleInput(
+    Character& character,
+    float dt,
+    const InputPermissions& permissions
+) {
     if (!character.isActive() || character.isDying()) {
         character.setRunning(false);
         character.setJumpHeld(false);
@@ -48,12 +52,21 @@ void InputHandler::handleInput(Character& character, float dt) {
         return;
     }
 
-    const bool moveLeftHeld = isHeld(bindings.moveLeft);
-    const bool moveRightHeld = isHeld(bindings.moveRight);
-    const bool jumpHeld = isHeld(bindings.jump);
-    const bool crouchHeld = isHeld(bindings.crouch);
-    const bool actionHeld = isHeld(bindings.action);
-    const bool separateRunHeld = isHeld(bindings.run);
+    const bool rawMoveLeftHeld = isHeld(bindings.moveLeft);
+    const bool rawMoveRightHeld = isHeld(bindings.moveRight);
+    const bool rawJumpHeld = isHeld(bindings.jump);
+    const bool rawCrouchHeld = isHeld(bindings.crouch);
+    const bool rawActionHeld = isHeld(bindings.action);
+    const bool rawRunHeld = isHeld(bindings.run);
+
+    const bool moveLeftHeld =
+        permissions.allowMoveLeft && rawMoveLeftHeld;
+    const bool moveRightHeld =
+        permissions.allowMoveRight && rawMoveRightHeld;
+    const bool jumpHeld = permissions.allowJump && rawJumpHeld;
+    const bool crouchHeld = permissions.allowCrouch && rawCrouchHeld;
+    const bool actionHeld = permissions.allowAction && rawActionHeld;
+    const bool separateRunHeld = permissions.allowRun && rawRunHeld;
 
     if (crouchHeld) {
         crawlCommand->execute(character, dt);
@@ -89,8 +102,11 @@ void InputHandler::handleInput(Character& character, float dt) {
         actionCommand->execute(character, dt);
     }
 
-    jumpWasHeld = jumpHeld;
-    actionWasHeld = actionHeld;
+    // Track the physical keys rather than the gated values. Releasing a
+    // gameplay restriction while a button is held must not synthesize a new
+    // jump or action press.
+    jumpWasHeld = rawJumpHeld;
+    actionWasHeld = rawActionHeld;
 }
 
 void InputHandler::setBindings(const InputBindings& inputBindings) {

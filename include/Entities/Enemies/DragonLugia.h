@@ -94,6 +94,10 @@ public:
     void setTexture(const sf::Texture& texture, bool resetRect = false) override;
     void update(float dt) override;
     void updateWithPlayer(float dt, Character* player, const TileMap* tileMap);
+    void updateWithPlayers(
+        float dt,
+        const std::vector<Character*>& players,
+        const TileMap* tileMap);
     void render(sf::RenderWindow& window) const override;
 
     void onStomped() override;

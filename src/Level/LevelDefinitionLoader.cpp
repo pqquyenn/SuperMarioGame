@@ -658,6 +658,9 @@ bool LevelDefinitionLoader::load(
                 portal.activation = PortalActivation::Right;
             } else if (activation == "down") {
                 portal.activation = PortalActivation::Down;
+            } else if (activation == "interact" || activation == "enter" ||
+                       activation == "door") {
+                portal.activation = PortalActivation::Interact;
             } else {
                 addParseError(errors, manifestPath, lineNumber,
                               "unknown portal activation: " + activation);

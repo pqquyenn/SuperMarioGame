@@ -9,7 +9,8 @@
 
 enum class PortalActivation {
     Down,
-    Right
+    Right,
+    Interact
 };
 
 enum class PlatformMotion {
