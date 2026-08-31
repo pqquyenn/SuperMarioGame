@@ -612,18 +612,31 @@ void Level::update(float dt) {
 void Level::render(sf::RenderWindow &window) {
   bgMap.render(window, camera);
 
-  // Render emerging items behind terrain tiles so they appear to rise from inside blocks
+  // --- Behind-terrain pass ---
+  // Entities drawn here are masked by the tilemap: tile pixels (opaque) cover
+  // any overlapping portion so that items rising from blocks and enemies hiding
+  // inside pipes appear to emerge naturally.
+
+  // Emerging items (e.g. mushroom rising out of a question block)
   for (const auto &item : items) {
     if (item && item->isActive() && item->isEmerging()) {
       item->render(window);
     }
   }
 
-  // Terrain is the world backdrop. Draw gameplay entities afterward so they
-  // cannot disappear behind ordinary solid tiles.
+  // Enemies that are partially inside terrain (e.g. PiranhaPlant in a pipe)
+  for (const auto &enemy : enemies) {
+    if (enemy && enemy->isActive() && enemy->shouldRenderBehindTerrain()) {
+      enemy->render(window);
+    }
+  }
+
+  // --- Terrain tilemap (masks everything drawn above) ---
   map.render(window, camera);
 
-  // Render fully emerged/active items in front of terrain tiles
+  // --- In-front-of-terrain pass ---
+
+  // Fully emerged / active items
   for (const auto &item : items) {
     if (item && item->isActive() && !item->isEmerging()) {
       item->render(window);
@@ -637,8 +650,9 @@ void Level::render(sf::RenderWindow &window) {
     }
   }
 
+  // Normal enemies (not behind terrain)
   for (const auto &enemy : enemies) {
-    if (enemy && enemy->isActive()) {
+    if (enemy && enemy->isActive() && !enemy->shouldRenderBehindTerrain()) {
       enemy->render(window);
     }
   }

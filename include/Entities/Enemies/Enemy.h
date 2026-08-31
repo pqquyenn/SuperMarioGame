@@ -40,6 +40,10 @@ public:
   virtual void onFireball();
   virtual void onFellIntoVoid();
   virtual void reverseDirection();
+  // Return true for enemies that are partially inside terrain (e.g. PiranhaPlant
+  // inside a pipe). They are rendered BEFORE the tilemap so the tile pixels
+  // naturally mask the hidden portion.
+  virtual bool shouldRenderBehindTerrain() const { return false; }
   void onWallCollision() override;
 
   int getDirection() const;
