@@ -580,23 +580,12 @@ void Level::update(float dt) {
   for (auto &item : items) {
     if (item && item->isActive()) {
       item->update(dt);
-
-      bool isEthereal = false;
-      if (auto *coin = dynamic_cast<Coin *>(item.get())) {
-        if (coin->isPopping())
-          isEthereal = true;
-      } else if (auto *shroom = dynamic_cast<Mushroom *>(item.get())) {
-        if (shroom->isEmerging())
-          isEthereal = true;
-      } else if (auto *flower = dynamic_cast<FireFlower *>(item.get())) {
-        if (flower->isEmerging())
-          isEthereal = true;
-      } else if (auto *star = dynamic_cast<StarItem *>(item.get())) {
-        if (star->isEmerging())
-          isEthereal = true;
+      if (item->getPosition().y > enemyVoidY) {
+        item->setActive(false);
+        continue;
       }
 
-      if (!isEthereal) {
+      if (!item->shouldSkipTileCollision()) {
         CollisionManager::resolveTileCollisions(*item, map);
       }
     }
@@ -623,12 +612,20 @@ void Level::update(float dt) {
 void Level::render(sf::RenderWindow &window) {
   bgMap.render(window, camera);
 
+  // Render emerging items behind terrain tiles so they appear to rise from inside blocks
+  for (const auto &item : items) {
+    if (item && item->isActive() && item->isEmerging()) {
+      item->render(window);
+    }
+  }
+
   // Terrain is the world backdrop. Draw gameplay entities afterward so they
   // cannot disappear behind ordinary solid tiles.
   map.render(window, camera);
 
+  // Render fully emerged/active items in front of terrain tiles
   for (const auto &item : items) {
-    if (item && item->isActive()) {
+    if (item && item->isActive() && !item->isEmerging()) {
       item->render(window);
     }
   }
@@ -692,6 +689,9 @@ void Level::spawnItemFromBlock(
         coin->startPop();
         items.push_back(std::unique_ptr<Item>(coin));
         SoundManager::getInstance().playSound("coin");
+        if (character) {
+          character->notify(GameEvent::coinCollected(Coin::defaultScoreValue()));
+        }
       }
     } else {
       if (auto *item = dynamic_cast<Item *>(entity.get())) {

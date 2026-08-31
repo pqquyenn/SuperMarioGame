@@ -33,6 +33,6 @@ public:
     bool tryCollect(Character& character) override;
 
     void startEmerge();
-    bool isEmerging() const;
+    bool isEmerging() const override;
     bool shouldSkipTileCollision() const override { return emerging; }
 };
