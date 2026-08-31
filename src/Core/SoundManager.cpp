@@ -2,7 +2,7 @@
 #include "Core/AssetManager.h"
 #include <algorithm>
 #include <iostream>
-
+#include <fstream>
 #include <filesystem>
 
 // === Meyers' Singleton ===
@@ -10,6 +10,10 @@
 SoundManager& SoundManager::getInstance() {
     static SoundManager instance;
     return instance;
+}
+
+SoundManager::SoundManager() {
+    loadVolume();
 }
 
 // === Background Music ===
@@ -64,4 +68,31 @@ void SoundManager::setMasterVolume(float volume) {
         (void)name;
         sound.setVolume(masterVolume);
     }
+    saveVolume();
+}
+
+// === Persistence ===
+
+void SoundManager::saveVolume() {
+    // Tao thu muc assets/state/ neu chua ton tai
+    std::filesystem::path configPath(VOLUME_CONFIG_PATH);
+    if (configPath.has_parent_path()) {
+        std::filesystem::create_directories(configPath.parent_path());
+    }
+
+    std::ofstream file(VOLUME_CONFIG_PATH);
+    if (file.is_open()) {
+        file << masterVolume;
+    }
+}
+
+void SoundManager::loadVolume() {
+    std::ifstream file(VOLUME_CONFIG_PATH);
+    if (file.is_open()) {
+        float savedVolume = 100.f;
+        if (file >> savedVolume) {
+            masterVolume = std::clamp(savedVolume, 0.f, 100.f);
+        }
+    }
+    // Neu file khong ton tai, giu mac dinh masterVolume = 100.f
 }

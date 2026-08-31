@@ -829,11 +829,11 @@ void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
             SoundManager::getInstance().playSound("stomp"); moveSelection(1); break;
         case sf::Keyboard::Left: case sf::Keyboard::A:
             if (page == Page::Settings && selectedIndex == 1) {
-                SoundManager::getInstance().playSound("stomp"); adjustVolume(-10.f);
+                adjustVolume(-10.f); SoundManager::getInstance().playSound("stomp");
             } break;
         case sf::Keyboard::Right: case sf::Keyboard::D:
             if (page == Page::Settings && selectedIndex == 1) {
-                SoundManager::getInstance().playSound("stomp"); adjustVolume(10.f);
+                adjustVolume(10.f); SoundManager::getInstance().playSound("stomp");
             } break;
         case sf::Keyboard::Enter: case sf::Keyboard::Space:
             SoundManager::getInstance().playSound("coin"); activateSelection(window); break;

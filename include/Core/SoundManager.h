@@ -7,7 +7,7 @@
 class SoundManager {
 private:
     // === Meyers' Singleton: constructor private ===
-    SoundManager() = default;
+    SoundManager();
     ~SoundManager() = default;
 
     // === Luu tru am thanh ===
@@ -15,6 +15,8 @@ private:
     std::string currentBgmPath;
     std::map<std::string, sf::Sound> sounds;
     float masterVolume{100.f};
+
+    static constexpr const char* VOLUME_CONFIG_PATH = "assets/state/volume.txt";
 
 public:
     // === Xoa copy & move de dam bao chi co 1 instance duy nhat ===
@@ -37,4 +39,8 @@ public:
 
     void setMasterVolume(float volume);
     float getMasterVolume() const { return masterVolume; }
+
+    // === Persistence ===
+    void saveVolume();
+    void loadVolume();
 };
