@@ -36,6 +36,7 @@ public:
 
   virtual void onStomped() = 0;
   virtual bool canBeStomped() const { return true; }
+  virtual bool bouncesPlayerOnStompAttempt() const { return false; }
   virtual void onFireball();
   virtual void onFellIntoVoid();
   virtual void reverseDirection();

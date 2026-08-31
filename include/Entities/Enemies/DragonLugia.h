@@ -108,6 +108,7 @@ public:
 
     void onStomped() override;
     bool canBeStomped() const override;
+    bool bouncesPlayerOnStompAttempt() const override { return true; }
     void onFireball() override;
 
     sf::FloatRect getBounds() const override;
