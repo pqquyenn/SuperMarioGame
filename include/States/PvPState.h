@@ -37,7 +37,7 @@ private:
 
         PlayerSlot(PlayerId playerId,
                    CharacterChoice choice,
-                   const InputBindings& bindings,
+                   BindingTarget bindingTarget,
                    int startingLives);
     };
 
@@ -72,8 +72,6 @@ private:
     float matchTimeRemaining{0.f};
     float friendlyRespawnTimer{0.f};
 
-    static InputBindings makePlayerOneBindings();
-    static InputBindings makePlayerTwoBindings();
     void createPlayers();
     sf::Vector2f findAnchor(const std::string& id,
                             sf::Vector2f fallback) const;

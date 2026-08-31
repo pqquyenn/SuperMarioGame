@@ -112,6 +112,33 @@ set_tests_properties(
     PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+add_executable(key_binding_tests
+    tests/key_binding_tests.cpp
+    src/Input/KeyBinding.cpp
+    src/Input/KeyBindingService.cpp
+)
+
+target_include_directories(key_binding_tests
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+if(TARGET SFML::Window)
+    target_link_libraries(key_binding_tests PRIVATE SFML::Window SFML::System)
+elseif(TARGET sfml-window)
+    target_link_libraries(key_binding_tests PRIVATE sfml-window sfml-system)
+endif()
+
+add_test(
+    NAME key_binding_tests
+    COMMAND key_binding_tests
+)
+set_tests_properties(
+    key_binding_tests
+    PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 set(SOLID03_RUNTIME_SOURCES ${SOURCES})
 list(FILTER SOLID03_RUNTIME_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 

@@ -4,28 +4,28 @@
 #include "Commands/FireCommand.h"
 #include "Commands/CrawlCommand.h"
 #include "Entities/Character.h"
+#include "Input/KeyBindingService.h"
 #include <SFML/Window/Keyboard.hpp>
 
 namespace {
-bool isHeld(const KeyBinding& binding) {
-    const bool primaryHeld =
-        binding.primary != sf::Keyboard::Unknown &&
-        sf::Keyboard::isKeyPressed(binding.primary);
-
-    const bool secondaryHeld =
-        binding.secondary != sf::Keyboard::Unknown &&
-        sf::Keyboard::isKeyPressed(binding.secondary);
-
-    const bool tertiaryHeld =
-        binding.tertiary != sf::Keyboard::Unknown &&
-        sf::Keyboard::isKeyPressed(binding.tertiary);
-
-    return primaryHeld || secondaryHeld || tertiaryHeld;
+bool isKeyHeld(sf::Keyboard::Key key) {
+    return key != sf::Keyboard::Unknown &&
+           sf::Keyboard::isKeyPressed(key);
 }
 }
 
 InputHandler::InputHandler(
-    const InputBindings& inputBindings,
+    BindingTarget target,
+    bool actionCanRun
+)
+    : InputHandler(
+          target,
+          KeyBindingService::getInstance(),
+          actionCanRun) {}
+
+InputHandler::InputHandler(
+    BindingTarget target,
+    const IKeyBindingProvider& provider,
     bool actionCanRun
 )
     : jumpCommand{std::make_unique<JumpCommand>()},
@@ -34,30 +34,59 @@ InputHandler::InputHandler(
       actionCommand{std::make_unique<FireCommand>()},
       crawlCommand{std::make_unique<CrawlCommand>()},
       actionAlsoRuns{actionCanRun},
-      bindings{inputBindings} {}
+      bindingTarget{target},
+      bindingProvider{&provider},
+      observedJumpKey{keyFor(InputAction::Jump)},
+      observedActionKey{keyFor(InputAction::Action)} {}
+
+sf::Keyboard::Key InputHandler::keyFor(InputAction action) const {
+    return bindingProvider
+        ? bindingProvider->getKey(bindingTarget, action)
+        : sf::Keyboard::Unknown;
+}
+
+bool InputHandler::held(InputAction action) const {
+    return isKeyHeld(keyFor(action));
+}
+
+void InputHandler::synchronizeEdgeBindings() {
+    const sf::Keyboard::Key jumpKey = keyFor(InputAction::Jump);
+    if (jumpKey != observedJumpKey) {
+        observedJumpKey = jumpKey;
+        jumpWasHeld = isKeyHeld(jumpKey);
+    }
+
+    const sf::Keyboard::Key actionKey = keyFor(InputAction::Action);
+    if (actionKey != observedActionKey) {
+        observedActionKey = actionKey;
+        actionWasHeld = isKeyHeld(actionKey);
+    }
+}
 
 void InputHandler::handleInput(
     Character& character,
     float dt,
     const InputPermissions& permissions
 ) {
+    synchronizeEdgeBindings();
+
     if (!character.isActive() || character.isDying()) {
         character.setRunning(false);
         character.setJumpHeld(false);
         crawlCommand->release(character);
         // Preserve physical key history so held buttons through death or
         // respawn are not mistaken for new presses on the first active frame.
-        jumpWasHeld = isHeld(bindings.jump);
-        actionWasHeld = isHeld(bindings.action);
+        jumpWasHeld = held(InputAction::Jump);
+        actionWasHeld = held(InputAction::Action);
         return;
     }
 
-    const bool rawMoveLeftHeld = isHeld(bindings.moveLeft);
-    const bool rawMoveRightHeld = isHeld(bindings.moveRight);
-    const bool rawJumpHeld = isHeld(bindings.jump);
-    const bool rawCrouchHeld = isHeld(bindings.crouch);
-    const bool rawActionHeld = isHeld(bindings.action);
-    const bool rawRunHeld = isHeld(bindings.run);
+    const bool rawMoveLeftHeld = held(InputAction::MoveLeft);
+    const bool rawMoveRightHeld = held(InputAction::MoveRight);
+    const bool rawJumpHeld = held(InputAction::Jump);
+    const bool rawCrouchHeld = held(InputAction::Crouch);
+    const bool rawActionHeld = held(InputAction::Action);
+    const bool rawRunHeld = held(InputAction::Run);
 
     const bool moveLeftHeld =
         permissions.allowMoveLeft && rawMoveLeftHeld;
@@ -109,12 +138,12 @@ void InputHandler::handleInput(
     actionWasHeld = rawActionHeld;
 }
 
-void InputHandler::setBindings(const InputBindings& inputBindings) {
-    bindings = inputBindings;
-    jumpWasHeld = false;
-    actionWasHeld = false;
+bool InputHandler::isHeld(InputAction action) const {
+    return held(action);
 }
 
-const InputBindings& InputHandler::getBindings() const {
-    return bindings;
+bool InputHandler::matches(
+    InputAction action,
+    sf::Keyboard::Key key) const {
+    return keyFor(action) == key;
 }

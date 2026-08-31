@@ -9,6 +9,7 @@
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
 #include "Factories/EntityFactory.h"
+#include "Input/KeyBindingService.h"
 #include "Physics/CollisionManager.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerStates/FireState.h"
@@ -37,10 +38,6 @@ constexpr float StompBounceVelocity = -250.f;
 constexpr float ContactPushVelocity = 135.f;
 constexpr float UiWidth = 800.f;
 constexpr float UiHeight = 600.f;
-
-KeyBinding only(sf::Keyboard::Key key) {
-    return KeyBinding{key, sf::Keyboard::Unknown, sf::Keyboard::Unknown};
-}
 
 float bottom(const sf::FloatRect& bounds) {
     return bounds.top + bounds.height;
@@ -72,34 +69,12 @@ std::unique_ptr<Character> makeCharacter(CharacterChoice choice) {
 PvPState::PlayerSlot::PlayerSlot(
     PlayerId playerId,
     CharacterChoice choice,
-    const InputBindings& bindings,
+    BindingTarget bindingTarget,
     int startingLives
 )
     : characterChoice{choice},
-      input{bindings, false},
+      input{bindingTarget, false},
       session{playerId, startingLives} {}
-
-InputBindings PvPState::makePlayerOneBindings() {
-    InputBindings bindings;
-    bindings.moveLeft = only(sf::Keyboard::A);
-    bindings.moveRight = only(sf::Keyboard::D);
-    bindings.jump = only(sf::Keyboard::W);
-    bindings.crouch = only(sf::Keyboard::S);
-    bindings.action = only(sf::Keyboard::Z);
-    bindings.run = only(sf::Keyboard::LShift);
-    return bindings;
-}
-
-InputBindings PvPState::makePlayerTwoBindings() {
-    InputBindings bindings;
-    bindings.moveLeft = only(sf::Keyboard::Left);
-    bindings.moveRight = only(sf::Keyboard::Right);
-    bindings.jump = only(sf::Keyboard::Up);
-    bindings.crouch = only(sf::Keyboard::Down);
-    bindings.action = only(sf::Keyboard::J);
-    bindings.run = only(sf::Keyboard::RShift);
-    return bindings;
-}
 
 PvPState::PvPState(
     PvPMatchType type,
@@ -114,9 +89,9 @@ PvPState::PvPState(
                  ? "pvp/small-arena.level"
                  : "pvp/super-arena.level")
           : std::move(mapPath)},
-      playerOne{PlayerId::One, playerOneChoice, makePlayerOneBindings(),
+      playerOne{PlayerId::One, playerOneChoice, BindingTarget::PvPPlayerOne,
                 ruleset.startingLives},
-      playerTwo{PlayerId::Two, playerTwoChoice, makePlayerTwoBindings(),
+      playerTwo{PlayerId::Two, playerTwoChoice, BindingTarget::PvPPlayerTwo,
                 ruleset.startingLives},
       randomEngine{std::random_device{}()} {}
 
@@ -854,11 +829,27 @@ void PvPState::renderHud(sf::RenderWindow& window) {
     controlsBackground.setPosition(0.f, UiHeight - 28.f);
     controlsBackground.setFillColor(sf::Color{0, 0, 0, 175});
     window.draw(controlsBackground);
-    sf::Text controls{
-        "P1: A/D MOVE  W JUMP  S CRAWL  LSHIFT RUN  Z FIRE"
-        "     P2: ARROWS MOVE/JUMP/CRAWL  RSHIFT RUN  J FIRE",
-        font,
-        7};
+    const auto& bindings = KeyBindingService::getInstance();
+    auto controlsFor = [&bindings](BindingTarget target,
+                                   const char* player) {
+        return std::string{player} + ": " +
+            keyDisplayName(bindings.getKey(target, InputAction::MoveLeft)) +
+            "/" +
+            keyDisplayName(bindings.getKey(target, InputAction::MoveRight)) +
+            " MOVE  " +
+            keyDisplayName(bindings.getKey(target, InputAction::Jump)) +
+            " JUMP  " +
+            keyDisplayName(bindings.getKey(target, InputAction::Crouch)) +
+            " CRAWL  " +
+            keyDisplayName(bindings.getKey(target, InputAction::Run)) +
+            " RUN  " +
+            keyDisplayName(bindings.getKey(target, InputAction::Action)) +
+            " FIRE";
+    };
+    const std::string controlsLabel =
+        controlsFor(BindingTarget::PvPPlayerOne, "P1") + "     " +
+        controlsFor(BindingTarget::PvPPlayerTwo, "P2");
+    sf::Text controls{controlsLabel, font, 7};
     centerText(controls, UiWidth * 0.5f, UiHeight - 14.f);
     window.draw(controls);
 

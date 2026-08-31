@@ -44,17 +44,6 @@ constexpr float TeamWipeDelay = 1.4f;
 constexpr float FlagJoinWindow = 2.f;
 constexpr float BossFinishDelay = 1.2f;
 
-KeyBinding only(sf::Keyboard::Key key) {
-    return {key, sf::Keyboard::Unknown, sf::Keyboard::Unknown};
-}
-
-KeyBinding keys(
-    sf::Keyboard::Key first,
-    sf::Keyboard::Key second = sf::Keyboard::Unknown,
-    sf::Keyboard::Key third = sf::Keyboard::Unknown) {
-    return {first, second, third};
-}
-
 const char* characterName(CharacterChoice choice) {
     return choice == CharacterChoice::Luigi ? "LUIGI" : "MARIO";
 }
@@ -120,49 +109,24 @@ void DuoState::PlayerEvents::onNotify(const GameEvent& event) {
 DuoState::PlayerSlot::PlayerSlot(
     DuoPlayerId playerId,
     CharacterChoice choice,
-    const InputBindings& bindings,
+    BindingTarget bindingTarget,
     int startingLives)
     : id{playerId},
       characterChoice{choice},
-      input{bindings},
+      input{bindingTarget},
       events{std::max(1, startingLives)} {}
-
-InputBindings DuoState::makePlayerOneBindings() {
-    InputBindings bindings;
-    bindings.moveLeft = only(sf::Keyboard::A);
-    bindings.moveRight = only(sf::Keyboard::D);
-    bindings.jump = keys(sf::Keyboard::W, sf::Keyboard::Space);
-    bindings.crouch = only(sf::Keyboard::S);
-    bindings.action = keys(sf::Keyboard::Z, sf::Keyboard::Q);
-    bindings.run = only(sf::Keyboard::LShift);
-    return bindings;
-}
-
-InputBindings DuoState::makePlayerTwoBindings() {
-    InputBindings bindings;
-    bindings.moveLeft = only(sf::Keyboard::Left);
-    bindings.moveRight = only(sf::Keyboard::Right);
-    bindings.jump = only(sf::Keyboard::Up);
-    bindings.crouch = only(sf::Keyboard::Down);
-    bindings.action = keys(sf::Keyboard::Numpad1, sf::Keyboard::Num1);
-    bindings.run = keys(
-        sf::Keyboard::Numpad0,
-        sf::Keyboard::Num0,
-        sf::Keyboard::Enter);
-    return bindings;
-}
 
 DuoState::DuoState(DuoSessionConfig config)
     : session{std::move(config)},
       playerOne{
           DuoPlayerId::One,
           session.playerOneChoice,
-          makePlayerOneBindings(),
+          BindingTarget::DuoPlayerOne,
           session.startingLives},
       playerTwo{
           DuoPlayerId::Two,
           session.playerTwoChoice,
-          makePlayerTwoBindings(),
+          BindingTarget::DuoPlayerTwo,
           session.startingLives} {
     if (session.mapPath.empty()) {
         session.mapPath = "1.1/1-1.level";
@@ -311,29 +275,15 @@ void DuoState::handleInput(sf::Event& event, sf::RenderWindow&) {
         return;
     }
 
-    switch (event.key.code) {
-        case sf::Keyboard::S:
-            startPortal(playerOne, PortalActivation::Down);
-            break;
-        case sf::Keyboard::Down:
-            startPortal(playerTwo, PortalActivation::Down);
-            break;
-        case sf::Keyboard::D:
-            startPortal(playerOne, PortalActivation::Right);
-            break;
-        case sf::Keyboard::Right:
-            startPortal(playerTwo, PortalActivation::Right);
-            break;
-        case sf::Keyboard::E:
-            startPortal(playerOne, PortalActivation::Interact);
-            break;
-        case sf::Keyboard::Enter:
-            if (!event.key.alt) {
-                startPortal(playerTwo, PortalActivation::Interact);
-            }
-            break;
-        default:
-            break;
+    const sf::Keyboard::Key key = event.key.code;
+    if (playerOne.input.matches(InputAction::Crouch, key)) {
+        startPortal(playerOne, PortalActivation::Down);
+    } else if (playerTwo.input.matches(InputAction::Crouch, key)) {
+        startPortal(playerTwo, PortalActivation::Down);
+    } else if (playerOne.input.matches(InputAction::MoveRight, key)) {
+        startPortal(playerOne, PortalActivation::Right);
+    } else if (playerTwo.input.matches(InputAction::MoveRight, key)) {
+        startPortal(playerTwo, PortalActivation::Right);
     }
 }
 
@@ -871,19 +821,19 @@ void DuoState::checkHeldPortalInput() {
         teamWipe) {
         return;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) &&
+    if (playerOne.input.isHeld(InputAction::Crouch) &&
         startPortal(playerOne, PortalActivation::Down)) {
         return;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) &&
+    if (playerTwo.input.isHeld(InputAction::Crouch) &&
         startPortal(playerTwo, PortalActivation::Down)) {
         return;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D) &&
+    if (playerOne.input.isHeld(InputAction::MoveRight) &&
         startPortal(playerOne, PortalActivation::Right)) {
         return;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+    if (playerTwo.input.isHeld(InputAction::MoveRight)) {
         startPortal(playerTwo, PortalActivation::Right);
     }
 }

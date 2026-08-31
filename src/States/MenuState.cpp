@@ -4,6 +4,7 @@
 #include "Core/GameSettings.h"
 #include "Core/SoundManager.h"
 #include "Core/AssetManager.h"
+#include "Input/KeyBindingService.h"
 #include "States/GameStateManager.h"
 #include "States/PlayState.h"
 #include "States/PvPState.h"
@@ -110,17 +111,10 @@ void MenuState::onEnter() {
     selectorText.setOutlineThickness(2.f);
 
     keyBindingsText.setFont(cleanFont);
-    keyBindingsText.setCharacterSize(15);
+    keyBindingsText.setCharacterSize(10);
     keyBindingsText.setFillColor(sf::Color::White);
     keyBindingsText.setLineSpacing(1.4f);
-    keyBindingsText.setString(
-        "SOLO          : WASD / ARROWS, SPACE, Z, SHIFT\n\n"
-        "DUO P1        : A/D MOVE, W/SPACE JUMP, S CROUCH\n"
-        "                Z ACTION, LEFT SHIFT RUN\n"
-        "DUO P2        : ARROWS MOVE/JUMP/CROUCH\n"
-        "                NUM1 ACTION, NUM0/ENTER RUN\n\n"
-        "[KEY REMAPPING COMING SOON]");
-    keyBindingsText.setPosition(145.f, 245.f);
+    keyBindingsText.setPosition(170.f, 225.f);
 
     achievementsText.setFont(cleanFont);
     achievementsText.setCharacterSize(14);
@@ -398,6 +392,10 @@ void MenuState::launchPendingDuoGame() {
 }
 
 void MenuState::setPage(Page newPage) {
+    if (newPage != Page::KeyBindings) {
+        bindingCaptureActive = false;
+        bindingStatusMessage.clear();
+    }
     page = newPage;
     selectedIndex = 0;
     showSelector = true;
@@ -508,10 +506,23 @@ void MenuState::rebuildEntries() {
             entries = {{"KEY BINDINGS"}, {"MASTER VOLUME  < " + std::to_string(volume) + "% >"}, {"BACK"}};
             break;
         }
-        case Page::KeyBindings:
+        case Page::KeyBindings: {
             pageTitleText.setString("KEY BINDINGS");
-            entries = {{"BACK"}};
+            const auto& bindings = KeyBindingService::getInstance();
+            keyBindingsText.setString(
+                std::string{"PROFILE:  < "} + bindingTargetName(bindingTarget) +
+                " >\nLEFT / RIGHT: CHANGE PROFILE");
+            for (InputAction action : allInputActions()) {
+                entries.push_back({
+                    inputActionName(action) + std::string{"    < "} +
+                    keyDisplayName(bindings.getKey(bindingTarget, action)) +
+                    " >"});
+            }
+            entries.push_back({"RESET PROFILE DEFAULT"});
+            entries.push_back({"RESET ALL DEFAULTS"});
+            entries.push_back({"BACK"});
             break;
+        }
     }
 
     const sf::Font& retroFont = fontRetroLoaded ? fontRetro : fontClean;
@@ -609,10 +620,10 @@ void MenuState::updateVisuals() {
 
     centerText(pageTitleText, UiWidth / 2.f, 203.f);
     for (std::size_t i = 0; i < entryTexts.size(); ++i) {
-        const float firstEntryY =
-            page == Page::KeyBindings ? 440.f :
+        const float firstEntryY = page == Page::KeyBindings ? 272.f :
             page == Page::Achievements ? 490.f : EntryStartY;
-        const float y = firstEntryY + static_cast<float>(i) * EntrySpacing;
+        const float spacing = page == Page::KeyBindings ? 23.f : EntrySpacing;
+        const float y = firstEntryY + static_cast<float>(i) * spacing;
         centerText(entryTexts[i], UiWidth / 2.f, y);
         if (!entries[i].enabled) {
             entryTexts[i].setFillColor(TextDisabled);
@@ -622,15 +633,23 @@ void MenuState::updateVisuals() {
     }
     if (!entryTexts.empty() && selectedIndex >= 0 && selectedIndex < static_cast<int>(entryTexts.size())) {
         const sf::FloatRect bounds = entryTexts[selectedIndex].getGlobalBounds();
+        selectionGlow.setSize({460.f, page == Page::KeyBindings ? 20.f : 34.f});
         selectorText.setPosition(bounds.left - 24.f, bounds.top + bounds.height / 2.f - 10.f);
-        selectionGlow.setPosition(UiWidth / 2.f - 230.f, bounds.top + bounds.height / 2.f - 16.f);
+        const float glowOffset = page == Page::KeyBindings ? 9.f : 16.f;
+        selectionGlow.setPosition(UiWidth / 2.f - 230.f,
+                                  bounds.top + bounds.height / 2.f - glowOffset);
     }
     if (page == Page::Settings && selectedIndex == 1) {
         statusText.setString("LEFT / RIGHT: ADJUST VOLUME");
+    } else if (page == Page::KeyBindings) {
+        statusText.setString(bindingStatusMessage.empty()
+            ? "ENTER: REBIND     ESC: BACK"
+            : bindingStatusMessage);
     } else {
         statusText.setString("");
     }
-    centerText(statusText, UiWidth / 2.f, 485.f);
+    centerText(statusText, UiWidth / 2.f,
+               page == Page::KeyBindings ? 515.f : 485.f);
 }
 
 void MenuState::activateSelection(sf::RenderWindow& window) {
@@ -744,7 +763,35 @@ void MenuState::activateSelection(sf::RenderWindow& window) {
             else setPage(Page::GameMode);
             break;
         case Page::KeyBindings:
-            setPage(Page::Settings);
+            if (selectedIndex < static_cast<int>(InputActionCount)) {
+                beginBindingCapture();
+            } else if (selectedIndex == static_cast<int>(InputActionCount)) {
+                const BindingUpdateResult result =
+                    KeyBindingService::getInstance().resetProfile(bindingTarget);
+                if (result.status == BindingUpdateStatus::Applied) {
+                    bindingStatusMessage = "PROFILE RESTORED TO DEFAULT";
+                    rebuildEntries();
+                } else {
+                    bindingStatusMessage = result.issues.empty()
+                        ? "COULD NOT RESET PROFILE"
+                        : result.issues.front().message;
+                }
+                updateVisuals();
+            } else if (selectedIndex == static_cast<int>(InputActionCount) + 1) {
+                const BindingUpdateResult result =
+                    KeyBindingService::getInstance().resetAll();
+                if (result.status == BindingUpdateStatus::Applied) {
+                    bindingStatusMessage = "ALL PROFILES RESTORED TO DEFAULT";
+                    rebuildEntries();
+                } else {
+                    bindingStatusMessage = result.issues.empty()
+                        ? "COULD NOT RESET BINDINGS"
+                        : result.issues.front().message;
+                }
+                updateVisuals();
+            } else {
+                setPage(Page::Settings);
+            }
             break;
     }
 }
@@ -754,6 +801,53 @@ void MenuState::adjustVolume(float delta) {
     sound.setMasterVolume(sound.getMasterVolume() + delta);
     rebuildEntries();
     selectedIndex = 1;
+    updateVisuals();
+}
+
+void MenuState::cycleBindingTarget(int direction) {
+    const int count = static_cast<int>(BindingTargetCount);
+    const int current = static_cast<int>(bindingTarget);
+    bindingTarget = static_cast<BindingTarget>(
+        (current + direction + count) % count);
+    bindingStatusMessage.clear();
+    const int previousSelection = selectedIndex;
+    rebuildEntries();
+    selectedIndex = std::min(previousSelection,
+                             static_cast<int>(entries.size()) - 1);
+    updateVisuals();
+}
+
+void MenuState::beginBindingCapture() {
+    if (selectedIndex < 0 ||
+        selectedIndex >= static_cast<int>(InputActionCount)) {
+        return;
+    }
+    bindingCaptureActive = true;
+    const InputAction action = allInputActions()[selectedIndex];
+    bindingStatusMessage =
+        std::string{"PRESS A KEY FOR "} + inputActionName(action) +
+        " (ESC: CANCEL)";
+    updateVisuals();
+}
+
+void MenuState::captureBindingKey(sf::Keyboard::Key key) {
+    const InputAction action = allInputActions()[selectedIndex];
+    const BindingUpdateResult result = KeyBindingService::getInstance().tryUpdate(
+        {bindingTarget, action, key});
+    if (result.status == BindingUpdateStatus::Applied ||
+        result.status == BindingUpdateStatus::Unchanged) {
+        bindingCaptureActive = false;
+        bindingStatusMessage = result.status == BindingUpdateStatus::Applied
+            ? std::string{inputActionName(action)} + " SET TO " +
+                  keyDisplayName(key)
+            : "KEY IS ALREADY ASSIGNED";
+        rebuildEntries();
+    } else if (!result.issues.empty()) {
+        bindingStatusMessage = result.issues.front().message +
+            " (ESC: CANCEL)";
+    } else {
+        bindingStatusMessage = "COULD NOT SAVE KEY BINDING (ESC: CANCEL)";
+    }
     updateVisuals();
 }
 
@@ -800,6 +894,49 @@ void MenuState::handleInput(sf::Event& event, sf::RenderWindow& window) {
         return;
     }
     if (event.type != sf::Event::KeyPressed) return;
+
+    if (page == Page::KeyBindings) {
+        if (bindingCaptureActive) {
+            if (event.key.code == sf::Keyboard::Escape) {
+                bindingCaptureActive = false;
+                bindingStatusMessage = "REBIND CANCELLED";
+                updateVisuals();
+            } else {
+                captureBindingKey(event.key.code);
+            }
+            return;
+        }
+
+        switch (event.key.code) {
+            case sf::Keyboard::Up: case sf::Keyboard::W:
+                SoundManager::getInstance().playSound("stomp");
+                moveSelection(-1);
+                break;
+            case sf::Keyboard::Down: case sf::Keyboard::S:
+                SoundManager::getInstance().playSound("stomp");
+                moveSelection(1);
+                break;
+            case sf::Keyboard::Left: case sf::Keyboard::A:
+                SoundManager::getInstance().playSound("stomp");
+                cycleBindingTarget(-1);
+                break;
+            case sf::Keyboard::Right: case sf::Keyboard::D:
+                SoundManager::getInstance().playSound("stomp");
+                cycleBindingTarget(1);
+                break;
+            case sf::Keyboard::Enter: case sf::Keyboard::Space:
+                SoundManager::getInstance().playSound("coin");
+                activateSelection(window);
+                break;
+            case sf::Keyboard::Escape:
+                SoundManager::getInstance().playSound("pipe");
+                goBack();
+                break;
+            default:
+                break;
+        }
+        return;
+    }
 
     if (isCharacterSelectionPage()) {
         if (isCharacterConfirming) return;

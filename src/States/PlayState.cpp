@@ -134,25 +134,17 @@ void PlayState::onExit() {
 
 void PlayState::handleInput(sf::Event &event, sf::RenderWindow &window) {
   if (event.type == sf::Event::KeyPressed) {
-    if ((event.key.code == sf::Keyboard::Down ||
-         event.key.code == sf::Keyboard::S) &&
+    if (inputHandler.matches(InputAction::Crouch, event.key.code) &&
         player &&
             level.tryActivatePortalForInput(*player, PortalActivation::Down)) {
       return;
-    } else if ((event.key.code == sf::Keyboard::Right ||
-                event.key.code == sf::Keyboard::D) &&
+    } else if (inputHandler.matches(
+                   InputAction::MoveRight,
+                   event.key.code) &&
                player &&
                level.tryActivatePortalForInput(
                    *player, PortalActivation::Right)) {
       return;
-    } else if ((event.key.code == sf::Keyboard::Enter ||
-                event.key.code == sf::Keyboard::Return ||
-                event.key.code == sf::Keyboard::E) &&
-               player) {
-      if (level.tryActivatePortalForInput(*player, PortalActivation::Down) ||
-          level.tryActivatePortalForInput(*player, PortalActivation::Right)) {
-        return;
-      }
     } else if (event.key.code == sf::Keyboard::T) {
       adminDebugView.toggle();
       std::cout << "[AdminDebugView] "
@@ -341,15 +333,14 @@ void PlayState::update(float dt) {
       CollisionManager::tryStandUp(*player, level.getTileMap());
       adminDebugView.updateMovementTrail(*player, dt);
 
-      // Kiem tra vao ong portal lien tuc khi giu Down / S / Crouch hoac Right / D
+      // Keep portal activation aligned with the active Solo profile while a
+      // direction is held.
       if (player && player->isActive() && !player->isDying()) {
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ||
-            sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
+        if (inputHandler.isHeld(InputAction::Crouch) ||
             player->isCrouching()) {
           level.tryActivatePortalForInput(*player, PortalActivation::Down);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) ||
-            sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
+        if (inputHandler.isHeld(InputAction::MoveRight) ||
             player->getVelocity().x > 0.f) {
           level.tryActivatePortalForInput(*player, PortalActivation::Right);
         }
