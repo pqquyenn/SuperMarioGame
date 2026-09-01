@@ -28,6 +28,9 @@ public:
         view.zoom(factor);
     }
 
+    void setViewport(const sf::FloatRect& viewport) {
+        view.setViewport(viewport);
+    }
 
     void setCenter(float x, float y) {
         float halfW = view.getSize().x / 2.f;
@@ -69,6 +72,6 @@ public:
     sf::FloatRect getViewBounds() const {
         sf::Vector2f c = view.getCenter();
         sf::Vector2f s = view.getSize();
-        return sf::FloatRect(c.x - s.x * 0.5f, c.y - s.y * 0.5f, s.x, s.y);
+        return sf::FloatRect({c.x - s.x * 0.5f, c.y - s.y * 0.5f}, s);
     }
 };

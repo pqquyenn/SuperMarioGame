@@ -1,25 +1,21 @@
 #pragma once
 
 #include "Commands/Command.h"
+#include "Commands/CrawlCommand.h"
+#include "Input/KeyBinding.h"
 #include <SFML/Window/Keyboard.hpp>
 #include <memory>
 
-struct KeyBinding {
-    sf::Keyboard::Key primary{sf::Keyboard::Unknown};
-    sf::Keyboard::Key secondary{sf::Keyboard::Unknown};
-    sf::Keyboard::Key tertiary{sf::Keyboard::Unknown};
-};
-
-struct InputBindings {
-    KeyBinding moveLeft{sf::Keyboard::Left, sf::Keyboard::A};
-    KeyBinding moveRight{sf::Keyboard::Right, sf::Keyboard::D};
-    KeyBinding jump{
-        sf::Keyboard::Space,
-        sf::Keyboard::W,
-        sf::Keyboard::Up
-    };
-    KeyBinding action{sf::Keyboard::Z, sf::Keyboard::J};
-    KeyBinding run{sf::Keyboard::LShift, sf::Keyboard::RShift};
+// A gameplay ruleset can temporarily suppress individual actions without
+// changing the configured keys. Duo mode uses the horizontal flags for its
+// shared-camera tether; existing Solo and PvP callers receive full access.
+struct InputPermissions {
+    bool allowMoveLeft{true};
+    bool allowMoveRight{true};
+    bool allowJump{true};
+    bool allowCrouch{true};
+    bool allowAction{true};
+    bool allowRun{true};
 };
 
 class InputHandler {
@@ -28,16 +24,37 @@ private:
     std::unique_ptr<Command> moveLeftCommand;
     std::unique_ptr<Command> moveRightCommand;
     std::unique_ptr<Command> actionCommand;
+    std::unique_ptr<CrawlCommand> crawlCommand;
 
+    bool jumpWasHeld{false};
     bool actionWasHeld{false};
-    InputBindings bindings;
+    bool actionAlsoRuns{true};
+    BindingTarget bindingTarget{BindingTarget::Solo};
+    const IKeyBindingProvider* bindingProvider{nullptr};
+    sf::Keyboard::Key observedJumpKey{sf::Keyboard::Unknown};
+    sf::Keyboard::Key observedActionKey{sf::Keyboard::Unknown};
+
+    sf::Keyboard::Key keyFor(InputAction action) const;
+    bool held(InputAction action) const;
+    void synchronizeEdgeBindings();
 
 public:
     explicit InputHandler(
-        const InputBindings& inputBindings = InputBindings{}
+        BindingTarget target = BindingTarget::Solo,
+        bool actionCanRun = true
+    );
+    InputHandler(
+        BindingTarget target,
+        const IKeyBindingProvider& provider,
+        bool actionCanRun = true
     );
 
-    void handleInput(Character& character, float dt);
-    void setBindings(const InputBindings& inputBindings);
-    const InputBindings& getBindings() const;
+    void handleInput(
+        Character& character,
+        float dt,
+        const InputPermissions& permissions = InputPermissions{}
+    );
+    bool isHeld(InputAction action) const;
+    bool matches(InputAction action, sf::Keyboard::Key key) const;
+    BindingTarget getBindingTarget() const { return bindingTarget; }
 };

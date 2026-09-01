@@ -1,4 +1,7 @@
 #include "Core/Game.h"
+#include "Core/AssetManager.h"
+#include "Factories/DefaultEntityRegistration.h"
+#include "Factories/EntityFactory.h"
 #include "States/MenuState.h"
 #include <iostream>
 #include <thread>   // std::this_thread::sleep_for (dung cho manual FPS capping)
@@ -80,7 +83,10 @@ void Game::render() {
 
 // === Constructor ===
 
-Game::Game() : accumulator(0.0f) {
+Game::Game()
+    : entityAssetProvider(AssetManager::getInstance()), accumulator(0.0f) {
+    registerDefaultEntityTypes(
+        EntityFactory::getInstance(), entityAssetProvider);
     initWindow();
     initStates();
 }
@@ -101,7 +107,18 @@ void Game::run() {
         }
 
         // 3. Xu ly pending state transitions tu frame truoc
+        const bool stateChanged = stateManager.hasPendingTransition();
         stateManager.processPendingActions();
+
+        // State initialization may load maps, textures, fonts, and entities.
+        // That work is not gameplay time. In Debug it can be long enough for
+        // one variable-dt physics update to move a newly spawned character
+        // completely through the floor before collision resolution runs.
+        if (stateChanged) {
+            dt = 0.f;
+            accumulator = 0.f;
+            clock.restart();
+        }
 
         // 4. Xu ly input/event
         processEvents();

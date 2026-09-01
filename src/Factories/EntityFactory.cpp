@@ -1,50 +1,6 @@
 #include "Factories/EntityFactory.h"
 #include "Entities/Entity.h"
-#include "Entities/Enemies/Goomba.h"
-#include "Entities/Enemies/Koopa.h"
-#include "Entities/Enemies/PiranhaPlant.h"
-#include "Entities/Items/Coin.h"
-#include "Entities/Items/Mushroom.h"
-#include "Entities/Items/FireFlower.h"
-#include "Core/AssetManager.h"
 
-void EntityFactory::registerDefaultEntities() {
-    static bool initialized = false;
-    if (initialized) return;
-
-    registerType("Goomba", [](const sf::Vector2f& pos) {
-        auto entity = std::make_unique<Goomba>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("Goomba"));
-        return entity;
-    });
-    registerType("Koopa", [](const sf::Vector2f& pos) {
-        auto entity = std::make_unique<Koopa>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("Koopa"));
-        return entity;
-    });
-    registerType("PiranhaPlant", [](const sf::Vector2f& pos) {
-        auto entity = std::make_unique<PiranhaPlant>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("PiranhaPlant"));
-        return entity;
-    });
-    registerType("Coin", [](const sf::Vector2f& pos) {
-        auto entity = std::make_unique<Coin>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("Coin"));
-        return entity;
-    });
-    registerType("Mushroom", [](const sf::Vector2f& pos) {
-        auto entity = std::make_unique<Mushroom>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("Mushroom"));
-        return entity;
-    });
-    registerType("FireFlower", [](const sf::Vector2f& pos) {
-        auto entity = std::make_unique<FireFlower>(pos.x, pos.y);
-        entity->setTexture(AssetManager::getInstance().getTexture("FireFlower"));
-        return entity;
-    });
-
-    initialized = true;
-}
 EntityFactory& EntityFactory::getInstance() {
     static EntityFactory instance;
     return instance;

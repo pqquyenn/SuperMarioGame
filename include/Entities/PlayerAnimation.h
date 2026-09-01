@@ -11,7 +11,9 @@ enum class PlayerMotion {
     Running,
     Jumping,
     Sliding,
-    Dead
+    Crouching,
+    Dead,
+    Shooting
 };
 
 struct PlayerAnimationSet {
@@ -19,7 +21,9 @@ struct PlayerAnimationSet {
     AnimationClip running;
     AnimationClip jumping;
     AnimationClip sliding;
+    AnimationClip crouching;
     AnimationClip dead;
+    AnimationClip shooting;
 
     const AnimationClip* findClip(PlayerMotion motion) const;
 };
@@ -42,10 +46,13 @@ public:
     ) const;
 };
 
-// Builds a profile for the current 403x266 PlayerSpriteSheet.png. Each player
-// supplies its own normal Small/Big row; Fire uses the shared Fire row.
+// Builds a profile for the current PlayerSpriteSheet.png. Small/Super rows are
+// parameterised per character, Fire uses the shared 7-frame strip at (170,132).
 PlayerAnimationProfile makeClassicPlayerAnimationProfile(
     int normalSmallRowY,
     int normalPoweredRowY,
     int firePoweredRowY
 );
+
+// Builds the animation profile for Luigi's rows in PlayerSpriteSheet.png.
+PlayerAnimationProfile makeLuigiAnimationProfile();

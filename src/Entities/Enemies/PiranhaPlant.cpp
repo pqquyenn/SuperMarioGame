@@ -1,4 +1,5 @@
 #include "Entities/Enemies/PiranhaPlant.h"
+#include "Core/AssetManager.h"
 #include <algorithm> // std::min, std::max
 
 // ============================================================
@@ -11,7 +12,8 @@ PiranhaPlant::PiranhaPlant(float x, float y) : Enemy(x, y) {
     pipeTopY = y;        // Lưu vị trí đỉnh ống
     currentRise = 0.f;   // Bắt đầu ẩn hoàn toàn trong ống
     currentState = State::WAITING_BOT;
-    waitTimer = 1.0f;    // Chờ 1 giây trước khi nhô lên lần đầu
+    waitTimer = 0.f;
+    waitingForInitialRise = true;
 
     // Đặt position ban đầu = ẩn hoàn toàn (dưới đỉnh ống)
     position.y = pipeTopY;
@@ -26,6 +28,20 @@ void PiranhaPlant::setPipeTopY(float y) {
     currentRise = 0.f;
     currentState = State::WAITING_BOT;
     waitTimer = 0.f;
+    waitingForInitialRise = true;
+}
+
+void PiranhaPlant::setCycleTiming(float visibleSeconds,
+                                  float hiddenSeconds,
+                                  float initialDelaySeconds) {
+    visibleDuration = std::max(0.f, visibleSeconds);
+    hiddenDuration = std::max(0.f, hiddenSeconds);
+    initialHiddenDelay = std::max(0.f, initialDelaySeconds);
+    position.y = pipeTopY;
+    currentRise = 0.f;
+    currentState = State::WAITING_BOT;
+    waitTimer = 0.f;
+    waitingForInitialRise = true;
 }
 
 // ============================================================
@@ -51,7 +67,7 @@ void PiranhaPlant::update(float dt) {
         case State::WAITING_TOP:
             // Chờ ở đỉnh
             waitTimer += dt;
-            if (waitTimer >= waitDuration) {
+            if (waitTimer >= visibleDuration) {
                 currentState = State::DESCENDING;
             }
             break;
@@ -63,6 +79,7 @@ void PiranhaPlant::update(float dt) {
                 currentRise = 0.f;
                 currentState = State::WAITING_BOT;
                 waitTimer = 0.f;
+                waitingForInitialRise = false;
             }
             position.y = pipeTopY - currentRise;
             break;
@@ -70,10 +87,28 @@ void PiranhaPlant::update(float dt) {
         case State::WAITING_BOT:
             // Chờ ở đáy (ẩn hoàn toàn trong ống)
             waitTimer += dt;
-            if (waitTimer >= waitDuration) {
+            const float targetWait = waitingForInitialRise
+                ? initialHiddenDelay
+                : hiddenDuration;
+            if (waitTimer >= targetWait) {
                 currentState = State::RISING;
+                waitTimer = 0.f;
             }
             break;
+    }
+
+    if (currentRise > 0.f) {
+        animTimer += dt;
+        if (animTimer >= animInterval) {
+            animTimer = 0.f;
+            currentFrame = 1 - currentFrame;
+            auto& assets = AssetManager::getInstance();
+            if (currentFrame == 0) {
+                sprite.setTexture(assets.getTexture("PiranhaPlant_1"));
+            } else {
+                sprite.setTexture(assets.getTexture("PiranhaPlant_2"));
+            }
+        }
     }
 
     sprite.setPosition(position);
@@ -90,7 +125,16 @@ void PiranhaPlant::render(sf::RenderWindow& window) const {
     if (currentRise <= 0.f) return; // Ẩn hoàn toàn → không vẽ
 
     if (sprite.getTexture() != nullptr) {
-        window.draw(sprite);
+        sf::Sprite drawSprite = sprite;
+        sf::Vector2u texSize = sprite.getTexture()->getSize();
+        if (texSize.x > 0 && texSize.y > 0) {
+            // Scale sprite to plantSize (no stretching, full texture shown)
+            drawSprite.setScale(plantSize.x / static_cast<float>(texSize.x),
+                                plantSize.y / static_cast<float>(texSize.y));
+            // Vẽ nguyên sprite tại vị trí nhô lên, phần còn trong ống bị tile che tự nhiên
+            drawSprite.setPosition(position.x, pipeTopY - currentRise);
+        }
+        window.draw(drawSprite);
         return;
     }
 

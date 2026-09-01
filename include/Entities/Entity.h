@@ -27,11 +27,21 @@ public:
     virtual void update(float dt) = 0;
     virtual void render(sf::RenderWindow& window) const;
     virtual void onCollision(Entity& other, const sf::FloatRect& overlap) {}
+    // Hooks used by the generic tile-physics pass. Gameplay-specific
+    // reactions stay on the entity instead of being selected by RTTI in the
+    // collision manager.
+    virtual void beginTileCollision() {}
+    virtual void onLanded() {}
+    virtual void onWallCollision() {}
+    virtual bool shouldSkipTileCollision() const { return false; }
 
     // getters, setters and movement handling
     virtual sf::FloatRect getBounds() const;
 
-    void setTexture(const sf::Texture& texture, bool resetRect = false);
+    virtual void setTexture(
+        const sf::Texture& texture,
+        bool resetRect = false
+    );
     void setTextureRect(const sf::IntRect& textureRect);
 
     const sf::Vector2f& getPosition() const;

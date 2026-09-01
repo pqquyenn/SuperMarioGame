@@ -1,0 +1,38 @@
+[stage]
+version=1
+id=pvp-super-arena-2
+name=PVP SUPER ARENA 2
+terrain=super-arena1.txt
+initial_area=overworld
+time_limit=999
+tile_size=16
+
+[rules]
+kill_plane_tile=16
+left_boundary_tile=0
+right_boundary_tile=26
+enemy_void_margin_tiles=2
+
+[entities]
+entity id=goomba_left symbol=E1 area=overworld tile=7,8 direction=-1 speed=28
+entity id=goomba_right symbol=E1 area=overworld tile=18,8 direction=1 speed=28
+entity id=center_plant_left symbol=E7 area=overworld tile=12,11 direction=0 visible_time=1.5 hidden_time=2.3 initial_delay=0
+entity id=center_plant_right symbol=E7 area=overworld tile=13,11 direction=0 visible_time=1.5 hidden_time=2.3 initial_delay=2.3
+
+[items]
+
+[platforms]
+
+[blocks]
+
+[anchors]
+anchor id=p1_spawn area=overworld tile=3,13 velocity=0,0
+anchor id=p2_spawn area=overworld tile=22,13 velocity=0,0
+anchor id=fire_spawn_left area=overworld tile=2,9 velocity=0,0
+anchor id=fire_spawn_center area=overworld tile=12,6 velocity=0,0
+anchor id=fire_spawn_right area=overworld tile=23,9 velocity=0,0
+
+[portals]
+
+[camera_zones]
+camera id=arena area=overworld bounds=0,0,26,16 follow_x=false follow_y=false center_y=7 dark=false

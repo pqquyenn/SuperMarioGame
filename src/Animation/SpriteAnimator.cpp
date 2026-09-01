@@ -48,7 +48,7 @@ void SpriteAnimator::update(float dt) {
     }
 }
 
-const sf::IntRect* SpriteAnimator::getCurrentFrame() const {
+const AnimationFrame* SpriteAnimator::getCurrentFrame() const {
     if (!currentClip ||
         !currentClip->isValid() ||
         currentFrame >= currentClip->frames.size()) {

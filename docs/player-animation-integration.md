@@ -17,12 +17,17 @@ Character
 SpriteAnimator
     advances shared AnimationClip frame data
 
+AnimationFrame
+    stores a rectangle and an optional injected texture
+
 PlayerAnimationProfile
     maps form name + player motion to a clip
 ```
 
 `SpriteAnimator` does not depend on Character, PlayerState, AssetManager,
-collision, or input, so Enemy and Item code may reuse it later.
+collision, or input, so Enemy and Item code may reuse it later. A frame with no
+texture pointer uses the sprite's current atlas. A frame with a texture pointer
+switches to that externally owned individual image.
 
 ## Supported Player Motions
 
@@ -34,11 +39,14 @@ Idle
 Running
 Jumping
 Sliding
+Crouching
 Dead
+Shooting
 ```
 
-Rising and falling share the Jumping frame. Swimming, climbing, crouching, and
-transformation animations should be added only when those mechanics exist.
+Rising and falling share the Jumping frame. Crouching is available only to
+powered forms. Swimming, climbing, and transformation animations should be
+added only when those mechanics exist.
 
 ## Current PlayerSpriteSheet Layout
 
@@ -59,7 +67,7 @@ Frame columns use a 16-pixel stride starting at `x = 1`:
 | Motion | Frame index | X coordinate |
 |---|---:|---:|
 | Idle | 0 | 1 |
-| Dead | 1 | 17 |
+| Small death / powered crouch | 1 | 17 |
 | Running | 2, 3, 4 | 33, 49, 65 |
 | Sliding | 5 | 81 |
 | Jumping | 6 | 97 |
@@ -93,6 +101,47 @@ luigi.setTexture(playerTexture);
 The texture must be loaded successfully before `getTexture()` is called.
 Character automatically selects the texture rectangle during `update(dt)`.
 
+## Individual Mario Texture Contract
+
+The current branch also supports the separate Small/Big Mario images now
+loaded by `AssetManager`. The gameplay coordinator injects the textures; Mario
+does not access the global asset store itself:
+
+```cpp
+AssetManager& assets = AssetManager::getInstance();
+
+MarioAnimationTextures textures;
+textures.smallIdle = &assets.getTexture("Mario_Small_Idle");
+textures.smallRun1 = &assets.getTexture("Mario_Small_Run1");
+textures.smallRun2 = &assets.getTexture("Mario_Small_Run2");
+textures.smallRun3 = &assets.getTexture("Mario_Small_Run3");
+textures.smallJump = &assets.getTexture("Mario_Small_Jump");
+textures.smallSlide = &assets.getTexture("Mario_Small_Slide");
+
+textures.superIdle = &assets.getTexture("Mario_Big_Idle");
+textures.superRun1 = &assets.getTexture("Mario_Big_Run1");
+textures.superRun2 = &assets.getTexture("Mario_Big_Run2");
+textures.superRun3 = &assets.getTexture("Mario_Big_Run3");
+textures.superJump = &assets.getTexture("Mario_Big_Jump");
+textures.superSlide = &assets.getTexture("Mario_Big_Slide");
+
+if (!mario.setAnimationTextures(textures)) {
+    // At least one required texture is missing or has the wrong dimensions.
+}
+```
+
+`smallDeath` is optional and falls back to Small Idle. Once AssetManager loads
+`Mario_Small_Death.png`, it should also be assigned:
+
+```cpp
+textures.smallDeath = &assets.getTexture("Mario_Small_Death");
+```
+
+The setter validates that Small images are 16x16 and Super images are 16x32.
+Fire form temporarily reuses the Super visual set because no individual Fire
+Mario files currently exist. This is only a visual fallback; Fire gameplay
+abilities remain controlled by `FireState`.
+
 ## Luigi Background Warning
 
 The Luigi band (`y = 62..121`) uses an opaque blue background with RGB
@@ -119,6 +168,7 @@ Character selects motion in this order:
 
 ```text
 Inactive -> Dead
+Powered + grounded + Down/S held -> Crouching
 Airborne -> Jumping
 No horizontal velocity -> Idle
 Facing opposite current velocity -> Sliding

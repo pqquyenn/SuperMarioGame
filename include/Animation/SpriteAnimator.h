@@ -17,7 +17,7 @@ public:
     void stop();
     void update(float dt);
 
-    const sf::IntRect* getCurrentFrame() const;
+    const AnimationFrame* getCurrentFrame() const;
     bool isPlaying(const AnimationClip& clip) const;
     bool isFinished() const;
 };

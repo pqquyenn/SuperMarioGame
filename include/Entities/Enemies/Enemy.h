@@ -17,6 +17,8 @@ protected:
   int direction{-1}; // -1: Left, 1: Right
   bool isAlive{true};
   bool squished{false};
+  bool activated{false};
+  int scoreValue{100};
 
   // ---- Vật lý trọng lực ----
   static constexpr float GRAVITY = 980.f;          // Gia tốc trọng lực (px/s²)
@@ -33,7 +35,16 @@ public:
   virtual ~Enemy() = default;
 
   virtual void onStomped() = 0;
+  virtual bool canBeStomped() const { return true; }
+  virtual bool bouncesPlayerOnStompAttempt() const { return false; }
+  virtual void onFireball();
+  virtual void onFellIntoVoid();
   virtual void reverseDirection();
+  // Return true for enemies that are partially inside terrain (e.g. PiranhaPlant
+  // inside a pipe). They are rendered BEFORE the tilemap so the tile pixels
+  // naturally mask the hidden portion.
+  virtual bool shouldRenderBehindTerrain() const { return false; }
+  void onWallCollision() override;
 
   int getDirection() const;
   void setDirection(int dir);
@@ -41,6 +52,12 @@ public:
   float getSpeed() const;
   void setSpeed(float spd);
 
+  int getScoreValue() const;
+  void setScoreValue(int score);
+
   bool isSquished() const;
   bool isEnemyAlive() const;
+
+  bool isActivated() const;
+  void setActivated(bool act);
 };

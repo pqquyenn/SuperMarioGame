@@ -21,8 +21,16 @@ public:
     virtual void onCollect() = 0;
     virtual bool tryCollect(class Character& character);
 
+    // Xử lý va chạm và hành vi đa hình
+    bool shouldSkipTileCollision() const override { return false; }
+    virtual void reverseDirection() {}
+    virtual bool isEmerging() const { return false; }
+
     // Collision box dựa trên size
     sf::FloatRect getBounds() const override;
+
+    void onCollision(Entity& other, const sf::FloatRect& overlap) override;
+    void onWallCollision() override;
 
     bool isCollected() const;
 };

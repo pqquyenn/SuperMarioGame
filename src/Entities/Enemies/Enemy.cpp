@@ -1,4 +1,5 @@
 #include "Entities/Enemies/Enemy.h"
+#include "Core/SoundManager.h"
 
 Enemy::Enemy(float x, float y)
     : Entity(x, y), speed(50.f), direction(-1), isAlive(true), squished(false) {
@@ -37,6 +38,23 @@ void Enemy::applyPhysics(float dt) {
 
 void Enemy::reverseDirection() { direction = -direction; }
 
+void Enemy::onWallCollision() { reverseDirection(); }
+
+void Enemy::onFireball() {
+    active = false;
+    isAlive = false;
+    SoundManager::getInstance().playSound("kick");
+}
+
+void Enemy::onFellIntoVoid() {
+    // Falling out of the map is an environmental removal. It should not
+    // award score or run a stomp/fireball animation, but it must stop all
+    // future updates and allow Level to erase the enemy safely.
+    velocity = {0.f, 0.f};
+    active = false;
+    isAlive = false;
+}
+
 int Enemy::getDirection() const { return direction; }
 
 void Enemy::setDirection(int dir) { direction = dir; }
@@ -45,6 +63,14 @@ float Enemy::getSpeed() const { return speed; }
 
 void Enemy::setSpeed(float spd) { speed = spd; }
 
+int Enemy::getScoreValue() const { return scoreValue; }
+
+void Enemy::setScoreValue(int score) { scoreValue = score; }
+
 bool Enemy::isSquished() const { return squished; }
 
 bool Enemy::isEnemyAlive() const { return isAlive; }
+
+bool Enemy::isActivated() const { return activated; }
+
+void Enemy::setActivated(bool act) { activated = act; }

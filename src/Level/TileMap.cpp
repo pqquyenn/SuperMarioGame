@@ -37,11 +37,20 @@ void TileMap::initFlyweights() {
     // 3. Destructible Brick Block ('S')
     const sf::Texture* brickTex = &assets.getTexture("Brick");
     add("S", brickTex, 0, 0, 16, 16, true);
+    m_tileRegistry["S"]->isBrick = true;
 
-    // 4. Question Block ('?', 'Q')
+    // 4. Question Block ('?', 'Q') and Empty Block ('E')
     const sf::Texture* mysteryTex = &assets.getTexture("MysteryBlock");
     add("?", mysteryTex, 0, 0, 16, 16, true);
+    m_tileRegistry["?"]->isQuestionBlock = true;
+    m_tileRegistry["?"]->isAnimated = true;
+
     add("Q", mysteryTex, 0, 0, 16, 16, true);
+    m_tileRegistry["Q"]->isQuestionBlock = true;
+    m_tileRegistry["Q"]->isAnimated = true;
+
+    const sf::Texture* emptyTex = &assets.getTexture("EmptyBlock");
+    add("E", emptyTex, 0, 0, 16, 16, true);
 
     // 5. Seamless Pipe parts (<, >, [, ])
     const sf::Texture* pipeTopTex = &assets.getTexture("PipeTop");
@@ -58,27 +67,40 @@ void TileMap::initFlyweights() {
     add("5",pipeConnTex,32,0,16,16,true,true,1);
     add("6",pipeConnTex,32,16,16,16,true,true,1);
     add("7",pipeConnTex,32,32,16,16,true,true,1);
-   
+    add("0",pipeConnTex,48,0,16,16,true,true,1);
+
+    // 'a' = horizontal auto-entry warp pipe (used for Pipe A and Pipe C1 in 1-2)
+    // Visually identical to '<' but triggers warp on horizontal contact, not Down key.
+    add("a", pipeTopTex, 0, 0, 16, 16, true, true, 2);
+    m_tileRegistry["a"]->isHorizontalWarpPipe = true;
+    
 
     // 5. End-Level Elements (Castle, FlagPole, Flag)
     const sf::Texture* castleTex = &assets.getTexture("Castle");
     const sf::Texture* largeCastleTex = &assets.getTexture("LargeCastle");
     const sf::Texture* flagPoleTex = &assets.getTexture("FlagPole");
     const sf::Texture* flagTex = &assets.getTexture("Flag");
-    add("C", castleTex, 0, 0, 80, 80, false);
-    add("LC", largeCastleTex, 0, 0, 148, 176, false);
+    add("j", castleTex, 0, 0, 80, 80, false);
+    m_tileRegistry["j"]->isCastle = true;
+    add("C", largeCastleTex, 0, 0, 148, 176, false);
+    m_tileRegistry["C"]->isCastle = true;
     add("P", flagPoleTex, 0, 0, 16, 16, false);
+    m_tileRegistry["P"]->isFlagpole = true;
     add("|", flagPoleTex, 0, 16, 16, 16, false);
+    m_tileRegistry["|"]->isFlagpole = true;
     add("F", flagTex, 0, 0, 16, 16, false);
 
     // 6. Underground Specific Tiles (UndergroundBlock, UndergroundBrick, Coin_Underground)
     const sf::Texture* ugBlockTex = &assets.getTexture("UndergroundBlock");
     const sf::Texture* ugBrickTex = &assets.getTexture("UndergroundBrick");
     const sf::Texture* ugCoinTex = &assets.getTexture("Coin_Underground");
-
+    const sf::Texture* upHardBlockTex= &assets.getTexture("UndergroundHardBlock");
     add("u", ugBlockTex, 0, 0, 16, 16, true);
     add("r", ugBrickTex, 0, 0, 16, 16, true);
+    m_tileRegistry["r"]->isBrick = true;
     add("c", ugCoinTex, 0, 0, 16, 16, false);
+    add("g",upHardBlockTex,0,0,16,16,true);
+    m_tileRegistry["c"]->isCoinTile = true;
     
     // Background Black Tile for 1-2
     add("*", &assets.getTexture("BlackTile"), 0, 0, 16, 16, false);
@@ -111,14 +133,23 @@ void TileMap::initFlyweights() {
     add("uh", &assets.getTexture("UndergroundHardBlock"), 0, 0, 16, 16, true);
     
     const sf::Texture* platformTex = &assets.getTexture("Platform");
-    add("pf1", platformTex, 0, 0, 16, 8, true);
-    add("pf2", platformTex, 16, 0, 16, 8, true);
-    add("pf3", platformTex, 32, 0, 16, 8, true);
+    add("D", platformTex, 0, 0, 16, 8, true);
+    add("M", platformTex, 16, 0, 16, 8, true);
+    add("N", platformTex, 32, 0, 16, 8, true);
     
     // Athletic Level Specific (1-3)
     add("T", &assets.getTexture("SpriteIsland"), 16, 32, 16, 16, true); // Tree Trunk (solid)
-    add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);  // Green Cap
-    add("O", platformTex, 16, 0, 16, 8, true);                          // Orange Wood Platform
+    add("8", &assets.getTexture("SpriteIsland"), 0, 0, 16, 16, true);  // Green Cap
+    add("G", &assets.getTexture("SpriteIsland"), 16, 0, 16, 16, true);
+    add("9", &assets.getTexture("SpriteIsland"), 48, 0, 16, 16, true);
+}
+
+bool TileMap::isSolidAt(float worldX, float worldY) const {
+    int col = static_cast<int>((worldX - m_tileOffset.x) / m_tileSize);
+    int row = static_cast<int>((worldY - m_tileOffset.y) / m_tileSize);
+    if (row < 0 || row >= static_cast<int>(m_grid.size())) return false;
+    if (col < 0 || col >= static_cast<int>(m_grid[row].size())) return false;
+    return m_grid[row][col] && m_grid[row][col]->isSolid();
 }
 
 bool TileMap::readFromFile(const std::string& filepath) {
@@ -128,8 +159,28 @@ bool TileMap::readFromFile(const std::string& filepath) {
         return false;
     }
 
+    // Handles from the previous grid must not resolve into a newly loaded map
+    // that happens to contain a tile at the same row and column.
+    ++m_mapRevision;
     m_grid.clear();
+    m_startMarker.reset();
     std::string line;
+
+    auto recordStartMarker = [this, &filepath](int x, int y) {
+        const sf::Vector2f markerPosition{
+            float(x * m_tileSize) + m_tileOffset.x,
+            float(y * m_tileSize) + m_tileOffset.y
+        };
+
+        if (m_startMarker) {
+            std::cerr << "TileMap Warning: Duplicate '@' start marker at row "
+                      << y << ", col " << x << " in " << filepath
+                      << "; keeping the first marker" << std::endl;
+            return;
+        }
+
+        m_startMarker = markerPosition;
+    };
 
     // Check if first line contains numeric dimensions header (e.g. "15 16")
     std::streampos pos = file.tellg();
@@ -158,23 +209,25 @@ bool TileMap::readFromFile(const std::string& filepath) {
             std::string token;
             int x = 0;
             while (ss >> token) {
-                if (token == "A" || token == "." || token == "-") {
+                if (token == "@") {
+                    recordStartMarker(x, y);
+                    row.push_back(nullptr);
+                } else if (token == "A" || token == "." || token == "-") {
                     row.push_back(nullptr);
                 } else {
                     auto it = m_tileRegistry.find(token);
                     if (it != m_tileRegistry.end()) {
-                        // Skip static tile rendering for Platform entities
-                        if (token == "O") {
-                            row.push_back(nullptr);
-                        } else {
-                            float yOff = m_tileOffset.y;
-                            if (token[0] == 'H') yOff -= m_tileOffset.y; // Hill2 does not move up
-                            if (token[0] == 'h') yOff += 4.f;           // Hill1 moves down 4.f
-                            
-                            row.push_back(std::make_unique<Tile>(
-                                it->second.get(),
-                                sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + yOff)));
+                        float yOff = m_tileOffset.y;
+                        float xOff = m_tileOffset.x;
+                        if (token[0] == 'h' || (token.length() >= 2 && (token.substr(0, 2) == "bu" || token.substr(0, 2) == "Bu" || token.substr(0, 2) == "bU"))) {
+                            yOff -= 4.f;
                         }
+                        if (token[0] == 'H') yOff += 4.f;           // Hill1 moves down 4.f
+                        if (token == "F") xOff += 8.f;              // Flag attaches directly to flagpole
+                        
+                        row.push_back(std::make_unique<Tile>(
+                            it->second.get(),
+                            sf::Vector2f(float(x * m_tileSize) + xOff, float(y * m_tileSize) + yOff)));
                     } else {
                         std::shared_ptr<TileType> typeToUse = nullptr;
                         if (token == "ground1") typeToUse = m_tileRegistry["u"];
@@ -197,19 +250,23 @@ bool TileMap::readFromFile(const std::string& filepath) {
         } else {
             for (size_t x = 0; x < line.size(); ++x) {
                 char c = line[x];
+                if (c == '@') {
+                    recordStartMarker(static_cast<int>(x), y);
+                    row.push_back(nullptr);
+                    continue;
+                }
                 if (c == '-' || c == ' ' || c == '.') {
                     row.push_back(nullptr);
                     continue;
                 }
                 auto it = m_tileRegistry.find(std::string(1, c));
                 if (it != m_tileRegistry.end()) {
-                    if (c == 'O') {
-                        row.push_back(nullptr);
-                    } else {
-                        row.push_back(std::make_unique<Tile>(
-                            it->second.get(),
-                            sf::Vector2f(float(x * m_tileSize) + m_tileOffset.x, float(y * m_tileSize) + m_tileOffset.y)));
-                    }
+                    float xOff = m_tileOffset.x;
+                    float yOff = m_tileOffset.y;
+                    if (c == 'F') xOff += 8.f;              // Flag attaches directly to flagpole
+                    row.push_back(std::make_unique<Tile>(
+                        it->second.get(),
+                        sf::Vector2f(float(x * m_tileSize) + xOff, float(y * m_tileSize) + yOff)));
                 } else {
                     if (c != 'e' && c != 'E' && c != 'o') {
                         std::cerr << "TileMap Warning: Unregistered char '" << c << "' at row " << y << ", col " << x << " in " << filepath << std::endl;
@@ -253,8 +310,11 @@ void TileMap::updateBuffer(const Camera& camera) {
     bufView.setCenter(ctr);
     m_backBuffer.setView(bufView);
 
-    for (Tile* t : getTilesInBounds(bounds))
-        if (t) t->render(m_backBuffer);
+    for (const TileHandle& handle : getTilesInBounds(bounds)) {
+        if (const Tile* tile = getTile(handle)) {
+            tile->render(m_backBuffer);
+        }
+    }
 
     m_backBuffer.display();
 
@@ -276,8 +336,8 @@ void TileMap::render(sf::RenderTarget& target, const Camera& camera) {
     target.draw(spr);
 }
 
-std::vector<Tile*> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const {
-    std::vector<Tile*> out;
+std::vector<TileHandle> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const {
+    std::vector<TileHandle> out;
     if (m_grid.empty()) return out;
     int x0 = std::max(0, (int)std::floor(bounds.left / m_tileSize) - 1);
     int y0 = std::max(0, (int)std::floor(bounds.top  / m_tileSize) - 1);
@@ -287,10 +347,204 @@ std::vector<Tile*> TileMap::getTilesInBounds(const sf::FloatRect& bounds) const 
     for (int y = y0; y < y1 && y < rows; ++y) {
         if (y < 0) continue;
         int cols = (int)m_grid[y].size();
-        for (int x = x0; x < x1 && x < cols; ++x)
-            if (x >= 0 && m_grid[y][x]) out.push_back(m_grid[y][x].get());
+        for (int x = x0; x < x1 && x < cols; ++x) {
+            if (x >= 0 && m_grid[y][x]) {
+                out.push_back(TileHandle{
+                    static_cast<std::size_t>(y),
+                    static_cast<std::size_t>(x),
+                    m_mapRevision
+                });
+            }
+        }
     }
     return out;
 }
 
+const Tile* TileMap::getTile(const TileHandle& handle) const {
+    if (handle.mapRevision != m_mapRevision ||
+        handle.row >= m_grid.size() ||
+        handle.column >= m_grid[handle.row].size()) {
+        return nullptr;
+    }
+
+    return m_grid[handle.row][handle.column].get();
+}
+
+Tile* TileMap::getTile(const TileHandle& handle) {
+    if (handle.mapRevision != m_mapRevision ||
+        handle.row >= m_grid.size() ||
+        handle.column >= m_grid[handle.row].size()) {
+        return nullptr;
+    }
+
+    return m_grid[handle.row][handle.column].get();
+}
+
 void TileMap::setNeedsRedraw(bool v) { m_needsRedraw = v; }
+
+void TileMap::hitTile(const TileHandle& handle) {
+    Tile* tile = getTile(handle);
+    if (!tile) return;
+    auto it = m_tileRegistry.find("E");
+    if (it != m_tileRegistry.end()) {
+        tile->setType(it->second.get());
+        m_needsRedraw = true;
+    }
+}
+
+void TileMap::removeTile(const TileHandle& handle) {
+    if (!getTile(handle)) return;
+
+    m_grid[handle.row][handle.column].reset();
+    m_needsRedraw = true;
+}
+
+void TileMap::update(float dt) {
+    for (auto& row : m_grid) {
+        for (auto& tile : row) {
+            if (tile) {
+                tile->update(dt);
+            }
+        }
+    }
+}
+
+void TileMap::breakBrick(const TileHandle& handle) {
+    Tile* tile = getTile(handle);
+    if (!tile) return;
+    
+    sf::FloatRect bounds = tile->getBounds();
+    const sf::Texture* brickTex = (tile->getType() && tile->getType()->texture)
+                                      ? tile->getType()->texture
+                                      : &AssetManager::getInstance().getTexture("Brick");
+    
+    // Spawn 4 debris pieces flying in different directions
+    // Top-left piece
+    m_debris.push_back({{bounds.left, bounds.top}, {-60.f, -250.f}, 0.f, 400.f, 0.f, true, brickTex});
+    // Top-right piece
+    m_debris.push_back({{bounds.left + 8.f, bounds.top}, {60.f, -250.f}, 0.f, -350.f, 0.f, true, brickTex});
+    // Bottom-left piece
+    m_debris.push_back({{bounds.left, bounds.top + 8.f}, {-50.f, -180.f}, 0.f, 300.f, 0.f, true, brickTex});
+    // Bottom-right piece
+    m_debris.push_back({{bounds.left + 8.f, bounds.top + 8.f}, {50.f, -180.f}, 0.f, -280.f, 0.f, true, brickTex});
+    
+    // The resolved pointer becomes invalid here and must not be used again.
+    removeTile(handle);
+}
+
+void TileMap::updateDebris(float dt) {
+    const float gravity = 980.f;
+    
+    for (auto& d : m_debris) {
+        if (!d.active) continue;
+        
+        d.velocity.y += gravity * dt;
+        d.position += d.velocity * dt;
+        d.rotation += d.rotationSpeed * dt;
+        d.lifetime += dt;
+        
+        // Remove after 2 seconds or if fallen off screen
+        if (d.lifetime > 2.f || d.position.y > 500.f) {
+            d.active = false;
+        }
+    }
+    
+    // Cleanup inactive debris
+    m_debris.erase(
+        std::remove_if(m_debris.begin(), m_debris.end(),
+            [](const BrickDebris& d) { return !d.active; }),
+        m_debris.end()
+    );
+}
+
+void TileMap::renderDebris(sf::RenderTarget& target) const {
+    AssetManager& assets = AssetManager::getInstance();
+    const sf::Texture& defaultBrickTex = assets.getTexture("Brick");
+    
+    for (const auto& d : m_debris) {
+        if (!d.active) continue;
+        
+        const sf::Texture* tex = d.texture ? d.texture : &defaultBrickTex;
+        // Each debris piece is an 8x8 quarter of the brick texture
+        sf::Sprite sprite(*tex, sf::IntRect(0, 0, 8, 8));
+        sprite.setOrigin(4.f, 4.f);
+        sprite.setPosition(d.position);
+        sprite.setRotation(d.rotation);
+        target.draw(sprite);
+    }
+}
+
+std::optional<sf::FloatRect> TileMap::findFlagpoleBounds() const {
+    float minX = 1e9f, maxX = -1e9f;
+    float minY = 1e9f, maxY = -1e9f;
+    bool found = false;
+
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->isFlagpole()) {
+                sf::FloatRect b = m_grid[r][c]->getBounds();
+                minX = std::min(minX, b.left);
+                maxX = std::max(maxX, b.left + b.width);
+                minY = std::min(minY, b.top);
+                maxY = std::max(maxY, b.top + b.height);
+                found = true;
+            }
+        }
+    }
+
+    if (found) {
+        return sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
+    }
+    return std::nullopt;
+}
+
+std::optional<sf::Vector2f> TileMap::findCastleDoor() const {
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->isCastle()) {
+                sf::FloatRect b = m_grid[r][c]->getBounds();
+                // Castle entrance door is horizontally around center:
+                // For small castle (80x80), door is around left + 40
+                // For large castle (148x176), door is around left + 74
+                float doorX = b.left + (b.width > 100.f ? 74.f : 40.f);
+                float groundY = b.top + b.height;
+                return sf::Vector2f(doorX, groundY);
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<sf::Vector2f> TileMap::findFlagPosition() const {
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->getType() && m_grid[r][c]->getType()->texture) {
+                // Check if this tile is the flag tile 'F'
+                sf::FloatRect b = m_grid[r][c]->getBounds();
+                // Flag is adjacent to flagpole top
+                if (m_grid[r][c]->getType() == m_tileRegistry.at("F").get()) {
+                    return sf::Vector2f(b.left, b.top);
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<sf::Vector2f> TileMap::takeFlagPosition() {
+    for (size_t r = 0; r < m_grid.size(); ++r) {
+        for (size_t c = 0; c < m_grid[r].size(); ++c) {
+            if (m_grid[r][c] && m_grid[r][c]->getType() && m_grid[r][c]->getType()->texture) {
+                if (m_grid[r][c]->getType() == m_tileRegistry.at("F").get()) {
+                    sf::FloatRect b = m_grid[r][c]->getBounds();
+                    sf::Vector2f pos(b.left, b.top);
+                    // Remove static flag tile from map grid so it is no longer rendered at the top
+                    m_grid[r][c].reset();
+                    m_needsRedraw = true;
+                    return pos;
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}

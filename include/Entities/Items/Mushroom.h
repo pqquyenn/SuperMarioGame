@@ -12,12 +12,11 @@ private:
     float moveSpeed{60.f};       // Tốc độ trượt ngang (pixels/sec)
     int moveDirection{1};        // 1: phải, -1: trái
     float gravity{600.f};        // Gia tốc trọng lực (pixels/sec²)
-    float vertVelocity{0.f};     // Vận tốc dọc hiện tại
 
     // Animation nhô lên từ gạch (emerge)
     bool emerging{false};        // Đang nhô lên khỏi gạch?
     float emergeDistance{0.f};   // Khoảng cách đã nhô
-    float emergeTarget{32.f};    // Nhô lên 1 tile (32px)
+    float emergeTarget{16.f};    // Nhô lên 1 tile (16px)
     float emergeSpeed{40.f};     // Tốc độ nhô lên
 
 public:
@@ -31,9 +30,10 @@ public:
 
     // Bắt đầu animation nhô lên từ gạch
     void startEmerge();
-    bool isEmerging() const;
+    bool isEmerging() const override;
+    bool shouldSkipTileCollision() const override { return emerging; }
 
     // Đảo chiều di chuyển (khi chạm tường)
-    void reverseDirection();
+    void reverseDirection() override;
     int getMoveDirection() const;
 };

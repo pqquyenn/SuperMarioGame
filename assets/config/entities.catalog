@@ -1,0 +1,15 @@
+# Runtime aliases used by .level manifests.
+# Format: <enemy|item> <symbol> <EntityFactory type>
+enemy E1 Goomba
+enemy E2 UndergroundGoomba
+enemy E3 Koopa
+enemy E4 RedKoopa
+enemy E5 GreenParatroopa
+enemy E6 RedParatroopa
+enemy E7 PiranhaPlant
+enemy E8 DragonLugia
+item I1 Coin
+item I2 Mushroom
+item I3 1UpMushroom
+item I4 FireFlower
+item I5 StarItem

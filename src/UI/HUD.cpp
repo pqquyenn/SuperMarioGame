@@ -1,18 +1,96 @@
 #include "UI/HUD.h"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <string>
+#include <vector>
 
-HUD::HUD() {}
+static sf::Font hudFont;
+static bool fontLoaded = false;
+
+static std::string formatWorldNumber(const std::string& raw) {
+    std::string s = raw;
+    while (!s.empty() && s.front() == ' ') s.erase(s.begin());
+    if (s.rfind("WORLD ", 0) == 0 || s.rfind("world ", 0) == 0 ||
+        s.rfind("World ", 0) == 0) {
+        s = s.substr(6);
+    }
+    while (!s.empty() && s.front() == ' ') s.erase(s.begin());
+    return s.empty() ? "1-1" : s;
+}
+
+HUD::HUD() {
+    if (!fontLoaded) {
+        std::vector<std::string> fontPaths = {
+            "assets/fonts/press-start-2p.ttf",
+            "../assets/fonts/press-start-2p.ttf",
+            "../../assets/fonts/press-start-2p.ttf",
+            "../../../assets/fonts/press-start-2p.ttf"
+        };
+        for (auto& path : fontPaths) {
+            if (hudFont.loadFromFile(path)) {
+                fontLoaded = true;
+                const_cast<sf::Texture&>(hudFont.getTexture(8)).setSmooth(false);
+                std::cout << "[HUD] Font loaded: " << path << std::endl;
+                break;
+            }
+        }
+        if (!fontLoaded) {
+            std::cerr << "[HUD] WARNING: Could not load font!" << std::endl;
+        }
+    }
+
+    unsigned int fontSize = 8;
+
+    // MARIO  score
+    scoreText.setFont(hudFont);
+    scoreText.setCharacterSize(fontSize);
+    scoreText.setFillColor(sf::Color::White);
+    scoreText.setPosition(16.f, 8.f);
+
+    // Coins
+    coinsText.setFont(hudFont);
+    coinsText.setCharacterSize(fontSize);
+    coinsText.setFillColor(sf::Color::White);
+    coinsText.setPosition(130.f, 8.f);
+
+    // World
+    worldText.setFont(hudFont);
+    worldText.setCharacterSize(fontSize);
+    worldText.setFillColor(sf::Color::White);
+    worldText.setPosition(200.f, 8.f);
+
+    // Lives
+    livesText.setFont(hudFont);
+    livesText.setCharacterSize(fontSize);
+    livesText.setFillColor(sf::Color::White);
+    livesText.setPosition(280.f, 8.f);
+
+    // Time
+    timeText.setFont(hudFont);
+    timeText.setCharacterSize(fontSize);
+    timeText.setFillColor(sf::Color::White);
+    timeText.setPosition(345.f, 8.f);
+}
 
 void HUD::onNotify(const GameEvent& event) {
     switch (event.type) {
         case GameEventType::COIN_COLLECTED:
             coins += 1;
-            score += 200;
+            score += event.value;
             break;
         case GameEventType::ENEMY_DEFEATED:
-            score += 100;
+            score += event.value;
             break;
         case GameEventType::PLAYER_DIED:
             lives -= 1;
+            break;
+        case GameEventType::POWERUP_COLLECTED:
+            score += event.value;
+            break;
+        case GameEventType::LIFE_GAINED:
+            lives += (event.value > 0 ? event.value : 1);
+            score += event.scoreDelta;
             break;
         default:
             break;
@@ -20,11 +98,57 @@ void HUD::onNotify(const GameEvent& event) {
 }
 
 void HUD::update(float dt) {
-    if (timeRemaining > 0) {
+    if (!timeFrozen && timeRemaining > 0) {
         timeRemaining -= dt;
+        if (timeRemaining < 0.f) timeRemaining = 0.f;
+    }
+
+    // Update text strings
+    {
+        std::ostringstream ss;
+        ss << playerName << "\n" << std::setw(6) << std::setfill('0') << score;
+        scoreText.setString(ss.str());
+    }
+
+    {
+        std::ostringstream ss;
+        ss << " x" << std::setw(2) << std::setfill('0') << coins;
+        coinsText.setString(ss.str());
+    }
+
+    {
+        std::ostringstream ss;
+        ss << "WORLD\n " << formatWorldNumber(levelName);
+        worldText.setString(ss.str());
+    }
+
+    {
+        std::ostringstream ss;
+        ss << "LIVES\n  x" << lives;
+        livesText.setString(ss.str());
+    }
+
+    {
+        std::ostringstream ss;
+        ss << "TIME\n " << std::setw(3) << std::setfill(' ') << static_cast<int>(timeRemaining);
+        timeText.setString(ss.str());
     }
 }
 
 void HUD::render(sf::RenderWindow& window) {
-    // Render HUD overlay
+    if (!fontLoaded) return;
+
+    // Save current view and switch to a fixed HUD view
+    sf::View oldView = window.getView();
+    sf::View hudView(sf::FloatRect({0.f, 0.f}, {400.f, 225.f}));
+    window.setView(hudView);
+
+    window.draw(scoreText);
+    window.draw(coinsText);
+    window.draw(worldText);
+    window.draw(livesText);
+    window.draw(timeText);
+
+    // Restore game camera view
+    window.setView(oldView);
 }

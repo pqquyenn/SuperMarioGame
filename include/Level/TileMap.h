@@ -8,11 +8,29 @@
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
+#include <cstdint>
+#include <optional>
 
 #include "Core/AssetManager.h"
 #include "Level/TileType.h"
 #include "Level/Tile.h"
 #include "Level/Camera.h"
+
+struct BrickDebris {
+    sf::Vector2f position;
+    sf::Vector2f velocity;
+    float rotation = 0.f;
+    float rotationSpeed = 0.f;
+    float lifetime = 0.f;
+    bool active = true;
+    const sf::Texture* texture = nullptr;
+};
+
+struct TileHandle {
+    std::size_t row{0};
+    std::size_t column{0};
+    std::uint64_t mapRevision{0};
+};
 
 class TileMap {
 public:
@@ -25,11 +43,20 @@ public:
     TileMap& operator=(TileMap&&) = delete;
 
     bool readFromFile(const std::string& filepath);
+    void update(float dt);
+    void breakBrick(const TileHandle& handle);
+    void updateDebris(float dt);
+    void renderDebris(sf::RenderTarget& target) const;
     void updateBuffer(const Camera& camera);
     void render(sf::RenderTarget& target, const Camera& camera);
-    std::vector<Tile*> getTilesInBounds(const sf::FloatRect& bounds) const;
+    std::vector<TileHandle> getTilesInBounds(const sf::FloatRect& bounds) const;
+    Tile* getTile(const TileHandle& handle);
+    const Tile* getTile(const TileHandle& handle) const;
+    bool isSolidAt(float worldX, float worldY) const;
     void setNeedsRedraw(bool needsRedraw);
     void setTileOffset(const sf::Vector2f& offset) { m_tileOffset = offset; }
+    void hitTile(const TileHandle& handle);
+    void removeTile(const TileHandle& handle);
     
     int getWidth() const {
         int maxW = 0;
@@ -43,6 +70,14 @@ public:
     // Named aliases used by Level and PlayState
     int getMapWidth()  const { return getWidth(); }
     int getMapHeight() const { return getHeight(); }
+    const std::optional<sf::Vector2f>& getStartMarker() const {
+        return m_startMarker;
+    }
+
+    std::optional<sf::FloatRect> findFlagpoleBounds() const;
+    std::optional<sf::Vector2f> findCastleDoor() const;
+    std::optional<sf::Vector2f> findFlagPosition() const;
+    std::optional<sf::Vector2f> takeFlagPosition();
 
 private:
     void initFlyweights();
@@ -50,9 +85,12 @@ private:
 private:
     std::unordered_map<std::string, std::shared_ptr<TileType>> m_tileRegistry;
     std::vector<std::vector<std::unique_ptr<Tile>>> m_grid;
+    std::uint64_t m_mapRevision{0};
     int m_tileSize;
     sf::RenderTexture m_frontBuffer;
     sf::RenderTexture m_backBuffer;
     bool m_needsRedraw;
     sf::Vector2f m_tileOffset{0.f, 0.f};
+    std::vector<BrickDebris> m_debris;
+    std::optional<sf::Vector2f> m_startMarker;
 };

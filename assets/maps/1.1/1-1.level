@@ -1,0 +1,60 @@
+# World 1-1 stage manifest. Positions are in 16px tile coordinates.
+[stage]
+version=1
+id=world-1-1
+name=WORLD 1-1
+terrain=1-1.txt
+background=background.txt
+next_stage=1.2/1-2.level
+initial_area=overworld
+time_limit=400
+tile_size=16
+
+[rules]
+kill_plane_tile=20
+left_boundary_tile=0
+right_boundary_tile=-1
+enemy_void_margin_tiles=4
+
+[entities]
+entity id=g01 symbol=E1 area=overworld tile=24,12 direction=-1
+entity id=g02 symbol=E1 area=overworld tile=41,12 direction=-1
+entity id=g03 symbol=E1 area=overworld tile=52,12 direction=-1
+entity id=g04 symbol=E1 area=overworld tile=53,12 direction=-1
+entity id=g05 symbol=E1 area=overworld tile=82,4 direction=-1
+entity id=g06 symbol=E1 area=overworld tile=84,4 direction=-1
+entity id=g07 symbol=E1 area=overworld tile=99,12 direction=-1
+entity id=g08 symbol=E1 area=overworld tile=100,12 direction=-1
+entity id=g09 symbol=E1 area=overworld tile=112,12 direction=-1
+entity id=g10 symbol=E1 area=overworld tile=113,12 direction=-1
+entity id=g11 symbol=E1 area=overworld tile=125,12 direction=-1
+entity id=g12 symbol=E1 area=overworld tile=126,12 direction=-1
+entity id=g13 symbol=E1 area=overworld tile=128,12 direction=-1
+entity id=g14 symbol=E1 area=overworld tile=129,12 direction=-1
+entity id=g15 symbol=E1 area=overworld tile=173,12 direction=-1
+entity id=g16 symbol=E1 area=overworld tile=174,12 direction=-1
+entity id=k01 symbol=E3 area=overworld tile=107,11 direction=-1
+
+[items]
+
+[platforms]
+
+[blocks]
+block area=overworld tile=21,9 content=PowerupByForm
+block area=overworld tile=64,8 content=I3
+block area=overworld tile=78,9 content=PowerupByForm
+block area=overworld tile=101,9 content=I5
+block area=overworld tile=109,5 content=PowerupByForm
+block area=overworld tile=109,9 content=PowerupByForm
+
+[anchors]
+anchor id=bonus_entry area=bonus tile=233.5,2 velocity=0,0
+anchor id=overworld_exit area=overworld tile=179.5,9 velocity=0,-100
+
+[portals]
+portal id=hidden_tunnel_entry area=overworld activation=down trigger=57,9,2,1 target=bonus_entry
+portal id=hidden_tunnel_exit area=bonus activation=right trigger=245,11,3,2 target=overworld_exit
+
+[camera_zones]
+camera id=overworld_camera area=overworld bounds=0,0,248,16 follow_x=true follow_y=false center_y=7 dark=false
+camera id=bonus_camera area=bonus bounds=225,0,23,16 follow_x=false follow_y=false center_y=8 dark=true

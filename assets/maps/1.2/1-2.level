@@ -1,0 +1,66 @@
+# World 1-2 contains overworld, underground, and bonus areas in one grid.
+[stage]
+version=1
+id=world-1-2
+name=WORLD 1-2
+terrain=1-2.txt
+background=background.txt
+next_stage=1.3/1-3.level
+initial_area=overworld
+time_limit=400
+tile_size=16
+
+[rules]
+kill_plane_tile=56.25
+left_boundary_tile=0
+right_boundary_tile=-1
+enemy_void_margin_tiles=4
+
+[entities]
+entity id=ug01 symbol=E2 area=underground tile=19,27 direction=-1
+entity id=ug02 symbol=E2 area=underground tile=20,27 direction=-1
+entity id=ug03 symbol=E2 area=underground tile=41,27 direction=-1
+entity id=ug04 symbol=E2 area=underground tile=80,27 direction=-1
+entity id=ug05 symbol=E2 area=underground tile=81,27 direction=-1
+entity id=ug06 symbol=E2 area=underground tile=83,20 direction=-1
+entity id=ug07 symbol=E2 area=underground tile=88,24 direction=-1
+entity id=ug08 symbol=E2 area=underground tile=89,24 direction=-1
+entity id=ug09 symbol=E2 area=underground tile=108,27 direction=-1
+entity id=ug10 symbol=E2 area=underground tile=109,27 direction=-1
+entity id=ug11 symbol=E2 area=underground tile=110,27 direction=-1
+entity id=ug12 symbol=E2 area=underground tile=147,23 direction=-1
+entity id=ug13 symbol=E2 area=underground tile=148,23 direction=-1
+entity id=k01 symbol=E3 area=underground tile=60,26 direction=-1
+entity id=k02 symbol=E3 area=underground tile=61,26 direction=-1
+entity id=rk01 symbol=E4 area=underground tile=164,26 direction=-1
+entity id=pp01 symbol=E7 area=underground tile=116.5,25 direction=0
+entity id=pp02 symbol=E7 area=underground tile=121.5,24 direction=0
+
+[items]
+
+[platforms]
+platform id=shaft1_a area=underground tile=152,19 width=3 bounds=19,31 speed=50 motion=loop_down
+platform id=shaft1_b area=underground tile=152,25 width=3 bounds=19,31 speed=50 motion=loop_down
+platform id=shaft2_a area=underground tile=170,19 width=3 bounds=20,31 speed=50 motion=loop_up
+platform id=shaft2_b area=underground tile=170,26 width=3 bounds=20,31 speed=50 motion=loop_up
+
+[blocks]
+block area=underground tile=16,25 content=PowerupByForm
+block area=underground tile=40,19 content=I5
+
+[anchors]
+anchor id=underground_entry area=underground tile=3,16 velocity=30,0
+anchor id=bonus_entry area=bonus tile=2,35 velocity=0,0
+anchor id=underground_return area=underground tile=125,25 velocity=30,-80
+anchor id=overworld_exit area=overworld tile=179.5,9 velocity=0,-100
+
+[portals]
+portal id=overworld_pipe area=overworld activation=right trigger=15,10,4,3 target=underground_entry
+portal id=bonus_pipe area=underground activation=down trigger=116,25,2,1 target=bonus_entry
+portal id=bonus_exit area=bonus activation=right trigger=38,41,3,2 target=underground_return
+portal id=underground_exit area=underground activation=right trigger=188,18,8,8 target=overworld_exit
+
+[camera_zones]
+camera id=overworld_camera area=overworld bounds=0,0,215,16 follow_x=true follow_y=false center_y=7 dark=false
+camera id=underground_camera area=underground bounds=0,18,215,12 follow_x=true follow_y=false center_y=25 dark=true
+camera id=bonus_camera area=bonus bounds=0,34,45,11 follow_x=true follow_y=true center_y=35 dark=true
