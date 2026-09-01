@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/GameSettings.h"
+#include "Input/KeyBinding.h"
 #include "PvP/PvPTypes.h"
 #include "States/GameState.h"
 #include <SFML/Graphics.hpp>
@@ -126,6 +127,9 @@ private:
     bool enterMenuDirectly{false};
     std::vector<MenuEntry> entries;
     int selectedIndex{0};
+    BindingTarget bindingTarget{BindingTarget::Solo};
+    bool bindingCaptureActive{false};
+    std::string bindingStatusMessage;
 
     // Timers & Animations
     float globalTime{0.f};
@@ -144,6 +148,9 @@ private:
     void activateSelection(sf::RenderWindow& window);
     void goBack();
     void adjustVolume(float delta);
+    void cycleBindingTarget(int direction);
+    void beginBindingCapture();
+    void captureBindingKey(sf::Keyboard::Key key);
     bool isCharacterSelectionPage() const;
     void beginPvPCharacterSelection(
         PvPMatchType type,

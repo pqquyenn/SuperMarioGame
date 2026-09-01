@@ -2,27 +2,9 @@
 
 #include "Commands/Command.h"
 #include "Commands/CrawlCommand.h"
+#include "Input/KeyBinding.h"
 #include <SFML/Window/Keyboard.hpp>
 #include <memory>
-
-struct KeyBinding {
-    sf::Keyboard::Key primary{sf::Keyboard::Key::Unknown};
-    sf::Keyboard::Key secondary{sf::Keyboard::Key::Unknown};
-    sf::Keyboard::Key tertiary{sf::Keyboard::Key::Unknown};
-};
-
-struct InputBindings {
-    KeyBinding moveLeft{sf::Keyboard::Key::Left, sf::Keyboard::Key::A};
-    KeyBinding moveRight{sf::Keyboard::Key::Right, sf::Keyboard::Key::D};
-    KeyBinding jump{
-        sf::Keyboard::Key::Space,
-        sf::Keyboard::Key::W,
-        sf::Keyboard::Key::Up
-    };
-    KeyBinding crouch{sf::Keyboard::Key::Down, sf::Keyboard::Key::S};
-    KeyBinding action{sf::Keyboard::Key::Z, sf::Keyboard::Key::J, sf::Keyboard::Key::Q};
-    KeyBinding run{sf::Keyboard::Key::LShift, sf::Keyboard::Key::RShift};
-};
 
 // A gameplay ruleset can temporarily suppress individual actions without
 // changing the configured keys. Duo mode uses the horizontal flags for its
@@ -47,11 +29,23 @@ private:
     bool jumpWasHeld{false};
     bool actionWasHeld{false};
     bool actionAlsoRuns{true};
-    InputBindings bindings;
+    BindingTarget bindingTarget{BindingTarget::Solo};
+    const IKeyBindingProvider* bindingProvider{nullptr};
+    sf::Keyboard::Key observedJumpKey{sf::Keyboard::Unknown};
+    sf::Keyboard::Key observedActionKey{sf::Keyboard::Unknown};
+
+    sf::Keyboard::Key keyFor(InputAction action) const;
+    bool held(InputAction action) const;
+    void synchronizeEdgeBindings();
 
 public:
     explicit InputHandler(
-        const InputBindings& inputBindings = InputBindings{},
+        BindingTarget target = BindingTarget::Solo,
+        bool actionCanRun = true
+    );
+    InputHandler(
+        BindingTarget target,
+        const IKeyBindingProvider& provider,
         bool actionCanRun = true
     );
 
@@ -60,6 +54,7 @@ public:
         float dt,
         const InputPermissions& permissions = InputPermissions{}
     );
-    void setBindings(const InputBindings& inputBindings);
-    const InputBindings& getBindings() const;
+    bool isHeld(InputAction action) const;
+    bool matches(InputAction action, sf::Keyboard::Key key) const;
+    BindingTarget getBindingTarget() const { return bindingTarget; }
 };

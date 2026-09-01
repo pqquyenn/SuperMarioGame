@@ -51,7 +51,7 @@ private:
         PlayerSlot(
             DuoPlayerId playerId,
             CharacterChoice choice,
-            const InputBindings& bindings,
+            BindingTarget bindingTarget,
             int startingLives);
     };
 
@@ -87,9 +87,6 @@ private:
     std::string stageName{"1-1"};
     PortalSequence portalSequence;
     float portalCooldown{0.f};
-
-    static InputBindings makePlayerOneBindings();
-    static InputBindings makePlayerTwoBindings();
 
     void createPlayers();
     void configureCamera();

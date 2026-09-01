@@ -28,6 +28,9 @@ public:
         view.zoom(factor);
     }
 
+    void setViewport(const sf::FloatRect& viewport) {
+        view.setViewport(viewport);
+    }
 
     void setCenter(float x, float y) {
         float halfW = view.getSize().x / 2.f;
