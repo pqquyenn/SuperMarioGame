@@ -11,16 +11,19 @@
 #include "Entities/Items/Item.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/OneUpMushroom.h"
+#include "Entities/Items/PlaneItem.h"
 #include "Entities/Items/StarItem.h"
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
 #include "Entities/PlayerPalette.h"
+#include "Entities/YellowLaser.h"
 #include "Observer/Event.h"
 #include "Observer/Observer.h"
 #include "Observer/Subject.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/StarEffect.h"
 #include "PlayerStates/FireState.h"
+#include "PlayerStates/PlaneState.h"
 #include "PlayerStates/SmallState.h"
 #include "PlayerStates/SuperState.h"
 #include "UI/HUD.h"
@@ -1192,6 +1195,57 @@ void testRespawnInvincibilityEffect(TestRunner &runner) {
                 "RespawnInvincibility", "Mario takes lethal damage after invincibility expires");
 }
 
+void testPlaneItemAndFlightMechanics(TestRunner &runner) {
+  Mario mario(0.f, 0.f);
+  mario.update(0.f);
+
+  // Initial form is Small
+  runner.expect(mario.getCurrentFormName() == "Small",
+                "PlaneMechanics", "Mario starts in Small state");
+
+  // Collect PlaneItem
+  PlaneItem planeItem(0.f, 0.f);
+  bool collected = planeItem.tryCollect(mario);
+  runner.expect(collected, "PlaneMechanics", "PlaneItem collected successfully");
+  runner.expect(mario.getCurrentFormName() == "Plane",
+                "PlaneMechanics", "Mario transitioned to Plane state");
+  runner.expect(mario.hasAbility(PlayerAbility::Fly),
+                "PlaneMechanics", "Mario has Fly ability");
+  runner.expect(mario.hasAbility(PlayerAbility::ShootFireballs),
+                "PlaneMechanics", "Mario has shooting ability in Plane state");
+
+  // Verify Projectile Request is YellowLaser
+  ProjectileType requestedType = ProjectileType::Fireball;
+  bool requestReceived = false;
+  mario.setProjectileRequestHandler([&](const ProjectileRequest& req) {
+    requestedType = req.type;
+    requestReceived = true;
+  });
+  mario.useSpecialAbility();
+  runner.expect(requestReceived && requestedType == ProjectileType::YellowLaser,
+                "PlaneMechanics", "Plane state shoots YellowLaser projectile");
+
+  // Test flight upward
+  mario.setJumpHeld(true);
+  mario.update(0.016f);
+  runner.expect(mario.getVelocity().y < 0.f,
+                "PlaneMechanics", "Mario ascends when jump/up is held in Plane state");
+
+  // Test flight downward
+  mario.setJumpHeld(false);
+  mario.setCrouchRequested(true);
+  mario.update(0.016f);
+  runner.expect(mario.getVelocity().y > 0.f,
+                "PlaneMechanics", "Mario descends when crouch/down is held in Plane state");
+
+  // Test damage absorption: taking damage loses the plane and reverts to Small Mario (surviving!)
+  mario.takeDamage();
+  runner.expect(mario.getCurrentFormName() == "Small",
+                "PlaneMechanics", "Taking damage loses the plane and returns to Small state");
+  runner.expect(mario.isActive() && !mario.isDying(),
+                "PlaneMechanics", "Mario survives the hit after losing plane");
+}
+
 } // namespace
 
 // ============================================================
@@ -1245,6 +1299,7 @@ int main() {
   testStarItemBounceAndCollect(runner);
   testOneUpMushroomCollect(runner);
   testRespawnInvincibilityEffect(runner);
+  testPlaneItemAndFlightMechanics(runner);
   runner.report("Suite 4: Item Collection & States");
 
   // Suite 5: OCP Polymorphism (Lương Nhật Minh)

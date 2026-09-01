@@ -11,6 +11,7 @@
 #include "Entities/Items/FireFlower.h"
 #include "Entities/Items/Mushroom.h"
 #include "Entities/Items/OneUpMushroom.h"
+#include "Entities/Items/PlaneItem.h"
 #include "Entities/Items/StarItem.h"
 #include "Factories/EntityAssetProvider.h"
 #include "Factories/EntityFactory.h"
@@ -114,4 +115,12 @@ void registerDefaultEntityTypes(
     };
     factory.registerType("StarItem", starCreator);
     factory.registerType("Star", starCreator);
+
+    auto planeCreator = [&assets](const sf::Vector2f& position) {
+        auto entity = std::make_unique<PlaneItem>(position.x, position.y);
+        entity->setTexture(assets.getTexture("PlaneRed"));
+        return entity;
+    };
+    factory.registerType("PlaneItem", planeCreator);
+    factory.registerType("Plane", planeCreator);
 }
