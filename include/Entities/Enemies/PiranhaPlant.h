@@ -55,6 +55,7 @@ public:
     void render(sf::RenderWindow& window) const override;
     void onStomped() override; // Immune – không làm gì
     bool canBeStomped() const override { return false; }
+    bool shouldRenderBehindTerrain() const override { return true; }
 
     sf::FloatRect getBounds() const override;
 
