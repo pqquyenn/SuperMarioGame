@@ -87,6 +87,7 @@ private:
     std::string stageName{"1-1"};
     PortalSequence portalSequence;
     float portalCooldown{0.f};
+    float skyDropTimer{5.f};
 
     void createPlayers();
     void configureCamera();

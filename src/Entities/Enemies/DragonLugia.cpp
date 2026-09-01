@@ -140,45 +140,29 @@ void DragonLugia::update(float dt) {
         sprite.setColor(sf::Color::White);
     }
 
-    // Always face Mario, but prevent direction flipping when clamped against an arena wall.
-    // Without this guard the direction oscillates every frame when the player is beyond the wall,
-    // which causes the flame spawn offset to push outside the arena and makes the dragon freeze.
-    if (state != State::Dying && state != State::Defeated) {
-        if (targetPlayerPos.x < position.x - 10.f && position.x > arenaMinX + 1.f) {
-            direction = -1;
-        } else if (targetPlayerPos.x > position.x + 10.f && position.x < arenaMaxX - 1.f) {
-            direction = 1;
-        }
-    }
-
     if (const auto* frame = animator.getCurrentFrame()) {
         sprite.setTextureRect(frame->textureRect);
     }
 
-    sprite.setScale(static_cast<float>(direction) * -SPRITE_SCALE, SPRITE_SCALE);
-
-    // Boss State Machine with Targeted Pursuit AI
+    // Boss State Machine with Targeted Pursuit & Dynamic Arena Swoop AI
     switch (state) {
         case State::GroundedWalk: {
             position.y = groundY;
-            float dx = targetPlayerPos.x - position.x;
-            float moveDir = (dx < 0.f) ? -1.f : 1.f;
-            if (std::abs(dx) > 8.f) {
-                position.x += moveDir * speed * dt;
-            } else {
-                position.x += static_cast<float>(direction) * speed * dt;
-            }
+            // Walk across the arena
+            position.x += static_cast<float>(direction) * speed * dt;
 
-            position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
-            if (position.x <= arenaMinX + 2.f) {
+            // Turn around at arena walls
+            if (position.x <= arenaMinX + 4.f) {
+                position.x = arenaMinX + 4.f;
                 direction = 1;
-            } else if (position.x >= arenaMaxX - 2.f) {
+            } else if (position.x >= arenaMaxX - 4.f) {
+                position.x = arenaMaxX - 4.f;
                 direction = -1;
             }
 
-            // Require a minimum walk time (0.8s) before allowing distance-based transition.
-            // This prevents rapid state cycling when the dragon is clamped at a wall boundary.
-            if (stateTimer >= 2.2f || (stateTimer >= 0.8f && std::abs(dx) < 80.f)) {
+            // After patrolling or when closing in on player, trigger attack
+            float dx = targetPlayerPos.x - position.x;
+            if (stateTimer >= 2.0f || (stateTimer >= 0.8f && std::abs(dx) < 70.f)) {
                 walkCycle++;
                 if (walkCycle % 2 == 0) {
                     changeBossState(State::Takeoff);
@@ -191,9 +175,15 @@ void DragonLugia::update(float dt) {
 
         case State::GroundedFire: {
             position.y = groundY;
-            if (!hasFiredInAttack && stateTimer >= 0.35f) {
+            // Face the player when shooting
+            direction = (targetPlayerPos.x >= position.x) ? 1 : -1;
+
+            if (!hasFiredInAttack && stateTimer >= 0.25f) {
                 hasFiredInAttack = true;
-                shootFlameAtTarget(targetPlayerPos, 100.f);
+                // Unleash a 3-way spread covering ground and platforms
+                shootFlameAtTarget(targetPlayerPos, 125.f);
+                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(0.f, -30.f), 110.f);
+                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(static_cast<float>(direction) * 40.f, 20.f), 100.f);
             }
             if (animator.isFinished() || stateTimer >= 0.8f) {
                 changeBossState(State::Takeoff);
@@ -202,19 +192,14 @@ void DragonLugia::update(float dt) {
         }
 
         case State::Takeoff: {
-            float targetAltitude = std::clamp(targetPlayerPos.y - 30.f, 85.f, 135.f);
-            position.y -= 110.f * dt;
-            float dx = targetPlayerPos.x - position.x;
-            float moveDir = (dx < 0.f) ? -1.f : 1.f;
-            if (std::abs(dx) > 8.f) {
-                position.x += moveDir * (speed * 0.8f) * dt;
-            } else {
-                position.x += static_cast<float>(direction) * (speed * 0.8f) * dt;
-            }
+            // Ascend to flight altitude (around 75px - high enough to sweep across platforms)
+            position.y -= 120.f * dt;
+            // Move horizontally across the arena
+            position.x += static_cast<float>(direction) * (speed * 0.9f) * dt;
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
 
-            if (position.y <= targetAltitude) {
-                position.y = targetAltitude;
+            if (position.y <= 75.f || stateTimer >= 1.0f) {
+                position.y = std::max(75.f, position.y);
                 changeBossState(State::SwoopTowardsPlayer);
             }
             break;
@@ -222,43 +207,54 @@ void DragonLugia::update(float dt) {
 
         case State::SwoopTowardsPlayer: {
             hoverTime += dt;
-            // Clamp target within arena bounds so the dragon doesn't perpetually
-            // chase a position it can never reach (e.g. player against a wall).
-            float targetX = std::clamp(targetPlayerPos.x, arenaMinX, arenaMaxX);
-            float targetY = std::clamp(targetPlayerPos.y - 25.f, 85.f, 135.f);
+
+            // Determine swoop direction across the player
+            float swoopDirX = (targetPlayerPos.x >= position.x) ? 1.f : -1.f;
+            direction = static_cast<int>(swoopDirX);
+
+            // Target destination: fly directly through the player's platform area across the arena
+            float targetX = std::clamp(targetPlayerPos.x + swoopDirX * 80.f, arenaMinX + 10.f, arenaMaxX - 10.f);
+            float targetY = std::clamp(targetPlayerPos.y, 75.f, 155.f);
 
             float dx = targetX - position.x;
             float dy = targetY - position.y;
             float dist = std::hypot(dx, dy);
 
-            // Fly directly towards Mario
+            // Aggressive dive/swoop across the arena
             if (dist > 10.f) {
-                position.x += (dx / dist) * (speed * 1.7f) * dt;
-                position.y += (dy / dist) * (speed * 1.3f) * dt;
+                position.x += (dx / dist) * (speed * 2.2f) * dt;
+                position.y += (dy / dist) * (speed * 1.5f) * dt;
             } else {
-                position.x += static_cast<float>(direction) * (speed * 1.2f) * dt;
+                position.x += swoopDirX * (speed * 1.8f) * dt;
             }
 
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
-            position.y = std::clamp(position.y, 80.f, groundY - 20.f);
+            position.y = std::clamp(position.y, 70.f, groundY - 10.f);
 
-            // Recalculate distance after clamping for accurate transition check
-            float clampedDist = std::hypot(targetX - position.x, targetY - position.y);
-
-            // Once close or after swooping, unleash aerial fire
-            if (clampedDist < 65.f || stateTimer >= 2.0f) {
+            // Transition to mid-air fire barrage when close to player or after swooping
+            float distToPlayer = std::hypot(targetPlayerPos.x - position.x, targetPlayerPos.y - position.y);
+            if (distToPlayer < 60.f || stateTimer >= 1.4f) {
                 changeBossState(State::AerialFire);
             }
             break;
         }
 
         case State::AerialFire: {
-            if (!hasFiredInAttack && stateTimer >= 0.35f) {
+            // Face the player to deliver the aerial barrage
+            direction = (targetPlayerPos.x >= position.x) ? 1 : -1;
+
+            if (!hasFiredInAttack && stateTimer >= 0.25f) {
                 hasFiredInAttack = true;
-                // Shoot targeted flame blast at Mario's position with balanced speed
-                shootFlameAtTarget(targetPlayerPos, 110.f);
-                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(static_cast<float>(direction) * 25.f, -10.f), 95.f);
+                // Bombard player and surrounding platforms with 3 fireballs
+                shootFlameAtTarget(targetPlayerPos, 130.f);
+                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(-35.f, -10.f), 115.f);
+                shootFlameAtTarget(targetPlayerPos + sf::Vector2f(35.f, -10.f), 115.f);
             }
+
+            // Maintain slight flight drift
+            position.x += static_cast<float>(direction) * (speed * 0.7f) * dt;
+            position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
+
             if (animator.isFinished() || stateTimer >= 0.8f) {
                 changeBossState(State::Landing);
             }
@@ -266,18 +262,13 @@ void DragonLugia::update(float dt) {
         }
 
         case State::Landing: {
-            position.y += 115.f * dt;
-            float dx = targetPlayerPos.x - position.x;
-            float moveDir = (dx < 0.f) ? -1.f : 1.f;
-            if (std::abs(dx) > 8.f) {
-                position.x += moveDir * (speed * 0.6f) * dt;
-            } else {
-                position.x += static_cast<float>(direction) * (speed * 0.6f) * dt;
-            }
+            position.y += 120.f * dt;
+            position.x += static_cast<float>(direction) * (speed * 0.8f) * dt;
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
 
             if (position.y >= groundY) {
                 position.y = groundY;
+                direction = (targetPlayerPos.x >= position.x) ? 1 : -1;
                 changeBossState(State::GroundedWalk);
             }
             break;
@@ -285,7 +276,7 @@ void DragonLugia::update(float dt) {
 
         case State::Hurt: {
             // Recoil away
-            position.x -= static_cast<float>(direction) * 40.f * dt;
+            position.x -= static_cast<float>(direction) * 50.f * dt;
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
 
             if (stateTimer >= 0.5f) {
@@ -311,6 +302,7 @@ void DragonLugia::update(float dt) {
         }
     }
 
+    sprite.setScale(static_cast<float>(direction) * -SPRITE_SCALE, SPRITE_SCALE);
     sprite.setPosition(position);
     updateFlames(dt, nullptr);
 }

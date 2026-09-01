@@ -11,6 +11,7 @@
 #include "Entities/Items/Item.h"
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
+#include "Factories/EntityFactory.h"
 #include "Physics/CollisionManager.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PvP/PvPCombatResolver.h"
@@ -152,6 +153,7 @@ void DuoState::onEnter() {
     }
     timeRemaining = static_cast<float>(level.getTimeLimit());
     level.setPowerupSpawnMultiplier(2);
+    skyDropTimer = 5.f;
     createPlayers();
     configureCamera();
     startStageMusic();
@@ -997,6 +999,95 @@ void DuoState::update(float dt) {
 
     updateBossTargets(dt);
     level.update(dt);
+
+    // Boss support drops (Doubled for Duo mode)
+    const DragonLugia* stageBoss = nullptr;
+    for (const auto& enemy : level.getEnemies()) {
+        if (const auto* dragon = dynamic_cast<const DragonLugia*>(enemy.get())) {
+            stageBoss = dragon;
+            break;
+        }
+    }
+
+    if (!finishPending && !teamWipe && stageBoss && !stageBoss->isBossDefeated() && hasActivePlayer()) {
+        skyDropTimer -= dt;
+        if (skyDropTimer <= 0.f) {
+            skyDropTimer = 6.5f + static_cast<float>(rand() % 40) / 10.f; // 6.5s - 10.5s
+
+            int dropType = rand() % 100;
+            if (dropType < 55) {
+                // 55% chance: Powerup Items (Mushroom, FireFlower, StarItem) - DOUBLED for Duo mode!
+                struct SurfaceSpot {
+                    float x;
+                    float y;
+                };
+                static const SurfaceSpot surfaces[] = {
+                    {80.f, 192.f},   // Ground Left
+                    {200.f, 192.f},  // Ground Center
+                    {310.f, 192.f},  // Ground Right
+                    {88.f, 128.f},   // Left Blue Platform (row 9)
+                    {184.f, 80.f},   // Middle Blue Platform (row 6)
+                    {300.f, 112.f}   // Right Blue Platform (row 8)
+                };
+
+                static const char* itemTypes[] = {"Mushroom", "FireFlower", "StarItem"};
+                int itemIdx = rand() % 3;
+                std::string selectedItem = itemTypes[itemIdx];
+
+                // If at least one active player is not Small (e.g. Super, Fire), spawn 2 FireFlowers instead of Mushrooms
+                bool hasBigPlayer = false;
+                for (const PlayerSlot* slot : {&playerOne, &playerTwo}) {
+                    if (slot->lifeState == DuoLifeState::Active && slot->character &&
+                        slot->character->getCurrentFormName() != "Small") {
+                        hasBigPlayer = true;
+                        break;
+                    }
+                }
+                if (selectedItem == "Mushroom" && hasBigPlayer) {
+                    selectedItem = "FireFlower";
+                }
+
+                // In Duo mode, spawn 2 items at 2 distinct surface locations
+                int spotIdx1 = rand() % 6;
+                int spotIdx2 = (spotIdx1 + 1 + rand() % 5) % 6;
+
+                sf::Vector2f pos1(surfaces[spotIdx1].x + static_cast<float>(rand() % 16 - 8), surfaces[spotIdx1].y);
+                sf::Vector2f pos2(surfaces[spotIdx2].x + static_cast<float>(rand() % 16 - 8), surfaces[spotIdx2].y);
+
+                bool spawned = false;
+                if (auto itemEnt1 = EntityFactory::getInstance().create(selectedItem, pos1)) {
+                    if (auto* item1 = dynamic_cast<Item*>(itemEnt1.get())) {
+                        itemEnt1.release();
+                        level.getItems().push_back(std::unique_ptr<Item>(item1));
+                        spawned = true;
+                    }
+                }
+                if (auto itemEnt2 = EntityFactory::getInstance().create(selectedItem, pos2)) {
+                    if (auto* item2 = dynamic_cast<Item*>(itemEnt2.get())) {
+                        itemEnt2.release();
+                        level.getItems().push_back(std::unique_ptr<Item>(item2));
+                        spawned = true;
+                    }
+                }
+                if (spawned) {
+                    SoundManager::getInstance().playSound("powerupappear");
+                }
+            } else {
+                // 45% chance: Goomba drops from ceiling (2 Goombas for Duo mode)
+                for (int i = 0; i < 2; ++i) {
+                    float spawnX = 60.f + static_cast<float>(rand() % 280);
+                    float spawnY = 20.f + static_cast<float>(rand() % 10);
+                    if (auto enemyEnt = EntityFactory::getInstance().create("Goomba", {spawnX, spawnY})) {
+                        if (auto* enemy = dynamic_cast<Enemy*>(enemyEnt.get())) {
+                            enemy->setActivated(true);
+                            enemyEnt.release();
+                            level.getEnemies().push_back(std::unique_ptr<Enemy>(enemy));
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     InputPermissions onePermissions;
     InputPermissions twoPermissions;
