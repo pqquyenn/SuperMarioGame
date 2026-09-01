@@ -4,6 +4,7 @@
 #include "Core/SoundManager.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/PlayerEffect.h"
+#include "PlayerStates/PlaneState.h"
 #include "PlayerStates/PlayerState.h"
 #include "PlayerStates/SmallState.h"
 #include "PlayerStates/SuperState.h"
@@ -105,11 +106,33 @@ void Character::render(sf::RenderWindow& window) const {
         const float centerX = position.x + collisionSize.x * 0.5f;
         const float centerY = position.y + collisionSize.y * 0.5f;
 
-        // 1. Draw Mario seated inside cockpit
+        // Determine base form name (Small, Super, Fire)
+        std::string baseForm = "Small";
+        if (auto* ps = dynamic_cast<const PlaneState*>(currentState.get())) {
+            baseForm = std::string(ps->getBaseFormName());
+        }
+
+        // 1. Draw Mario seated inside cockpit with idle standing sprite of the base form
         sf::Sprite marioSprite = sprite;
-        marioSprite.setOrigin(8.f, 16.f);
+        const AnimationClip* idleClip = animationProfile.findClip(baseForm, PlayerMotion::Idle);
+        if (idleClip && idleClip->isValid() && !idleClip->frames.empty()) {
+            sf::IntRect frameRect = idleClip->frames[0].textureRect;
+            if (baseForm != "Small") {
+                // For Super / Fire, take the upper 18 pixels (head, cap, chest)
+                frameRect.height = std::min(frameRect.height, 18);
+                marioSprite.setTextureRect(frameRect);
+                marioSprite.setOrigin(8.f, 18.f);
+                marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY + 1.f);
+            } else {
+                marioSprite.setTextureRect(frameRect);
+                marioSprite.setOrigin(8.f, 16.f);
+                marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY - 1.f);
+            }
+        } else {
+            marioSprite.setOrigin(8.f, 16.f);
+            marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY - 1.f);
+        }
         marioSprite.setScale(facingRight ? 1.f : -1.f, 1.f);
-        marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY - 1.f);
         window.draw(marioSprite);
 
         // 2. Draw plane on top so the cockpit covers Mario's lower body/legs
@@ -493,7 +516,17 @@ bool Character::receivePowerUp(std::unique_ptr<PlayerState> newState) {
     }
 
     if (newState->getName() == "Plane") {
-        changeState(std::move(newState));
+        std::string baseForm = "Small";
+        if (currentState) {
+            if (currentState->getName() == "Plane") {
+                if (auto* ps = dynamic_cast<PlaneState*>(currentState.get())) {
+                    baseForm = std::string(ps->getBaseFormName());
+                }
+            } else {
+                baseForm = std::string(currentState->getName());
+            }
+        }
+        changeState(std::make_unique<PlaneState>(baseForm));
     } else if (currentState->getName() == "Fire" && newState->getName() == "Super") {
         // Keep Fire form when collecting a Super Mushroom
     } else if (currentState->getFormTier() == FormTier::Small &&

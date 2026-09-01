@@ -441,8 +441,9 @@ void PlayState::update(float dt) {
 
       // Boss support drops are enabled by placing DragonLugia in the manifest,
       // rather than by branching on a numeric stage ID.
+      // Drops are paused when player is already riding the plane.
       if (!levelWon && stageBoss && player && player->isActive() &&
-          !player->isDying()) {
+          !player->isDying() && player->getCurrentFormName() != "Plane") {
         skyDropTimer -= dt;
         if (skyDropTimer <= 0.f) {
           skyDropTimer = 6.5f + static_cast<float>(rand() % 40) / 10.f; // 6.5s - 10.5s

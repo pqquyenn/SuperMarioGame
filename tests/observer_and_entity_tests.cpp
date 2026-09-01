@@ -1244,6 +1244,42 @@ void testPlaneItemAndFlightMechanics(TestRunner &runner) {
                 "PlaneMechanics", "Taking damage loses the plane and returns to Small state");
   runner.expect(mario.isActive() && !mario.isDying(),
                 "PlaneMechanics", "Mario survives the hit after losing plane");
+
+  // Test Super Mario entering Plane and reverting to Super on damage
+  Mario superMario(0.f, 0.f);
+  superMario.update(0.f);
+  Mushroom mushroom(0.f, 0.f);
+  mushroom.tryCollect(superMario);
+  runner.expect(superMario.getCurrentFormName() == "Super",
+                "PlaneMechanics", "Mario transformed to Super form");
+  PlaneItem superPlaneItem(0.f, 0.f);
+  superPlaneItem.tryCollect(superMario);
+  runner.expect(superMario.getCurrentFormName() == "Plane",
+                "PlaneMechanics", "Super Mario entered Plane state");
+  superMario.takeDamage();
+  runner.expect(superMario.getCurrentFormName() == "Super",
+                "PlaneMechanics", "Losing plane returns to Super form");
+  runner.expect(superMario.isActive() && !superMario.isDying(),
+                "PlaneMechanics", "Super Mario survived losing plane");
+
+  // Test Fire Mario entering Plane and reverting to Fire on damage
+  Mario fireMario(0.f, 0.f);
+  fireMario.update(0.f);
+  Mushroom shroom2(0.f, 0.f);
+  shroom2.tryCollect(fireMario);
+  FireFlower fireFlower(0.f, 0.f);
+  fireFlower.tryCollect(fireMario);
+  runner.expect(fireMario.getCurrentFormName() == "Fire",
+                "PlaneMechanics", "Mario transformed to Fire form");
+  PlaneItem firePlaneItem(0.f, 0.f);
+  firePlaneItem.tryCollect(fireMario);
+  runner.expect(fireMario.getCurrentFormName() == "Plane",
+                "PlaneMechanics", "Fire Mario entered Plane state");
+  fireMario.takeDamage();
+  runner.expect(fireMario.getCurrentFormName() == "Fire",
+                "PlaneMechanics", "Losing plane returns to Fire form");
+  runner.expect(fireMario.isActive() && !fireMario.isDying(),
+                "PlaneMechanics", "Fire Mario survived losing plane");
 }
 
 } // namespace
