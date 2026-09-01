@@ -29,7 +29,7 @@ entity id=rk03 symbol=E4 area=overworld tile=167.25,11.625 direction=-1
 [items]
 
 [platforms]
-platform id=vertical_1 area=overworld tile=64,6 width=3 bounds=6,15 speed=50 motion=vertical
+platform id=vertical_1 area=overworld tile=64,5 width=3 bounds=5,13 speed=50 motion=vertical
 platform id=horizontal_1 area=overworld tile=100,7 width=3 bounds=100,106 speed=40 motion=horizontal
 platform id=horizontal_2 area=overworld tile=115,9 width=3 bounds=109,115 speed=40 motion=horizontal
 platform id=horizontal_3 area=overworld tile=152,9 width=3 bounds=152,166 speed=50 motion=horizontal
