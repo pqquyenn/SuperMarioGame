@@ -140,6 +140,9 @@ void Character::onCollision(
 
     if (!enemy->canBeStomped()) {
         takeDamage();
+        if (isStomp && !dying) {
+            setVelocity(sf::Vector2f(velocity.x, -180.f));
+        }
         return;
     }
 

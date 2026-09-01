@@ -163,9 +163,18 @@ void DragonLugia::update(float dt) {
             position.y = groundY;
             float dx = targetPlayerPos.x - position.x;
             float moveDir = (dx < 0.f) ? -1.f : 1.f;
-            position.x += moveDir * speed * dt;
+            if (std::abs(dx) > 8.f) {
+                position.x += moveDir * speed * dt;
+            } else {
+                position.x += static_cast<float>(direction) * speed * dt;
+            }
 
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
+            if (position.x <= arenaMinX + 2.f) {
+                direction = 1;
+            } else if (position.x >= arenaMaxX - 2.f) {
+                direction = -1;
+            }
 
             // Require a minimum walk time (0.8s) before allowing distance-based transition.
             // This prevents rapid state cycling when the dragon is clamped at a wall boundary.
@@ -193,10 +202,15 @@ void DragonLugia::update(float dt) {
         }
 
         case State::Takeoff: {
-            float targetAltitude = std::clamp(targetPlayerPos.y - 50.f, 50.f, 130.f);
+            float targetAltitude = std::clamp(targetPlayerPos.y - 30.f, 85.f, 135.f);
             position.y -= 110.f * dt;
             float dx = targetPlayerPos.x - position.x;
-            position.x += ((dx < 0.f) ? -1.f : 1.f) * (speed * 0.8f) * dt;
+            float moveDir = (dx < 0.f) ? -1.f : 1.f;
+            if (std::abs(dx) > 8.f) {
+                position.x += moveDir * (speed * 0.8f) * dt;
+            } else {
+                position.x += static_cast<float>(direction) * (speed * 0.8f) * dt;
+            }
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
 
             if (position.y <= targetAltitude) {
@@ -211,7 +225,7 @@ void DragonLugia::update(float dt) {
             // Clamp target within arena bounds so the dragon doesn't perpetually
             // chase a position it can never reach (e.g. player against a wall).
             float targetX = std::clamp(targetPlayerPos.x, arenaMinX, arenaMaxX);
-            float targetY = std::clamp(targetPlayerPos.y - 45.f, 45.f, 125.f);
+            float targetY = std::clamp(targetPlayerPos.y - 25.f, 85.f, 135.f);
 
             float dx = targetX - position.x;
             float dy = targetY - position.y;
@@ -221,10 +235,12 @@ void DragonLugia::update(float dt) {
             if (dist > 10.f) {
                 position.x += (dx / dist) * (speed * 1.7f) * dt;
                 position.y += (dy / dist) * (speed * 1.3f) * dt;
+            } else {
+                position.x += static_cast<float>(direction) * (speed * 1.2f) * dt;
             }
 
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
-            position.y = std::clamp(position.y, 40.f, groundY - 20.f);
+            position.y = std::clamp(position.y, 80.f, groundY - 20.f);
 
             // Recalculate distance after clamping for accurate transition check
             float clampedDist = std::hypot(targetX - position.x, targetY - position.y);
@@ -252,7 +268,12 @@ void DragonLugia::update(float dt) {
         case State::Landing: {
             position.y += 115.f * dt;
             float dx = targetPlayerPos.x - position.x;
-            position.x += ((dx < 0.f) ? -1.f : 1.f) * (speed * 0.6f) * dt;
+            float moveDir = (dx < 0.f) ? -1.f : 1.f;
+            if (std::abs(dx) > 8.f) {
+                position.x += moveDir * (speed * 0.6f) * dt;
+            } else {
+                position.x += static_cast<float>(direction) * (speed * 0.6f) * dt;
+            }
             position.x = std::clamp(position.x, arenaMinX, arenaMaxX);
 
             if (position.y >= groundY) {
@@ -534,7 +555,7 @@ void DragonLugia::render(sf::RenderWindow& window) const {
         float barW = 44.f;
         float barH = 5.f;
         float barX = position.x - barW / 2.f;
-        float barY = position.y - 48.f;
+        float barY = std::max(34.f, position.y - 48.f);
 
         hpBarBack.setSize(sf::Vector2f(barW, barH));
         hpBarBack.setPosition(barX, barY);
