@@ -157,7 +157,7 @@ BindingProfiles makeDefaultBindingProfiles() {
 
     set(BindingTarget::Solo, InputAction::MoveLeft, sf::Keyboard::Left);
     set(BindingTarget::Solo, InputAction::MoveRight, sf::Keyboard::Right);
-    set(BindingTarget::Solo, InputAction::Jump, sf::Keyboard::Space);
+    set(BindingTarget::Solo, InputAction::Jump, sf::Keyboard::Up);
     set(BindingTarget::Solo, InputAction::Crouch, sf::Keyboard::Down);
     set(BindingTarget::Solo, InputAction::Action, sf::Keyboard::Z);
     set(BindingTarget::Solo, InputAction::Run, sf::Keyboard::LShift);

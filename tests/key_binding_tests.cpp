@@ -17,7 +17,7 @@ int main() {
     const BindingProfiles defaults = makeDefaultBindingProfiles();
     assert(validateBindingProfiles(defaults).valid());
     assert(defaults[static_cast<std::size_t>(BindingTarget::Solo)]
-               .get(InputAction::Jump) == sf::Keyboard::Space);
+               .get(InputAction::Jump) == sf::Keyboard::Up);
     assert(defaults[static_cast<std::size_t>(BindingTarget::PvPPlayerTwo)]
                .get(InputAction::Action) == sf::Keyboard::J);
 
@@ -28,7 +28,7 @@ int main() {
 
     KeyBindingService service{configPath};
     assert(service.getKey(BindingTarget::Solo, InputAction::Jump) ==
-           sf::Keyboard::Space);
+           sf::Keyboard::Up);
 
     BindingUpdateResult result = service.tryUpdate(
         {BindingTarget::Solo, InputAction::Jump, sf::Keyboard::X});
@@ -62,7 +62,7 @@ int main() {
     result = reloaded.resetProfile(BindingTarget::Solo);
     assert(result.status == BindingUpdateStatus::Applied);
     assert(reloaded.getKey(BindingTarget::Solo, InputAction::Jump) ==
-           sf::Keyboard::Space);
+           sf::Keyboard::Up);
 
     assert(keyDisplayName(sf::Keyboard::LShift) == "LEFT SHIFT");
     assert(keyDisplayName(sf::Keyboard::Numpad1) == "NUMPAD 1");
