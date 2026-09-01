@@ -19,6 +19,7 @@
 #include "PlayerEffects/StarEffect.h"
 #include "PlayerStates/FireState.h"
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
