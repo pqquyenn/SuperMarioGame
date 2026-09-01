@@ -1142,12 +1142,16 @@ const DuoState::PlayerSlot& DuoState::slotFor(DuoPlayerId id) const {
 DuoHudPlayerData DuoState::makeHudData(
     const PlayerSlot& slot,
     const char* label) const {
+    std::string form = slot.character
+        ? std::string{slot.character->getCurrentFormName()}
+        : std::string{"SMALL"};
+    for (char& c : form) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
     return {
         label,
         characterName(slot.characterChoice),
-        slot.character
-            ? std::string{slot.character->getCurrentFormName()}
-            : std::string{"SMALL"},
+        form,
         slot.events.stats.score,
         slot.events.stats.coins,
         slot.events.lives,
