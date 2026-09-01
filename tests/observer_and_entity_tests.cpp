@@ -18,6 +18,7 @@
 #include "Observer/Event.h"
 #include "Observer/Observer.h"
 #include "Observer/Subject.h"
+#include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/StarEffect.h"
 #include "PlayerStates/FireState.h"
 #include "PlayerStates/SmallState.h"
@@ -1161,6 +1162,36 @@ void testSecondaryPlayerPalette(TestRunner &runner) {
                 "Skin and Luigi cleanup background colors remain unchanged");
 }
 
+void testRespawnInvincibilityEffect(TestRunner &runner) {
+  Mario mario(0.f, 0.f);
+  mario.update(0.f);
+
+  // Mario dies and respawns
+  mario.die(DeathCause::NormalDamage);
+  mario.respawn(100.f, 200.f);
+
+  runner.expect(mario.getPosition().x == 100.f && mario.getPosition().y == 200.f,
+                "RespawnInvincibility", "Mario respawns at specified coordinates");
+  runner.expect(mario.isActive() && !mario.isDying(),
+                "RespawnInvincibility", "Mario is active and not dying after respawn");
+
+  // Apply respawn invincibility (2.0s duration, 0.1s flash interval)
+  mario.addEffect(std::make_unique<DamageInvincibilityEffect>(2.f));
+
+  // Verify damage absorption during invincibility
+  mario.takeDamage();
+  runner.expect(!mario.isDying() && mario.isActive(),
+                "RespawnInvincibility", "Mario absorbs damage during 2s invincibility");
+
+  // Advance time past 2.0s duration
+  mario.update(2.1f);
+
+  // Invincibility has expired, damage should now take effect
+  mario.takeDamage();
+  runner.expect(mario.isDying(),
+                "RespawnInvincibility", "Mario takes lethal damage after invincibility expires");
+}
+
 } // namespace
 
 // ============================================================
@@ -1213,6 +1244,7 @@ int main() {
   testSecondaryPlayerPalette(runner);
   testStarItemBounceAndCollect(runner);
   testOneUpMushroomCollect(runner);
+  testRespawnInvincibilityEffect(runner);
   runner.report("Suite 4: Item Collection & States");
 
   // Suite 5: OCP Polymorphism (Lương Nhật Minh)

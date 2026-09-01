@@ -16,6 +16,7 @@
 #include "Core/GameSettings.h"
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
+#include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/StarEffect.h"
 #include "PlayerStates/FireState.h"
 #include <algorithm>
@@ -292,6 +293,44 @@ void PlayState::update(float dt) {
           level.resetToInitialArea();
           player->respawn(playerSpawnPoint.x, playerSpawnPoint.y);
           centerCameraOnPlayerSpawn();
+
+          if (isMap4()) {
+            player->addEffect(
+                std::make_unique<DamageInvincibilityEffect>(2.f));
+          }
+
+          if (SoundManager::getInstance().getCurrentBGM().empty()) {
+            const std::string levelName = level.getDefinition().name.empty()
+                ? std::filesystem::path(initialMapPath).stem().string()
+                : level.getDefinition().name;
+            std::string lowerMap = initialMapPath;
+            for (char &c : lowerMap) c = static_cast<char>(::tolower(c));
+            std::string lowerName = levelName;
+            for (char &c : lowerName) c = static_cast<char>(::tolower(c));
+
+            bool hasBoss = false;
+            for (const auto &enemy : level.getEnemies()) {
+              if (dynamic_cast<DragonLugia *>(enemy.get())) {
+                hasBoss = true;
+                break;
+              }
+            }
+
+            if (isMap4() || hasBoss || lowerName.find("castle") != std::string::npos ||
+                lowerMap.find("castle") != std::string::npos) {
+              SoundManager::getInstance().playBGM("assets/audio/music/castle.wav");
+            } else if (level.usesDarkBackground() ||
+                       lowerName.find("underground") != std::string::npos ||
+                       lowerMap.find("underground") != std::string::npos ||
+                       lowerName.find("1-2") != std::string::npos) {
+              SoundManager::getInstance().playBGM("assets/audio/music/underground.wav");
+            } else if (lowerName.find("underwater") != std::string::npos ||
+                       lowerMap.find("underwater") != std::string::npos) {
+              SoundManager::getInstance().playBGM("assets/audio/music/underwater.wav");
+            } else {
+              SoundManager::getInstance().playBGM("assets/audio/music/overworld.wav");
+            }
+          }
         } else if (stateManager) {
           stateManager->changeState(
               std::make_unique<GameOverState>(hud.getScore(), initialMapPath));
@@ -625,3 +664,20 @@ void PlayState::constrainPlayerHorizontally() {
     player->setVelocity(0.f, player->getVelocity().y);
   }
 }
+
+bool PlayState::isMap4() const {
+  if (level.getLevelId() == 4 || level.getDefinition().id == "world-1-4") {
+    return true;
+  }
+  if (initialMapPath.find("1.4") != std::string::npos ||
+      initialMapPath.find("1-4") != std::string::npos) {
+    return true;
+  }
+  const std::string &name = level.getDefinition().name;
+  if (name.find("1-4") != std::string::npos ||
+      name.find("1.4") != std::string::npos) {
+    return true;
+  }
+  return false;
+}
+
