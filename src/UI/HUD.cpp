@@ -8,6 +8,17 @@
 static sf::Font hudFont;
 static bool fontLoaded = false;
 
+static std::string formatWorldNumber(const std::string& raw) {
+    std::string s = raw;
+    while (!s.empty() && s.front() == ' ') s.erase(s.begin());
+    if (s.rfind("WORLD ", 0) == 0 || s.rfind("world ", 0) == 0 ||
+        s.rfind("World ", 0) == 0) {
+        s = s.substr(6);
+    }
+    while (!s.empty() && s.front() == ' ') s.erase(s.begin());
+    return s.empty() ? "1-1" : s;
+}
+
 HUD::HUD() {
     if (!fontLoaded) {
         std::vector<std::string> fontPaths = {
@@ -19,6 +30,7 @@ HUD::HUD() {
         for (auto& path : fontPaths) {
             if (hudFont.loadFromFile(path)) {
                 fontLoaded = true;
+                const_cast<sf::Texture&>(hudFont.getTexture(8)).setSmooth(false);
                 std::cout << "[HUD] Font loaded: " << path << std::endl;
                 break;
             }
@@ -106,7 +118,7 @@ void HUD::update(float dt) {
 
     {
         std::ostringstream ss;
-        ss << "WORLD\n " << levelName;
+        ss << "WORLD\n " << formatWorldNumber(levelName);
         worldText.setString(ss.str());
     }
 
