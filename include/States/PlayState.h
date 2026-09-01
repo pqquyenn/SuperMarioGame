@@ -36,6 +36,7 @@ private:
     void refreshPlayerSpawnPoint();
     void centerCameraOnPlayerSpawn();
     void constrainPlayerHorizontally();
+    bool isMap4() const;
 
 public:
     PlayState(const std::string& mapPath = "1.1/1-1.level");
