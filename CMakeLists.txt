@@ -243,6 +243,7 @@ add_executable(solid04_tile_tests
     src/PlayerStates/SmallState.cpp
     src/PlayerStates/SuperState.cpp
     src/PlayerStates/FireState.cpp
+    src/PlayerStates/PlaneState.cpp
     src/PlayerEffects/PlayerEffect.cpp
     src/PlayerEffects/DamageInvincibilityEffect.cpp
     src/PlayerEffects/StarEffect.cpp
@@ -322,6 +323,7 @@ add_executable(solid11_tests
     src/PlayerStates/SmallState.cpp
     src/PlayerStates/SuperState.cpp
     src/PlayerStates/FireState.cpp
+    src/PlayerStates/PlaneState.cpp
     src/PlayerEffects/PlayerEffect.cpp
     src/PlayerEffects/DamageInvincibilityEffect.cpp
     src/PlayerEffects/StarEffect.cpp
@@ -336,8 +338,10 @@ add_executable(solid11_tests
     src/Entities/Items/Coin.cpp
     src/Entities/Items/Mushroom.cpp
     src/Entities/Items/FireFlower.cpp
+    src/Entities/Items/PlaneItem.cpp
     src/Entities/Items/StarItem.cpp
     src/Entities/Items/OneUpMushroom.cpp
+    src/Entities/YellowLaser.cpp
     src/Core/AssetManager.cpp
     src/Core/SoundManager.cpp
 )

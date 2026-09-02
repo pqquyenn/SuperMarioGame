@@ -5,6 +5,7 @@
 #include "Level/Level.h"
 #include "Entities/Character.h"
 #include "Entities/Fireball.h"
+#include "Entities/YellowLaser.h"
 #include "Input/InputHandler.h"
 #include "AdminControl/AdminDebugView.h"
 #include "UI/HUD.h"
@@ -23,6 +24,7 @@ private:
     ObserverConnection achievementObserverConnection;
     AdminDebugView adminDebugView;
     std::vector<std::unique_ptr<Fireball>> fireballs;
+    std::vector<std::unique_ptr<YellowLaser>> yellowLasers;
 
     bool isFreeCameraMode = false;
     float freeCamSpeed = 900.f;
@@ -33,6 +35,7 @@ private:
     float skyDropTimer = 5.f;
 
     void spawnFireball(const ProjectileRequest& request);
+    void spawnYellowLaser(const ProjectileRequest& request);
     void refreshPlayerSpawnPoint();
     void centerCameraOnPlayerSpawn();
     void constrainPlayerHorizontally();
