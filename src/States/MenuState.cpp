@@ -494,9 +494,7 @@ void MenuState::rebuildEntries() {
                 "HARDCORE            " +
                 achievementStatus(achievements, AchievementId::Hardcore) + "\n" +
                 "FRIENDLY            " +
-                achievementStatus(achievements, AchievementId::Friendly) + "\n" +
-                "I HATE MYSTERY      " +
-                achievementStatus(achievements, AchievementId::IHateMystery));
+                achievementStatus(achievements, AchievementId::Friendly));
             entries = {{"BACK"}};
             break;
         }

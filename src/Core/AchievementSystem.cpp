@@ -33,7 +33,6 @@ const char* keyFor(AchievementId id) {
         case AchievementId::SmallIsEnough: return "small_is_enough";
         case AchievementId::Hardcore: return "hardcore";
         case AchievementId::Friendly: return "friendly";
-        case AchievementId::IHateMystery: return "i_hate_mystery";
         case AchievementId::Count: break;
     }
     return "unknown";
@@ -84,10 +83,6 @@ void AchievementSystem::completeLevel(int levelId, int score) {
     if (!attempt.defeatedEnemy) {
         changed |= unlock(AchievementId::Friendly);
     }
-    if (!attempt.touchedMystery) {
-        changed |= unlock(AchievementId::IHateMystery);
-    }
-
     attempt.active = false;
     if (changed) {
         save();
@@ -112,9 +107,6 @@ void AchievementSystem::onNotify(const GameEvent& event) {
             break;
         case GameEventType::ENEMY_DEFEATED:
             attempt.defeatedEnemy = true;
-            break;
-        case GameEventType::MYSTERY_BLOCK_TOUCHED:
-            attempt.touchedMystery = true;
             break;
         default:
             break;
