@@ -13,7 +13,6 @@ enum class AchievementId : std::size_t {
     SmallIsEnough,
     Hardcore,
     Friendly,
-    IHateMystery,
     Count
 };
 
@@ -24,7 +23,6 @@ private:
         bool changedForm{false};
         bool lostLife{false};
         bool defeatedEnemy{false};
-        bool touchedMystery{false};
         std::string initialForm{"Small"};
     };
 
