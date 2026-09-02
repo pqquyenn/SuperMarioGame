@@ -24,7 +24,7 @@ entity id=boss01 symbol=E8 area=overworld tile=18,10 direction=-1
 [platforms]
 
 [blocks]
-block area=overworld tile=11,6 content=PowerupByForm
+block area=overworld tile=5,9 content=PowerupByForm
 
 [anchors]
 
