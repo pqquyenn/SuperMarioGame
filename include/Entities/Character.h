@@ -17,7 +17,7 @@ enum class FormTier;
 
 enum class DeathCause { NormalDamage, Void, TimeOut, Crushed, PvP };
 
-enum class ProjectileType { Fireball, Iceball };
+enum class ProjectileType { Fireball, Iceball, YellowLaser };
 
 struct ProjectileRequest {
   ProjectileType type;

@@ -245,6 +245,10 @@ PlayerAnimationProfile makeClassicPlayerAnimationProfile(
         "StarSuper",
         makeStarSuperAnimationSet(deathFrame)
     );
+    profile.registerForm(
+        "Plane",
+        makeAnimationSet(normalSmallRowY, 16, deathFrame)
+    );
 
     return profile;
 }

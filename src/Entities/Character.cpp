@@ -1,8 +1,10 @@
 #include "Entities/Character.h"
 #include "Entities/Enemies/Enemy.h"
+#include "Core/AssetManager.h"
 #include "Core/SoundManager.h"
 #include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/PlayerEffect.h"
+#include "PlayerStates/PlaneState.h"
 #include "PlayerStates/PlayerState.h"
 #include "PlayerStates/SmallState.h"
 #include "PlayerStates/SuperState.h"
@@ -94,6 +96,54 @@ void Character::render(sf::RenderWindow& window) const {
         if (!effect->isCharacterVisible()) {
             return;
         }
+    }
+
+    if (currentFormName == "Plane" || hasAbility(PlayerAbility::Fly)) {
+        sf::Texture& planeTex = AssetManager::getInstance().getTexture("PlaneRed");
+        const float scale = 0.65f;
+        const float planeW = static_cast<float>(planeTex.getSize().x);
+        const float planeH = static_cast<float>(planeTex.getSize().y);
+        const float centerX = position.x + collisionSize.x * 0.5f;
+        const float centerY = position.y + collisionSize.y * 0.5f;
+
+        // Determine base form name (Small, Super, Fire)
+        std::string baseForm = "Small";
+        if (auto* ps = dynamic_cast<const PlaneState*>(currentState.get())) {
+            baseForm = std::string(ps->getBaseFormName());
+        }
+
+        // 1. Draw Mario seated inside cockpit with idle standing sprite of the base form
+        sf::Sprite marioSprite = sprite;
+        const AnimationClip* idleClip = animationProfile.findClip(baseForm, PlayerMotion::Idle);
+        if (idleClip && idleClip->isValid() && !idleClip->frames.empty()) {
+            sf::IntRect frameRect = idleClip->frames[0].textureRect;
+            if (baseForm != "Small") {
+                // For Super / Fire, take the upper 18 pixels (head, cap, chest)
+                frameRect.height = std::min(frameRect.height, 18);
+                marioSprite.setTextureRect(frameRect);
+                marioSprite.setOrigin(8.f, 18.f);
+                marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY + 1.f);
+            } else {
+                marioSprite.setTextureRect(frameRect);
+                marioSprite.setOrigin(8.f, 16.f);
+                marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY - 1.f);
+            }
+        } else {
+            marioSprite.setOrigin(8.f, 16.f);
+            marioSprite.setPosition(centerX + (facingRight ? -1.f : 1.f), centerY - 1.f);
+        }
+        marioSprite.setScale(facingRight ? 1.f : -1.f, 1.f);
+        window.draw(marioSprite);
+
+        // 2. Draw plane on top so the cockpit covers Mario's lower body/legs
+        if (planeTex.getSize().x > 0) {
+            sf::Sprite planeSprite(planeTex);
+            planeSprite.setScale(facingRight ? scale : -scale, scale);
+            planeSprite.setOrigin(planeW * 0.45f, planeH * 0.5f);
+            planeSprite.setPosition(centerX, centerY);
+            window.draw(planeSprite);
+        }
+        return;
     }
 
     sf::Sprite displaySprite = sprite;
@@ -287,6 +337,26 @@ void Character::applyGravity(float dt) {
 }
 
 void Character::updateCharacterPhysics(float dt) {
+    if (hasAbility(PlayerAbility::Fly)) {
+        if (jumpHeldThisFrame) {
+            velocity.y = -180.f;
+        } else if (crouchRequested) {
+            velocity.y = 180.f;
+        } else {
+            velocity.y = std::clamp(velocity.y * (1.f - 6.f * dt), -5.f, 5.f);
+        }
+
+        if (!horizontalInputThisFrame) {
+            applyHorizontalDeceleration(dt);
+        }
+
+        integrateVelocity(dt);
+
+        horizontalInputThisFrame = false;
+        jumpHeldThisFrame = false;
+        return;
+    }
+
     if (!horizontalInputThisFrame && grounded) {
         applyHorizontalDeceleration(dt);
     }
@@ -445,7 +515,19 @@ bool Character::receivePowerUp(std::unique_ptr<PlayerState> newState) {
         return false;
     }
 
-    if (currentState->getName() == "Fire" && newState->getName() == "Super") {
+    if (newState->getName() == "Plane") {
+        std::string baseForm = "Small";
+        if (currentState) {
+            if (currentState->getName() == "Plane") {
+                if (auto* ps = dynamic_cast<PlaneState*>(currentState.get())) {
+                    baseForm = std::string(ps->getBaseFormName());
+                }
+            } else {
+                baseForm = std::string(currentState->getName());
+            }
+        }
+        changeState(std::make_unique<PlaneState>(baseForm));
+    } else if (currentState->getName() == "Fire" && newState->getName() == "Super") {
         // Keep Fire form when collecting a Super Mushroom
     } else if (currentState->getFormTier() == FormTier::Small &&
         newState->getFormTier() == FormTier::Powered) {
@@ -653,6 +735,10 @@ float Character::getHorizontalMovementScale() const {
 
 void Character::setCrouchRequested(bool status) {
     crouchRequested = status;
+
+    if (hasAbility(PlayerAbility::Fly)) {
+        return;
+    }
 
     if (!status || crouching || !isActive() || dying || !grounded ||
         !currentState || currentState->getFormTier() != FormTier::Powered) {

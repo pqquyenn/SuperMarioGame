@@ -16,6 +16,7 @@
 #include "Core/GameSettings.h"
 #include "Entities/Luigi.h"
 #include "Entities/Mario.h"
+#include "PlayerEffects/DamageInvincibilityEffect.h"
 #include "PlayerEffects/StarEffect.h"
 #include "PlayerStates/FireState.h"
 #include <algorithm>
@@ -57,7 +58,13 @@ void PlayState::onEnter() {
   player->setTexture(
       AssetManager::getInstance().getTexture("PlayerSpriteSheet"));
   player->setProjectileRequestHandler(
-      [this](const ProjectileRequest &request) { spawnFireball(request); });
+      [this](const ProjectileRequest &request) {
+        if (request.type == ProjectileType::Fireball) {
+          spawnFireball(request);
+        } else if (request.type == ProjectileType::YellowLaser) {
+          spawnYellowLaser(request);
+        }
+      });
   player->update(0.f);
   refreshPlayerSpawnPoint();
   player->setPosition(playerSpawnPoint);
@@ -292,6 +299,44 @@ void PlayState::update(float dt) {
           level.resetToInitialArea();
           player->respawn(playerSpawnPoint.x, playerSpawnPoint.y);
           centerCameraOnPlayerSpawn();
+
+          if (isMap4()) {
+            player->addEffect(
+                std::make_unique<DamageInvincibilityEffect>(2.f));
+          }
+
+          if (SoundManager::getInstance().getCurrentBGM().empty()) {
+            const std::string levelName = level.getDefinition().name.empty()
+                ? std::filesystem::path(initialMapPath).stem().string()
+                : level.getDefinition().name;
+            std::string lowerMap = initialMapPath;
+            for (char &c : lowerMap) c = static_cast<char>(::tolower(c));
+            std::string lowerName = levelName;
+            for (char &c : lowerName) c = static_cast<char>(::tolower(c));
+
+            bool hasBoss = false;
+            for (const auto &enemy : level.getEnemies()) {
+              if (dynamic_cast<DragonLugia *>(enemy.get())) {
+                hasBoss = true;
+                break;
+              }
+            }
+
+            if (isMap4() || hasBoss || lowerName.find("castle") != std::string::npos ||
+                lowerMap.find("castle") != std::string::npos) {
+              SoundManager::getInstance().playBGM("assets/audio/music/castle.wav");
+            } else if (level.usesDarkBackground() ||
+                       lowerName.find("underground") != std::string::npos ||
+                       lowerMap.find("underground") != std::string::npos ||
+                       lowerName.find("1-2") != std::string::npos) {
+              SoundManager::getInstance().playBGM("assets/audio/music/underground.wav");
+            } else if (lowerName.find("underwater") != std::string::npos ||
+                       lowerMap.find("underwater") != std::string::npos) {
+              SoundManager::getInstance().playBGM("assets/audio/music/underwater.wav");
+            } else {
+              SoundManager::getInstance().playBGM("assets/audio/music/overworld.wav");
+            }
+          }
         } else if (stateManager) {
           stateManager->changeState(
               std::make_unique<GameOverState>(hud.getScore(), initialMapPath));
@@ -396,8 +441,9 @@ void PlayState::update(float dt) {
 
       // Boss support drops are enabled by placing DragonLugia in the manifest,
       // rather than by branching on a numeric stage ID.
+      // Drops are paused when player is already riding the plane.
       if (!levelWon && stageBoss && player && player->isActive() &&
-          !player->isDying()) {
+          !player->isDying() && player->getCurrentFormName() != "Plane") {
         skyDropTimer -= dt;
         if (skyDropTimer <= 0.f) {
           skyDropTimer = 6.5f + static_cast<float>(rand() % 40) / 10.f; // 6.5s - 10.5s
@@ -421,11 +467,11 @@ void PlayState::update(float dt) {
             int spotIdx = rand() % 6;
             sf::Vector2f spawnPos(surfaces[spotIdx].x + static_cast<float>(rand() % 16 - 8), surfaces[spotIdx].y);
 
-            static const char* itemTypes[] = {"Mushroom", "FireFlower", "StarItem"};
-            int itemIdx = rand() % 3;
+            static const char* itemTypes[] = {"Mushroom", "FireFlower", "StarItem", "PlaneItem"};
+            int itemIdx = rand() % 4;
             std::string selectedItem = itemTypes[itemIdx];
             if (selectedItem == "Mushroom" && player->getCurrentFormName() != "Small") {
-              selectedItem = "FireFlower";
+              selectedItem = "PlaneItem";
             }
             if (auto itemEnt = EntityFactory::getInstance().create(selectedItem, spawnPos)) {
               if (auto* item = dynamic_cast<Item*>(itemEnt.get())) {
@@ -516,6 +562,50 @@ void PlayState::update(float dt) {
                      [](const auto &f) { return !f || !f->isActive(); }),
       fireballs.end());
 
+  // Cập nhật YellowLaser: di chuyển thẳng, va chạm enemy
+  for (auto &laser : yellowLasers) {
+    if (!laser || !laser->isActive())
+      continue;
+
+    laser->update(dt);
+    if (!laser->isActive())
+      continue;
+
+    const sf::FloatRect laserBounds = laser->getBounds();
+    for (auto &enemy : level.getEnemies()) {
+      if (!enemy || !enemy->isActive())
+        continue;
+      sf::FloatRect overlap;
+      if (CollisionManager::checkAABB(laserBounds, enemy->getBounds(), overlap)) {
+        enemy->onFireball();
+        laser->explode();
+        if (player) {
+          player->notify(GameEvent::enemyDefeated(enemy->getScoreValue()));
+        }
+        break;
+      }
+    }
+
+    if (laser->isActive()) {
+      const sf::FloatRect camBounds = level.getCamera().getViewBounds();
+      constexpr float CleanupMargin = 64.f;
+      const sf::FloatRect activeBounds{
+          camBounds.left - CleanupMargin,
+          camBounds.top - CleanupMargin,
+          camBounds.width + CleanupMargin * 2.f,
+          camBounds.height + CleanupMargin * 2.f};
+
+      if (!laser->getBounds().intersects(activeBounds)) {
+        laser->explode();
+      }
+    }
+  }
+
+  yellowLasers.erase(
+      std::remove_if(yellowLasers.begin(), yellowLasers.end(),
+                     [](const auto &l) { return !l || !l->isActive(); }),
+      yellowLasers.end());
+
   // Cập nhật các entity trong level
   level.update(dt);
 
@@ -547,6 +637,12 @@ void PlayState::render(sf::RenderWindow &window) {
   for (const auto &fireball : fireballs) {
     if (fireball && fireball->isActive()) {
       fireball->render(window);
+    }
+  }
+
+  for (const auto &laser : yellowLasers) {
+    if (laser && laser->isActive()) {
+      laser->render(window);
     }
   }
 
@@ -590,6 +686,27 @@ void PlayState::spawnFireball(const ProjectileRequest &request) {
   fireballs.push_back(std::move(fireball));
 }
 
+void PlayState::spawnYellowLaser(const ProjectileRequest &request) {
+  if (request.type != ProjectileType::YellowLaser) {
+    return;
+  }
+
+  sf::Texture &tex = AssetManager::getInstance().getTexture("YellowLaser");
+  if (tex.getSize().x == 0) {
+    return;
+  }
+
+  if (yellowLasers.size() >= 4) {
+    return;
+  }
+
+  auto laser =
+      std::make_unique<YellowLaser>(request.position.x, request.position.y,
+                                    request.facingRight, tex);
+  yellowLasers.push_back(std::move(laser));
+  SoundManager::getInstance().playSound("fireball");
+}
+
 void PlayState::refreshPlayerSpawnPoint() {
   if (!player) {
     return;
@@ -625,3 +742,20 @@ void PlayState::constrainPlayerHorizontally() {
     player->setVelocity(0.f, player->getVelocity().y);
   }
 }
+
+bool PlayState::isMap4() const {
+  if (level.getLevelId() == 4 || level.getDefinition().id == "world-1-4") {
+    return true;
+  }
+  if (initialMapPath.find("1.4") != std::string::npos ||
+      initialMapPath.find("1-4") != std::string::npos) {
+    return true;
+  }
+  const std::string &name = level.getDefinition().name;
+  if (name.find("1-4") != std::string::npos ||
+      name.find("1.4") != std::string::npos) {
+    return true;
+  }
+  return false;
+}
+

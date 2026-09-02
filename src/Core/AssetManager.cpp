@@ -164,6 +164,10 @@ void AssetManager::loadLevelAssets() {
           "assets/sprites/effects/burst_green_bright.png");
   tryLoad("DragonFlameBurstSheet",
           "assets/sprites/effects/dragon_flame_burst_green.png");
+  tryLoad("PlaneRed",
+          "assets/sprites/items/plane_red.png");
+  tryLoad("YellowLaser",
+          "assets/sprites/effects/yellow_laser.png");
   // Generate solid black tile
   if (textures.find("BlackTile") == textures.end()) {
     sf::Image blackImg;
